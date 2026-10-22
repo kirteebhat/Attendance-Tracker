@@ -1,0 +1,55 @@
+import { z } from "zod";
+export declare const AuditLogFilterQuerySchema: z.ZodObject<{
+    actor: z.ZodOptional<z.ZodString>;
+    performedBy: z.ZodOptional<z.ZodString>;
+    performedByEmployeeId: z.ZodOptional<z.ZodString>;
+    action: z.ZodOptional<z.ZodString>;
+    entity: z.ZodOptional<z.ZodString>;
+    entityType: z.ZodOptional<z.ZodString>;
+    entityId: z.ZodOptional<z.ZodString>;
+    startDate: z.ZodOptional<z.ZodString>;
+    endDate: z.ZodOptional<z.ZodString>;
+    from: z.ZodOptional<z.ZodString>;
+    to: z.ZodOptional<z.ZodString>;
+    search: z.ZodOptional<z.ZodString>;
+    page: z.ZodDefault<z.ZodNumber>;
+    limit: z.ZodDefault<z.ZodNumber>;
+    sortBy: z.ZodDefault<z.ZodEnum<["timestamp"]>>;
+    sortOrder: z.ZodDefault<z.ZodEnum<["asc", "desc"]>>;
+}, "strip", z.ZodTypeAny, {
+    page: number;
+    limit: number;
+    sortBy: "timestamp";
+    sortOrder: "asc" | "desc";
+    action?: string | undefined;
+    startDate?: string | undefined;
+    endDate?: string | undefined;
+    from?: string | undefined;
+    to?: string | undefined;
+    search?: string | undefined;
+    actor?: string | undefined;
+    performedBy?: string | undefined;
+    performedByEmployeeId?: string | undefined;
+    entity?: string | undefined;
+    entityType?: string | undefined;
+    entityId?: string | undefined;
+}, {
+    action?: string | undefined;
+    page?: number | undefined;
+    limit?: number | undefined;
+    startDate?: string | undefined;
+    endDate?: string | undefined;
+    from?: string | undefined;
+    to?: string | undefined;
+    search?: string | undefined;
+    sortBy?: "timestamp" | undefined;
+    sortOrder?: "asc" | "desc" | undefined;
+    actor?: string | undefined;
+    performedBy?: string | undefined;
+    performedByEmployeeId?: string | undefined;
+    entity?: string | undefined;
+    entityType?: string | undefined;
+    entityId?: string | undefined;
+}>;
+export type AuditLogFilterQuery = z.infer<typeof AuditLogFilterQuerySchema>;
+//# sourceMappingURL=audit.d.ts.map
