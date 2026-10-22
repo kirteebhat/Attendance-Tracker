@@ -41,7 +41,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!token) return;
 
     // Connect to WebSocket server
-    const client = ioClient({
+    const wsUrl = import.meta.env.VITE_API_URL || undefined;
+    const client = ioClient(wsUrl, {
       auth: { token },
       transports: ["websocket", "polling"],
       reconnection: true,

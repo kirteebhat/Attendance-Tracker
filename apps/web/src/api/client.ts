@@ -62,6 +62,16 @@ export const tokenStorage = {
   },
 };
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
+export function getFullApiUrl(endpoint: string): string {
+  if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+    return endpoint;
+  }
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  return API_BASE_URL ? `${API_BASE_URL}${cleanEndpoint}` : cleanEndpoint;
+}
+
 /**
  * Standard HTTP Fetch wrapper with automatic Bearer token injection,
  * automatic token rotation on ERR_TOKEN_EXPIRED, and typed responses.
@@ -70,7 +80,7 @@ export async function apiRequest<T = unknown>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = endpoint.startsWith("http") ? endpoint : endpoint;
+  const url = getFullApiUrl(endpoint);
   const token = tokenStorage.getAccessToken();
 
   const headers = new Headers(options.headers || {});
@@ -123,7 +133,7 @@ export async function apiRequest<T = unknown>(
 
       try {
         const storedRefreshToken = tokenStorage.getRefreshToken();
-        const refreshRes = await fetch("/api/auth/refresh", {
+        const refreshRes = await fetch(getFullApiUrl("/api/auth/refresh"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refreshToken: storedRefreshToken }),

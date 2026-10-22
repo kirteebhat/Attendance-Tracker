@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, tokenStorage } from "./client";
+import { api, tokenStorage, getFullApiUrl } from "./client";
 import { AttendanceStatus, WorkType } from "@vorldx/shared";
 
 export interface DashboardDayTrend {
@@ -917,7 +917,7 @@ export function useWfhReport(params: ReportFilterParams) {
 
 export async function downloadReportCsv(endpoint: string, filename: string) {
   const token = tokenStorage.getAccessToken();
-  const res = await fetch(endpoint, {
+  const res = await fetch(getFullApiUrl(endpoint), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error(`CSV export failed with status ${res.status}`);
