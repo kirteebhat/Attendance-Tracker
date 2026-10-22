@@ -13,11 +13,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@vorldx/shared": ["../../packages/shared/src/index.ts"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../../packages/shared/src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
