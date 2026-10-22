@@ -1,0 +1,73 @@
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "./context/AuthContext";
+import { SocketProvider } from "./context/SocketContext";
+import { ToastProvider } from "./components/ui/Toast";
+import { ProtectedRoute } from "./routes/ProtectedRoute";
+import { RoleGuard } from "./routes/RoleGuard";
+import { AppShell } from "./components/layout/AppShell";
+import { LoginPage } from "./pages/LoginPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { AttendanceLedgerPage } from "./pages/AttendanceLedgerPage";
+import { ReportsPage } from "./pages/ReportsPage";
+import { WfhPage } from "./pages/WfhPage";
+import { EmployeesPage } from "./pages/EmployeesPage";
+import { PoliciesPage } from "./pages/PoliciesPage";
+import { DisplaysPage } from "./pages/DisplaysPage";
+import { AuditLogsPage } from "./pages/AuditLogsPage";
+import { UnauthorizedPage } from "./pages/UnauthorizedPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+export const App: React.FC = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <AuthProvider>
+          <SocketProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* Public Authentication Route */}
+                <Route path="/login" element={<LoginPage />} />
+
+                {/* Protected Administrative Application Shell */}
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<AppShell />}>
+                    {/* Role-Guarded HR & Admin Routes */}
+                    <Route element={<RoleGuard allowedRoles={["HR", "ADMIN", "HR_ADMIN"]} />}>
+                      <Route path="/" element={<DashboardPage />} />
+                      <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                      <Route path="/attendance" element={<AttendanceLedgerPage />} />
+                      <Route path="/reports" element={<ReportsPage />} />
+                      <Route path="/wfh" element={<WfhPage />} />
+                      <Route path="/employees" element={<EmployeesPage />} />
+                      <Route path="/policies" element={<PoliciesPage />} />
+                      <Route path="/displays" element={<DisplaysPage />} />
+                      <Route path="/audit-logs" element={<AuditLogsPage />} />
+                    </Route>
+
+                    {/* Common Protected Fallbacks */}
+                    <Route path="/unauthorized" element={<UnauthorizedPage />} />
+                    <Route path="*" element={<NotFoundPage />} />
+                  </Route>
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </SocketProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </QueryClientProvider>
+  );
+};
+
+export default App;
+

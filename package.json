@@ -1,0 +1,34 @@
+{
+  "name": "attendance-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VorldX Employee Attendance System Monorepo",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=@vorldx/shared && npm run build --workspace=@vorldx/api && npm run build --workspace=@vorldx/web && npm run build --workspace=@vorldx/display",
+    "dev:api": "npm run dev --workspace=@vorldx/api",
+    "dev:web": "npm run dev --workspace=@vorldx/web",
+    "dev:display": "npm run dev --workspace=@vorldx/display",
+    "dev:mobile": "npm run start --workspace=@vorldx/mobile",
+    "dev": "npm run dev:api",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
+    "demo": "tsx scripts/dev-demo.ts",
+    "test:e2e": "tsx scripts/verify-14-step-workflow.ts",
+    "seed": "npm run seed --workspace=@vorldx/api"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.21.0",
+    "@typescript-eslint/parser": "^8.21.0",
+    "eslint": "^8.57.1",
+    "prettier": "^3.4.2",
+    "puppeteer-core": "^25.15.0",
+    "typescript": "^5.7.3"
+  }
+}

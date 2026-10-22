@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+.next
+.expo
+package-lock.json
+*.log
+*.d.ts
+*.tsbuildinfo
+
