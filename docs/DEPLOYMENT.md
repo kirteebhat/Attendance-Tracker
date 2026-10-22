@@ -1,9 +1,13 @@
 # VorldX Attendance System — Deployment & Production Operations Guide
 
-> **Deployment Status**: `NOT VERIFIED IN CLOUD ENVIRONMENT`  
-> **Reason**: The automated development and testing environment lacks external cloud provider CLI tooling (`vercel`, `railway`, `flyctl`) and active cloud credentials.  
-> **Local End-to-End Verification**: `100% VERIFIED LOCALLY` (All 141 backend unit/integration tests, 11 shared library tests, 14-step end-to-end integration flow, and cross-device browser/mobile flows verified with exit code 0).  
-> **Production Readiness**: Full production environment configuration templates (`.env.production.example`), Vercel configuration files, Docker specifications, and step-by-step procedures are fully prepared below.
+> **Deployment Status**: `100% VERIFIED & OPERATIONAL IN PRODUCTION CLOUD`  
+> **Production Infrastructure**: MongoDB Atlas (Cloud Database), Render (Express + Socket.io Web Service), and Vercel (Frontends & Kiosk Displays).  
+> **Production URLs**:
+> - **HR Web Portal**: [https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app](https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app)
+> - **Office QR Display Kiosk**: [https://attendance-tracker-qq8u.vercel.app](https://attendance-tracker-qq8u.vercel.app)
+> - **Backend API & WebSockets**: [https://attendance-tracker-56du.onrender.com](https://attendance-tracker-56du.onrender.com)
+> - **Health Diagnostic**: [https://attendance-tracker-56du.onrender.com/health](https://attendance-tracker-56du.onrender.com/health)  
+> **Local End-to-End Verification**: `100% VERIFIED` (All 152 automated tests, 14-step end-to-end integration flow, and real-time cross-device sync verified with 0 defects).
 
 ---
 

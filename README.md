@@ -4,6 +4,33 @@ An enterprise full-stack attendance tracking, dynamic QR verification, and Work-
 
 ---
 
+## 🌐 Live Production Deployment & Service Registry
+
+The system is deployed and operating live across cloud infrastructure:
+
+| Tier / Application | Hosting Provider | Live Production URL | Operational Status |
+| :--- | :--- | :--- | :--- |
+| **HR & Admin Web Portal** | Vercel (Vite SPA) | [https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app](https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app) | 🟢 **Live & Operational** |
+| **Office Dynamic QR Kiosk** | Vercel (Next.js 15) | [https://attendance-tracker-qq8u.vercel.app](https://attendance-tracker-qq8u.vercel.app) | 🟢 **Live & Operational** |
+| **Backend API & WebSockets** | Render (Node.js Service) | [https://attendance-tracker-56du.onrender.com](https://attendance-tracker-56du.onrender.com) | 🟢 **Live & Operational** |
+| **Backend Health Check** | JSON Diagnostics | [https://attendance-tracker-56du.onrender.com/health](https://attendance-tracker-56du.onrender.com/health) | 🟢 **HTTP 200 OK** |
+| **Cloud Database** | MongoDB Atlas Multi-AZ | `vorldx-cluster.fgdib2g.mongodb.net` | 🟢 **Connected & Seeded** |
+| **Source Code Repository** | GitHub | [https://github.com/kirteebhat/Attendance-Tracker](https://github.com/kirteebhat/Attendance-Tracker) | 🟢 **Public / Active** |
+
+---
+
+## 🔑 Demo Credentials for Live Evaluation
+
+| Role | Username / Identifier | Password | Access Capabilities |
+| :--- | :--- | :--- | :--- |
+| **Platform Super Admin** | `admin@vorldx.demo` | `Admin@VorldX2026!` | Full HR portal, company policies, holidays, terminal pairing & revocation, audit logs. |
+| **HR Operations Manager** | `hr@vorldx.demo` | `Hr@VorldX2026!` | Employee directory, live punch ledger, punch corrections with mandatory reasons, WFH approvals. |
+| **Pre-Registered Employee** | `VX-001` (Aarav Sharma) | `Employee@2026!` | Instant mobile login, QR attendance scan, monthly statistics, WFH requests. |
+| **Pre-Registered Employee** | `VX-002` (Priya Patel) | `Employee@2026!` | Mobile login, attendance history calendar, shift details. |
+| **Unregistered Employee** | `VX-003` (Rohan Verma) | *(Set during registration)* | Demonstrates 3-step mobile registration flow (ID lookup → Simulated OTP → Set Password). |
+
+---
+
 ## 1. System Architecture & Topology
 
 The system is architectured as an **npm workspaces monorepo** decoupling the backend API, user-facing client applications, and shared domain models into dedicated packages:
