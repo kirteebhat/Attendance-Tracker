@@ -9,6 +9,8 @@
   ],
   "scripts": {
     "build": "npm run build --workspace=@vorldx/shared && npm run build --workspace=@vorldx/api && npm run build --workspace=@vorldx/web && npm run build --workspace=@vorldx/display",
+    "build:web": "npm run build --workspace=@vorldx/shared && npm run build --workspace=@vorldx/web",
+    "build:display": "npm run build --workspace=@vorldx/shared && npm run build --workspace=@vorldx/display",
     "dev:api": "npm run dev --workspace=@vorldx/api",
     "dev:web": "npm run dev --workspace=@vorldx/web",
     "dev:display": "npm run dev --workspace=@vorldx/display",
