@@ -14,7 +14,8 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@vorldx/shared": ["../../packages/shared/src/index.ts"]
     }
   },
   "include": ["src"],
