@@ -1,0 +1,68 @@
+flowchart LR
+    Employee(["Employee Actor"])
+    HRAdmin(["HR / Admin Actor"])
+    Kiosk(["Turnstile Display Kiosk"])
+
+    subgraph Attendance_UseCases ["Attendance & Check-In Use Cases"]
+        UC1["Self-Register with Assigned ID"]
+        UC2["Verify Account via Demo OTP"]
+        UC3["Scan Dynamic QR Code"]
+        UC4["View Today's Punch State & Shift Hours"]
+        UC5["View Monthly Attendance History"]
+        UC6["View Attendance Percentage & Summary Stats"]
+    end
+
+    subgraph WFH_UseCases ["Work-From-Home (WFH) Use Cases"]
+        UC7["Check WFH Eligibility & Quota"]
+        UC8["Submit WFH Request (Date & Reason)"]
+        UC9["Track WFH Request Status in Real-Time"]
+        UC10["Review Pending WFH Requests"]
+        UC11["Approve or Reject WFH with Justification"]
+    end
+
+    subgraph Admin_Management_UseCases ["HR Administration & Governance"]
+        UC12["Manage Employee Directory (CRUD)"]
+        UC13["Configure Shift Hours & Grace Periods"]
+        UC14["View Daily Attendance Ledger & Multi-Filters"]
+        UC15["Perform Manual Punch Corrections with Reason"]
+        UC16["Inspect Immutable Audit Trail & State Diffs"]
+        UC17["Export Attendance Reports as CSV"]
+        UC18["Generate Terminal Pairing Codes"]
+        UC19["Revoke / Disable Compromised Terminals"]
+    end
+
+    subgraph Kiosk_UseCases ["Display Terminal Operations"]
+        UC20["Authorize Hardware via Pairing Code"]
+        UC21["Fetch Signed 30-Second QR Challenge"]
+        UC22["Render Animated Countdown Ring"]
+        UC23["Listen for Instant Revocation Command"]
+    end
+
+    %% Employee Associations
+    Employee --> UC1
+    Employee --> UC2
+    Employee --> UC3
+    Employee --> UC4
+    Employee --> UC5
+    Employee --> UC6
+    Employee --> UC7
+    Employee --> UC8
+    Employee --> UC9
+
+    %% HR Admin Associations
+    HRAdmin --> UC10
+    HRAdmin --> UC11
+    HRAdmin --> UC12
+    HRAdmin --> UC13
+    HRAdmin --> UC14
+    HRAdmin --> UC15
+    HRAdmin --> UC16
+    HRAdmin --> UC17
+    HRAdmin --> UC18
+    HRAdmin --> UC19
+
+    %% Kiosk Associations
+    Kiosk --> UC20
+    Kiosk --> UC21
+    Kiosk --> UC22
+    Kiosk --> UC23

@@ -1,0 +1,58 @@
+flowchart TD
+    subgraph Client_Tier ["Client Presentation Tier"]
+        direction TB
+        Web["HR & Admin Web Portal<br/>(React 18 + Vite + Tailwind CSS)<br/>Port: 3000 / Vercel SPA"]
+        Display["Office QR Display Kiosk<br/>(Next.js 15 App Router)<br/>Port: 3001 / Vercel SSR"]
+        Mobile["Employee Mobile Application<br/>(Expo SDK 52 + React Native)<br/>Port: 8081 / EAS Build"]
+    end
+
+    subgraph Shared_Tier ["Shared Domain Foundation"]
+        Shared["@vorldx/shared<br/>(Zod Schemas, TypeScript Interfaces, State Enums, Socket Contracts)"]
+    end
+
+    subgraph Application_Tier ["Backend Application & Real-Time Tier"]
+        direction TB
+        API["Express REST API Server<br/>(Node.js v22 + TypeScript)<br/>Port: 4000 / Render"]
+        SocketServer["Socket.IO Real-Time Server<br/>(WebSocket & Polling Engine)"]
+        
+        subgraph Rooms ["Scoped Real-Time Socket Rooms"]
+            RoomDisplay["display:{terminalId}"]
+            RoomEmp["employee:{employeeId}"]
+            RoomHR["hr (Admin & HR Channel)"]
+        end
+    end
+
+    subgraph Security_Tier ["Cryptographic & Verification Engine"]
+        HMAC["HMAC-SHA256 Token Signer<br/>(30s Rotation + 15s Sliding Grace)"]
+        NTP["Server-Authoritative Clock<br/>(Zero-Trust Timestamp Stamping)"]
+        NonceStore["Atomic Nonce Replay Guard<br/>(Single-Use findOneAndUpdate)"]
+    end
+
+    subgraph Persistence_Tier ["Data Persistence Tier"]
+        MongoDB[("MongoDB Atlas M0 Cluster<br/>(Multi-AZ Replica Set / Mongoose ODM)")]
+    end
+
+    %% Client-Shared Relationships
+    Web -.->|Imports Contracts & Types| Shared
+    Display -.->|Imports Contracts & Types| Shared
+    Mobile -.->|Imports Contracts & Types| Shared
+    API -.->|Imports Contracts & Types| Shared
+
+    %% Client-Server Communications
+    Web <-->|HTTPS REST & WSS Events| API
+    Display <-->|HTTPS REST & WSS Events| API
+    Mobile <-->|HTTPS REST| API
+
+    %% Backend Internals
+    API --- SocketServer
+    SocketServer --- RoomDisplay
+    SocketServer --- RoomEmp
+    SocketServer --- RoomHR
+
+    API --> HMAC
+    API --> NTP
+    API --> NonceStore
+
+    %% Persistence
+    API <-->|Mongoose Queries & Compound Indexes| MongoDB
+    NonceStore <-->|Atomic Flag Update| MongoDB

@@ -1,0 +1,63 @@
+flowchart TD
+    subgraph External_Entities ["External Actors"]
+        EMP["Employee (Mobile App)"]
+        HR["HR / Administrator (Web Portal)"]
+        KIOSK["Office QR Kiosk Display"]
+    end
+
+    subgraph DFD_Level_1 ["Process Boundary: VorldX Attendance System"]
+        P1["1.0 Authentication & Session Controller"]
+        P2["2.0 Dynamic Challenge & Rotation Engine"]
+        P3["3.0 Server-Authoritative Punch Processor"]
+        P4["4.0 Work-From-Home (WFH) Governance"]
+        P5["5.0 Policy Configuration & Grace Evaluator"]
+        P6["6.0 Immutable Audit & Reporting Engine"]
+    end
+
+    subgraph Data_Stores ["Persistent Data Stores (MongoDB Atlas)"]
+        D1[("D1: Users & Employees Store")]
+        D2[("D2: QR Challenges & Displays Store")]
+        D3[("D3: Attendance Records Store")]
+        D4[("D4: WFH Requests Store")]
+        D5[("D5: Policies & Shifts Store")]
+        D6[("D6: Audit Trails Store")]
+    end
+
+    %% Auth Flows
+    EMP -->|ID & OTP Verification| P1
+    HR -->|Credentials & JWT Refresh| P1
+    P1 <-->|Verify Hashes & Roles| D1
+
+    %% Kiosk Challenge Flows
+    KIOSK -->|Request 30s Challenge Token| P2
+    P2 <-->|Validate Secret & Store Nonce| D2
+    P2 -->|Signed Token & Expiry| KIOSK
+
+    %% Punch Flows
+    EMP -->|Submit Scanned QR Token| P3
+    P3 <-->|Atomic Nonce Validation| D2
+    P3 <-->|Read Shift Rules & Grace Period| D5
+    P3 -->|Write CheckIn / CheckOut Punch| D3
+    P3 -->|Real-Time Socket Event| HR
+    P3 -->|Confirmation & Today Status| EMP
+
+    %% WFH Flows
+    EMP -->|Submit WFH Request (Date & Reason)| P4
+    P4 <-->|Check Quota & Active Requests| D4
+    P4 -->|Pending Request Notification| HR
+    HR -->|Approve / Reject WFH Decision| P4
+    P4 -->|Write WFH Decision| D4
+    P4 -->|Generate WFH_APPROVED Attendance| D3
+    P4 -->|Real-Time Status Update| EMP
+
+    %% Policy Flows
+    HR -->|Update Shift, Grace, Quota Settings| P5
+    P5 -->|Versioned Policy Update| D5
+    P5 -->|Log Policy Change| P6
+
+    %% Audit & Report Flows
+    HR -->|Request Punch Correction (with Reason)| P3
+    P3 -->|Log State Diff & Justification| P6
+    P6 -->|Append Immutable Audit Event| D6
+    HR -->|Query Summary & CSV Export| P6
+    P6 <-->|Aggregate Attendance & Punctuality| D3

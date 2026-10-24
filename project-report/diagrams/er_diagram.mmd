@@ -1,0 +1,118 @@
+erDiagram
+    USERS ||--|| EMPLOYEES : "has profile"
+    EMPLOYEES ||--o{ ATTENDANCE_RECORDS : "records daily punches"
+    EMPLOYEES ||--o{ WFH_REQUESTS : "submits"
+    EMPLOYEES ||--o{ REGISTRATION_OTPS : "verifies via"
+    QR_DISPLAYS ||--o{ QR_CHALLENGES : "issues rotating"
+    ATTENDANCE_POLICIES ||--o{ SHIFTS : "configures"
+    USERS ||--o{ AUDIT_LOGS : "triggers actions"
+
+    USERS {
+        ObjectId _id PK
+        string email UK "Index: Unique lowercase"
+        string passwordHash "Bcrypt salt rounds 10"
+        string role "ADMIN | HR | EMPLOYEE"
+        boolean isActive "Default: true"
+        number failedLoginAttempts "Default: 0"
+        Date lockUntil "Account security lockout"
+        Date createdAt
+        Date updatedAt
+    }
+
+    EMPLOYEES {
+        ObjectId _id PK
+        string employeeId UK "Index: Unique e.g. VX-001"
+        ObjectId userId FK "Index: 1-to-1 User ref"
+        string fullName "Indexed text"
+        string department "Engineering, HR, Product, Design, Sales"
+        string designation "Job title"
+        string phone "Contact number"
+        string assignedShiftId FK "Reference to Shift definition"
+        string status "ACTIVE | INACTIVE"
+        Date joiningDate
+        Date createdAt
+        Date updatedAt
+    }
+
+    ATTENDANCE_RECORDS {
+        ObjectId _id PK
+        ObjectId employeeId FK "Index: Compound with date"
+        string date "Index: YYYY-MM-DD format"
+        Date checkInTime "Server NTP authoritative"
+        Date checkOutTime "Server NTP authoritative"
+        number totalMinutes "Calculated elapsed shift duration"
+        string status "PRESENT | LATE | HALF_DAY | CHECKED_OUT | WFH_APPROVED | ABSENT"
+        string checkInMethod "QR_SCAN | MANUAL_CORRECTION | SYSTEM_WFH"
+        ObjectId terminalId FK "Reference to QR Display Kiosk"
+        boolean isCorrected "Flag for manual HR adjustments"
+        string correctionReason "Mandatory justification note"
+        ObjectId correctedBy FK "Reference to HR User ID"
+        Date createdAt
+        Date updatedAt
+    }
+
+    QR_DISPLAYS {
+        ObjectId _id PK
+        string terminalId UK "Index: Unique e.g. TERM_LKO_0"
+        string name "e.g. Main Lobby Turnstile #1"
+        string pairingCodeHash "SHA-256 hashed 6-char code"
+        Date pairingCodeExpiresAt "15-minute TTL"
+        string displaySecretHash "Stored hardware signature key"
+        string status "PENDING_PAIRING | AUTHORIZED | DISABLED | REVOKED"
+        Date lastSeenAt "Network heartbeat timestamp"
+        Date createdAt
+        Date updatedAt
+    }
+
+    QR_CHALLENGES {
+        ObjectId _id PK
+        string terminalId FK "Terminal issuer"
+        string nonce UK "Index: Unique cryptographic nonce"
+        string signature "HMAC-SHA256 signature"
+        Date issuedAt "Timestamp of generation"
+        Date expiresAt "30s rotation + 15s grace"
+        boolean consumed "Index: Atomic single-use flag"
+        ObjectId consumedBy FK "Employee who scanned"
+        Date consumedAt
+    }
+
+    WFH_REQUESTS {
+        ObjectId _id PK
+        ObjectId employeeId FK "Index: Compound with date"
+        string date "Index: YYYY-MM-DD"
+        string reason "Employee justification text"
+        string status "PENDING | APPROVED | REJECTED | CANCELLED"
+        ObjectId reviewerId FK "Reference to HR/Admin User"
+        string reviewerNotes "Manager approval or rejection note"
+        Date reviewedAt
+        Date createdAt
+        Date updatedAt
+    }
+
+    ATTENDANCE_POLICIES {
+        ObjectId _id PK
+        number version "Incrementing policy version"
+        string organizationName "VorldX Industries Private Limited"
+        string timezone "Asia/Kolkata"
+        number gracePeriodMinutes "Default: 15 minutes"
+        number halfDayMinHours "Default: 4 hours"
+        number fullDayMinHours "Default: 8 hours"
+        number wfhMonthlyQuota "Default: 4 days per month"
+        boolean active "Currently active policy flag"
+        Date createdAt
+        Date updatedAt
+    }
+
+    AUDIT_LOGS {
+        ObjectId _id PK
+        ObjectId actorId FK "Actor who executed modification"
+        string actorEmail "Email snapshot"
+        string action "ATTENDANCE_CORRECTED | POLICY_UPDATED | DISPLAY_REVOKED"
+        string entityType "AttendanceRecord | Policy | Display"
+        string entityId "Target entity ID"
+        object beforeState "JSON snapshot before change"
+        object afterState "JSON snapshot after change"
+        string reason "Mandatory business justification"
+        string ipAddress "Client IP address"
+        Date timestamp "Index: Immutable log timestamp"
+    }

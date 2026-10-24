@@ -1,0 +1,52 @@
+sequenceDiagram
+    autonumber
+    actor Employee as Employee Mobile App
+    participant Display as Office QR Display Kiosk
+    participant API as VorldX Express API Server
+    participant DB as MongoDB Atlas Cluster
+    participant Socket as Socket.IO Hub
+    actor HR as HR Admin Web Portal
+
+    %% Step 1: Challenge Generation
+    Display->>API: GET /api/displays/token (Bearer TerminalToken)
+    API->>API: Generate Nonce & Calculate Expiry (Now + 30s)
+    API->>API: Compute HMAC-SHA256(terminalId + nonce + expiry, secret)
+    API->>DB: Store Nonce Record (consumed: false)
+    API-->>Display: 200 OK { token, expiresAt, nonce, secondsRemaining: 30 }
+    Display->>Display: Render Rotating QR Canvas & SVG Countdown
+
+    %% Step 2: Employee Scanning
+    Employee->>Display: Scan Dynamic Optical QR Code
+    Employee->>API: POST /api/attendance/scan { token } (Bearer UserToken)
+    
+    %% Step 3: Server-Authoritative Evaluation
+    API->>API: Read Server Time Date.now() (NTP-Synchronized)
+    API->>API: Verify HMAC Signature & Expiration Window (30s + 15s grace)
+    API->>DB: Atomic Update findOneAndUpdate({ nonce, consumed: false }, { consumed: true })
+    alt Nonce Already Consumed or Expired
+        API-->>Employee: 400/410 { error: "ERR_QR_EXPIRED" | "ERR_REPLAY_DETECTED" }
+    else Valid & Fresh Nonce
+        API->>DB: Check AttendanceRecord for Employee on Date
+        alt First Punch of the Day (Check-In)
+            API->>API: Compare CheckIn vs (ShiftStart + GracePeriodMinutes)
+            alt On-Time Arrival
+                API->>DB: insert AttendanceRecord { status: "PRESENT", checkIn: ServerTime }
+            else Late Arrival
+                API->>DB: insert AttendanceRecord { status: "LATE", checkIn: ServerTime }
+            end
+        else Second Punch of the Day (Check-Out)
+            API->>API: Calculate Duration = CheckOut - CheckIn
+            alt Duration >= FullDayMinHours (e.g. 8h)
+                API->>DB: update AttendanceRecord { status: "CHECKED_OUT", checkOut: ServerTime, totalMinutes }
+            else Duration >= HalfDayMinHours (e.g. 4h)
+                API->>DB: update AttendanceRecord { status: "HALF_DAY", checkOut: ServerTime, totalMinutes }
+            end
+        end
+
+        %% Step 4: Real-Time Broadcast & Confirmation
+        API->>Socket: emit("attendance.updated", recordPayload)
+        Socket-->>HR: Push Real-Time Event to "hr" Room (Updates Dashboard Table & Graph)
+        Socket-->>Employee: Push Real-Time Event to "employee:{id}" Room
+        API-->>Employee: 200 OK { success: true, record, status, checkInTime }
+        Employee->>Employee: Display Animated Success Screen & Vibration Feedback
+    end

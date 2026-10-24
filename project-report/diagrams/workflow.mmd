@@ -1,0 +1,41 @@
+flowchart TD
+    Start([Kiosk Startup]) --> PairCheck{Terminal Paired & Authorized?}
+    
+    PairCheck -- No --> EnterCode[Enter 6-Char Pairing Code VX-XXXX]
+    EnterCode --> VerifyCode[API Validates Hash & Generates Display Secret]
+    VerifyCode --> PairCheck
+    
+    PairCheck -- Yes --> RequestChallenge[Display Requests 30-Second Challenge]
+    RequestChallenge --> SignChallenge[API Signs HMAC-SHA256 Token with Nonce]
+    SignChallenge --> ShowQR[Display Renders Canvas QR & Radial SVG Countdown]
+    
+    ShowQR --> EmpAction[Employee Scans QR via Mobile Camera or Emulator]
+    EmpAction --> SubmitToken[Mobile Submits Opaque Token String to POST /attendance/scan]
+    
+    SubmitToken --> ServerClock[API Reads NTP Server Time Date.now]
+    ServerClock --> CheckSig{Signature Valid & Nonce Fresh?}
+    
+    CheckSig -- Invalid or Expired --> RejectScan[HTTP 400/410 Rejection + Mobile Error Alert]
+    CheckSig -- Valid --> AtomicConsume[Atomically Mark Nonce Consumed in DB]
+    
+    AtomicConsume --> RecordCheck{Existing Open Punch for Today?}
+    
+    RecordCheck -- No Record --> EvalLate{Check-In <= ShiftStart + Grace?}
+    EvalLate -- Yes --> MarkPresent[Create Attendance Record: Status = PRESENT]
+    EvalLate -- No --> MarkLate[Create Attendance Record: Status = LATE]
+    
+    RecordCheck -- Open CheckIn Exists --> CalcDuration[Compute Total Duration = CheckOut - CheckIn]
+    CalcDuration --> EvalThreshold{Duration >= FullDayHours?}
+    EvalThreshold -- Yes --> MarkCheckedOut[Update Record: Status = CHECKED_OUT]
+    EvalThreshold -- No --> MarkHalfDay[Update Record: Status = HALF_DAY]
+    
+    MarkPresent --> BroadcastEvent[API Broadcasts attendance.updated via Socket.IO]
+    MarkLate --> BroadcastEvent
+    MarkCheckedOut --> BroadcastEvent
+    MarkHalfDay --> BroadcastEvent
+    
+    BroadcastEvent --> PushWeb[HR Web Portal Updates Real-Time Live Feed & Bar Charts]
+    BroadcastEvent --> PushMobile[Employee Mobile App Updates Today Widget & Monthly Stats]
+    
+    PushWeb --> Complete([Punch Cycle Complete])
+    PushMobile --> Complete

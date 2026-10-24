@@ -263,3 +263,4 @@ function generatePdf() {
 }
 
 generatePdf();
+
