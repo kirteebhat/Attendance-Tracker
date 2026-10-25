@@ -8,12 +8,21 @@ if (!process.env.NODE_PATH || !process.env.NODE_PATH.includes(mobileModules)) {
   process.env.NODE_PATH = [mobileModules, rootModules, process.env.NODE_PATH || ""]
     .filter(Boolean)
     .join(path.delimiter);
-  require("module").Module._initPaths();
+  try {
+    require("module").Module._initPaths();
+  } catch (_) {}
 }
 
 module.exports = function (api) {
   api.cache(true);
   return {
-    presets: ["babel-preset-expo"],
+    presets: [
+      [
+        "babel-preset-expo",
+        {
+          disableImportExportTransform: false,
+        },
+      ],
+    ],
   };
 };
