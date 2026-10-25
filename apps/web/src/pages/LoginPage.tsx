@@ -37,7 +37,7 @@ export const LoginPage: React.FC = () => {
     resolver: zodResolver(loginSchema),
     defaultValues: {
       identifier: "admin@vorldx.demo",
-      password: "Admin@12345",
+      password: "Admin@VorldX2026!",
     },
   });
 
@@ -57,7 +57,11 @@ export const LoginPage: React.FC = () => {
 
   const handleDemoFill = (identifier: string) => {
     setValue("identifier", identifier);
-    setValue("password", "Admin@12345");
+    if (identifier.includes("admin")) {
+      setValue("password", "Admin@VorldX2026!");
+    } else {
+      setValue("password", "Hr@VorldX2026!");
+    }
     setServerError(null);
   };
 
