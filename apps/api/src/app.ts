@@ -29,7 +29,16 @@ export function createApp(): Express {
     cors({
       origin: (origin, callback) => {
         // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
-        if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+        // or requests matching allowedOrigins, Vercel frontends, Render domain, or localhost
+        if (
+          !origin ||
+          allowedOrigins.includes(origin) ||
+          allowedOrigins.includes("*") ||
+          origin.includes("onrender.com") ||
+          origin.includes("vercel.app") ||
+          origin.includes("localhost") ||
+          origin.includes("127.0.0.1")
+        ) {
           callback(null, true);
         } else {
           callback(new Error(`CORS blocked for origin: ${origin}`));
