@@ -15,6 +15,7 @@
     "dev:web": "npm run dev --workspace=@vorldx/web",
     "dev:display": "npm run dev --workspace=@vorldx/display",
     "dev:mobile": "npm run start --workspace=@vorldx/mobile",
+    "dev:mobile:web": "npm run web --workspace=@vorldx/mobile",
     "dev": "npm run dev:api",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "npm run typecheck --workspaces --if-present",

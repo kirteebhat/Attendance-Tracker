@@ -59,8 +59,8 @@ export default function LoginScreen() {
   };
 
   const fillDemoCredentials = () => {
-    setIdentifier("emp1@vorldx.demo");
-    setPassword("Employee@123");
+    setIdentifier("aarav.sharma@vorldx.demo");
+    setPassword("Employee@2026!");
     setError(null);
   };
 
@@ -141,7 +141,7 @@ export default function LoginScreen() {
           testID="login-demo-fill-btn"
         >
           <StatusBadge status="DEMO" label="QUICK-FILL DEMO ACCOUNT" />
-          <Text style={styles.demoFillText}>Auto-fill Ananya Sharma (EMP-001)</Text>
+          <Text style={styles.demoFillText}>Auto-fill Aarav Sharma (EMP-1001)</Text>
         </TouchableOpacity>
       </Card>
 
