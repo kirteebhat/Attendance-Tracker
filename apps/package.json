@@ -1,0 +1,11 @@
+{
+  "name": "attendance-tracker-apps",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd .. && npm install && npm run build --workspace=@vorldx/web"
+  },
+  "dependencies": {
+    "vite": "^6.1.0"
+  }
+}
