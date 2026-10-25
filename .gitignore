@@ -5,6 +5,7 @@ node_modules/
 # Production builds
 dist/
 !packages/shared/dist/**
+!apps/web/dist/**
 build/
 .next/
 out/

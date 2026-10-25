@@ -2,6 +2,8 @@ import express, { Express } from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import path from "path";
+import fs from "fs";
 import { env } from "./config/env";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { requestLogger } from "./middleware/requestLogger";
@@ -13,8 +15,13 @@ import routes from "./routes";
 export function createApp(): Express {
   const app = express();
 
-  // 1. Security HTTP Headers
-  app.use(helmet());
+  // 1. Security HTTP Headers (relaxed CSP to allow Vite/React SPA assets)
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+    })
+  );
 
   // 2. Strict CORS Configuration from Environment
   const allowedOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
@@ -60,7 +67,24 @@ export function createApp(): Express {
   // 7. Core Application Routes
   app.use(routes);
 
-  // 8. 404 Route Handler
+  // 8. Serve HR Web Portal SPA if compiled dist exists
+  const webDistPath = path.resolve(__dirname, "../../web/dist");
+  if (fs.existsSync(webDistPath)) {
+    app.use(express.static(webDistPath));
+    app.get("*", (req, res, next) => {
+      // Don't intercept API, health, or WebSocket routes
+      if (
+        req.path.startsWith("/api") ||
+        req.path.startsWith("/health") ||
+        req.path.startsWith("/socket.io")
+      ) {
+        return next();
+      }
+      res.sendFile(path.join(webDistPath, "index.html"));
+    });
+  }
+
+  // 9. 404 Route Handler
   app.use(notFoundHandler);
 
   // 9. Global Error Handler

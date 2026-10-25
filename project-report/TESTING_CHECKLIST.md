@@ -128,3 +128,4 @@ The following items pertain to physical on-premise hardware installation and fie
 - [ ] **HW-02 (Field Deployment)**: Raspberry Pi GPIO electromagnetic turnstile gate release relay integration.
 - [ ] **HW-03 (Field Deployment)**: Production SMS gateway integration (Twilio / AWS SNS) to replace demo OTP banner.
 - [ ] **HW-04 (Field Deployment)**: Local backup NTP hardware server for uninterrupted offline server time synchronization.
+

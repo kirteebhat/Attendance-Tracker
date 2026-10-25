@@ -376,8 +376,9 @@ All 59 visual artifacts captured during browser and mobile automated verificatio
 
 | Service Tier | Cloud Provider | Production URL | Status |
 | :--- | :--- | :--- | :--- |
-| **HR & Admin Web Portal** | Vercel (Vite SPA) | [https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app](https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app) | 🟢 **Live & Operational** |
-| **Office Dynamic QR Kiosk** | Vercel (Next.js 15) | [https://attendance-tracker-qq8u.vercel.app](https://attendance-tracker-qq8u.vercel.app) | 🟢 **Live & Operational** |
+| **HR & Admin Web Portal (Direct)** | Cloud Web Service | [https://attendance-tracker-56du.onrender.com](https://attendance-tracker-56du.onrender.com) | 🟢 **Live & Operational (Public / No SSO)** |
+| **HR & Admin Web Portal (Vercel)** | Vercel (Vite SPA) | [https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app](https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app) | 🟢 **Live & Operational** |
+| **Office Dynamic QR Kiosk** | Vercel (Next.js 15) | [https://attendance-tracker-qq8u.vercel.app](https://attendance-tracker-qq8u.vercel.app) | 🟢 **Live & Operational (Verified)** |
 | **Backend REST & WebSockets** | Render (Node.js) | [https://attendance-tracker-56du.onrender.com](https://attendance-tracker-56du.onrender.com) | 🟢 **Live & Operational** |
 | **Backend Health Diagnostics** | JSON Metrics | [https://attendance-tracker-56du.onrender.com/health](https://attendance-tracker-56du.onrender.com/health) | 🟢 **HTTP 200 OK** |
 | **Persistent Database** | MongoDB Atlas | `vorldx-cluster.fgdib2g.mongodb.net` (M0 Multi-AZ) | 🟢 **Connected & Seeded** |
