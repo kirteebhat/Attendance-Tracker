@@ -1,3 +1,20 @@
+import { STATUS_REGISTRY, getStatusDescriptor, StatusCategory } from "@vorldx/shared";
+
+export { STATUS_REGISTRY, getStatusDescriptor, type StatusCategory };
+
+export function getMobileStatusTheme(status: string | StatusCategory) {
+  const descriptor = getStatusDescriptor(status);
+  return {
+    label: descriptor.label,
+    icon: descriptor.icon,
+    solidColor: descriptor.solidColor,
+    color: descriptor.dark.text,
+    bg: descriptor.dark.bg,
+    border: descriptor.dark.border,
+    ariaLabel: descriptor.ariaLabel,
+  };
+}
+
 export const colors = {
   background: {
     base: "#070D1E", // Deepest midnight navy

@@ -49,3 +49,4 @@ const FeatureFlagSchema = new Schema<IFeatureFlag>(
 );
 
 export const FeatureFlag = model<IFeatureFlag>("FeatureFlag", FeatureFlagSchema);
+

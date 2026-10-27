@@ -196,4 +196,36 @@ const index_1 = require("./index");
         });
         node_assert_1.default.strictEqual(invalidPayload.success, false);
     });
+    (0, node_test_1.test)("shared status system enforces color, icon, and label for all statuses", () => {
+        const requiredStatuses = [
+            "PRESENT",
+            "LATE",
+            "ABSENT",
+            "INCOMPLETE",
+            "WFH",
+            "LEAVE",
+            "HOLIDAY",
+            "OFF_DAY",
+            "PENDING",
+            "APPROVED",
+            "REJECTED",
+            "CANCELLED",
+        ];
+        for (const status of requiredStatuses) {
+            const descriptor = index_1.STATUS_REGISTRY[status];
+            node_assert_1.default.ok(descriptor, `Status descriptor missing for ${status}`);
+            node_assert_1.default.ok(descriptor.label && descriptor.label.length > 0, `Missing label for ${status}`);
+            node_assert_1.default.ok(descriptor.icon && descriptor.icon.length > 0, `Missing icon for ${status}`);
+            node_assert_1.default.ok(descriptor.solidColor.startsWith("#"), `Invalid solidColor for ${status}`);
+            node_assert_1.default.ok(descriptor.light.text && descriptor.light.bg, `Missing light colors for ${status}`);
+            node_assert_1.default.ok(descriptor.dark.text && descriptor.dark.bg, `Missing dark colors for ${status}`);
+            node_assert_1.default.ok(descriptor.ariaLabel && descriptor.ariaLabel.startsWith("Status:"), `Missing accessible ariaLabel for ${status}`);
+        }
+        // Test normalization helper
+        node_assert_1.default.strictEqual((0, index_1.getStatusDescriptor)("present").key, "PRESENT");
+        node_assert_1.default.strictEqual((0, index_1.getStatusDescriptor)("WFH_APPROVED").key, "WFH");
+        node_assert_1.default.strictEqual((0, index_1.getStatusDescriptor)("half_day").key, "INCOMPLETE");
+        node_assert_1.default.strictEqual((0, index_1.getStatusDescriptor)("WEEKEND").key, "OFF_DAY");
+        node_assert_1.default.strictEqual((0, index_1.getStatusDescriptor)("unknown_status").icon, "HelpCircle");
+    });
 });

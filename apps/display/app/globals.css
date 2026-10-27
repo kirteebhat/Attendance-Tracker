@@ -32,3 +32,12 @@ body {
   box-shadow: 0 0 50px -10px rgba(239, 68, 68, 0.25);
 }
 
+
+/* Reduced motion compliance */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -18,6 +18,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./constants/enums"), exports);
 __exportStar(require("./constants/errors"), exports);
 __exportStar(require("./constants/sockets"), exports);
+__exportStar(require("./constants/statusSystem"), exports);
 // Schemas
 __exportStar(require("./schemas/auth"), exports);
 __exportStar(require("./schemas/attendance"), exports);

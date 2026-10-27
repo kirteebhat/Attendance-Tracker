@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
 import { ToastProvider } from "./components/ui/Toast";
@@ -8,6 +9,7 @@ import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { RoleGuard } from "./routes/RoleGuard";
 import { AppShell } from "./components/layout/AppShell";
 import { LoginPage } from "./pages/LoginPage";
+import { DesignSystemPage } from "./pages/DesignSystemPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AttendanceLedgerPage } from "./pages/AttendanceLedgerPage";
 import { ReportsPage } from "./pages/ReportsPage";
@@ -31,13 +33,16 @@ const queryClient = new QueryClient({
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <AuthProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
           <SocketProvider>
             <BrowserRouter>
               <Routes>
                 {/* Public Authentication Route */}
                 <Route path="/login" element={<LoginPage />} />
+                {/* Hidden Enterprise Design System Showcase */}
+                <Route path="/design-system" element={<DesignSystemPage />} />
 
                 {/* Protected Administrative Application Shell */}
                 <Route element={<ProtectedRoute />}>
@@ -65,7 +70,8 @@ export const App: React.FC = () => {
           </SocketProvider>
         </AuthProvider>
       </ToastProvider>
-    </QueryClientProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
   );
 };
 

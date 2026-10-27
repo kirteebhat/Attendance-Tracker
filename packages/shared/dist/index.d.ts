@@ -1,6 +1,7 @@
 export * from "./constants/enums";
 export * from "./constants/errors";
 export * from "./constants/sockets";
+export * from "./constants/statusSystem";
 export * from "./schemas/auth";
 export * from "./schemas/attendance";
 export * from "./schemas/wfh";

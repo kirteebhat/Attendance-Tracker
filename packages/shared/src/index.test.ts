@@ -23,6 +23,8 @@ import {
   FeatureFlagsSchema,
   DEFAULT_FEATURE_FLAGS,
   UpdateFeatureFlagPayloadSchema,
+  STATUS_REGISTRY,
+  getStatusDescriptor,
 } from "./index";
 
 describe("@vorldx/shared package exports", () => {
@@ -246,5 +248,40 @@ describe("@vorldx/shared package exports", () => {
       enabled: true,
     });
     assert.strictEqual(invalidPayload.success, false);
+  });
+
+  test("shared status system enforces color, icon, and label for all statuses", () => {
+    const requiredStatuses = [
+      "PRESENT",
+      "LATE",
+      "ABSENT",
+      "INCOMPLETE",
+      "WFH",
+      "LEAVE",
+      "HOLIDAY",
+      "OFF_DAY",
+      "PENDING",
+      "APPROVED",
+      "REJECTED",
+      "CANCELLED",
+    ] as const;
+
+    for (const status of requiredStatuses) {
+      const descriptor = STATUS_REGISTRY[status];
+      assert.ok(descriptor, `Status descriptor missing for ${status}`);
+      assert.ok(descriptor.label && descriptor.label.length > 0, `Missing label for ${status}`);
+      assert.ok(descriptor.icon && descriptor.icon.length > 0, `Missing icon for ${status}`);
+      assert.ok(descriptor.solidColor.startsWith("#"), `Invalid solidColor for ${status}`);
+      assert.ok(descriptor.light.text && descriptor.light.bg, `Missing light colors for ${status}`);
+      assert.ok(descriptor.dark.text && descriptor.dark.bg, `Missing dark colors for ${status}`);
+      assert.ok(descriptor.ariaLabel && descriptor.ariaLabel.startsWith("Status:"), `Missing accessible ariaLabel for ${status}`);
+    }
+
+    // Test normalization helper
+    assert.strictEqual(getStatusDescriptor("present").key, "PRESENT");
+    assert.strictEqual(getStatusDescriptor("WFH_APPROVED").key, "WFH");
+    assert.strictEqual(getStatusDescriptor("half_day").key, "INCOMPLETE");
+    assert.strictEqual(getStatusDescriptor("WEEKEND").key, "OFF_DAY");
+    assert.strictEqual(getStatusDescriptor("unknown_status").icon, "HelpCircle");
   });
 });

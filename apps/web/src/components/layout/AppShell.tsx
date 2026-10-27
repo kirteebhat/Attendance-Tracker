@@ -8,7 +8,7 @@ export const AppShell: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden transition-colors">
       {/* Desktop Persistent Sidebar */}
       <div className="hidden md:flex h-full">
         <Sidebar />

@@ -76,3 +76,4 @@ router.get("/ota/manifest", (_req: Request, res: Response) => {
 });
 
 export default router;
+

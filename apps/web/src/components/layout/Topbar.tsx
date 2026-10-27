@@ -1,8 +1,9 @@
 import React from "react";
 import { useLocation, Link } from "react-router-dom";
-import { Menu, ChevronRight, Wifi, WifiOff, LogOut, User } from "lucide-react";
+import { Menu, ChevronRight, Wifi, WifiOff, LogOut, User, Sun, Moon, Palette } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
+import { useTheme } from "../../context/ThemeContext";
 import { Badge } from "../ui/Badge";
 
 interface TopbarProps {
@@ -23,16 +24,17 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenMobile }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { isConnected, isReconnecting } = useSocket();
+  const { theme, resolvedTheme, toggleTheme } = useTheme();
 
   const pathSegments = location.pathname.split("/").filter(Boolean);
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-8 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-xs">
+    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-xs transition-colors">
       {/* Left: Mobile hamburger & Breadcrumbs */}
       <div className="flex items-center gap-3">
         <button
           onClick={onOpenMobile}
-          className="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+          className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5" />
@@ -40,13 +42,13 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenMobile }) => {
 
         {/* Breadcrumb Navigation */}
         <nav aria-label="Breadcrumb" className="flex items-center text-sm font-medium">
-          <Link to="/" className="text-slate-500 hover:text-blue-600 transition-colors">
+          <Link to="/" className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
             Portal
           </Link>
           {pathSegments.length === 0 ? (
             <>
               <ChevronRight className="w-4 h-4 text-slate-400 mx-1.5" />
-              <span className="text-slate-900 font-semibold">Executive Dashboard</span>
+              <span className="text-slate-900 dark:text-slate-100 font-semibold">Executive Dashboard</span>
             </>
           ) : (
             pathSegments.map((segment, idx) => {
@@ -58,11 +60,11 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenMobile }) => {
                 <React.Fragment key={href}>
                   <ChevronRight className="w-4 h-4 text-slate-400 mx-1.5" />
                   {isLast ? (
-                    <span className="text-slate-900 font-semibold">{title}</span>
+                    <span className="text-slate-900 dark:text-slate-100 font-semibold">{title}</span>
                   ) : (
                     <Link
                       to={href}
-                      className="text-slate-500 hover:text-blue-600 transition-colors"
+                      className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                     >
                       {title}
                     </Link>
@@ -74,8 +76,31 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenMobile }) => {
         </nav>
       </div>
 
-      {/* Right: Socket Status & User Controls */}
-      <div className="flex items-center gap-3">
+      {/* Right: Theme Toggle, Design System, Socket Status & User Controls */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Design System Quick Link */}
+        <Link
+          to="/design-system"
+          className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors"
+          title="Open Design System Component Showcase"
+        >
+          <Palette className="w-3.5 h-3.5 text-indigo-500" />
+          <span>Design System</span>
+        </Link>
+
+        {/* Theme Toggle Button (Light / Dark / System) */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500"
+          title={`Theme: ${theme} (Click to toggle)`}
+          aria-label={`Toggle theme, current is ${resolvedTheme}`}
+        >
+          {resolvedTheme === "dark" ? (
+            <Sun className="w-4 h-4 text-amber-400" />
+          ) : (
+            <Moon className="w-4 h-4 text-slate-600" />
+          )}
+        </button>
         {/* Real-Time WebSocket Status Badge */}
         <div
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${

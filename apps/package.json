@@ -2,11 +2,15 @@
   "name": "attendance-tracker-apps",
   "version": "1.0.0",
   "private": true,
+  "description": "Vercel monorepo proxy workspace for Attendance Tracker web apps",
+  "bin": {
+    "vite": "./bin/vite.js"
+  },
   "scripts": {
-    "build": "cd .. && npm install && npm run build --workspace=@vorldx/web"
+    "build": "cd .. && npm install && npm run build:web",
+    "vite": "node ./bin/vite.js"
   },
   "dependencies": {
     "vite": "^6.1.0"
   }
 }
-
