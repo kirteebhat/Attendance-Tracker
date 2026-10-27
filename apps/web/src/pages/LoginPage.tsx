@@ -49,7 +49,7 @@ type SocketAuthStatus =
   | "LOCKED";
 
 export const LoginPage: React.FC = () => {
-  const { login, requestStaffOtp, verifyStaffOtp } = useAuth();
+  const { login, requestStaffOtp, verifyStaffOtp, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
