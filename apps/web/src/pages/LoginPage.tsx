@@ -652,6 +652,7 @@ export const LoginPage: React.FC = () => {
                     <div className="truncate">
                       <span className="block font-semibold">Admin Staff</span>
                       <span className="font-mono text-[10px] text-slate-400">+91 9876543210</span>
+                      <span className="font-mono text-[10px] text-cyan-500 dark:text-cyan-400 font-semibold block">Code: 123456</span>
                     </div>
                   </button>
                   <button
@@ -663,9 +664,14 @@ export const LoginPage: React.FC = () => {
                     <div className="truncate">
                       <span className="block font-semibold">HR Staff</span>
                       <span className="font-mono text-[10px] text-slate-400">+91 9876543211</span>
+                      <span className="font-mono text-[10px] text-cyan-500 dark:text-cyan-400 font-semibold block">Code: 123456</span>
                     </div>
                   </button>
                 </div>
+                <p className="text-[11px] text-slate-400 mt-2.5 text-center leading-relaxed">
+                  💡 <span className="font-semibold text-slate-300">Staff OTP Demo Code:</span>{" "}
+                  <span className="font-mono font-bold text-cyan-400">123456</span>. Real SMS requires paid telecom gateway credits; use <span className="font-mono font-semibold">123456</span> to sign in.
+                </p>
               </div>
             </div>
           )}
