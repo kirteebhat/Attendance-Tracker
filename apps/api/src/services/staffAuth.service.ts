@@ -327,7 +327,7 @@ export class StaffAuthService {
       }
       if (demoUser) {
         if (demoUser.lockoutUntil && demoUser.lockoutUntil.getTime() > Date.now()) {
-          demoUser.lockoutUntil = undefined;
+          demoUser.lockoutUntil = null;
           demoUser.failedLoginAttempts = 0;
           await demoUser.save();
         }

@@ -36,6 +36,7 @@ export const SocketEvent = {
   LEAVE_BALANCE_UPDATED: "leave.balance_updated",
 
   // Calendar & holiday events
+  CALENDAR_UPDATED: "calendar.updated",
   CALENDAR_EVENT_CREATED: "calendar.event_created",
   CALENDAR_EVENT_UPDATED: "calendar.event_updated",
   CALENDAR_EVENT_DELETED: "calendar.event_deleted",

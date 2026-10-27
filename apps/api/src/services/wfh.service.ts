@@ -4,10 +4,10 @@ import {
   IWfhRequest,
   Employee,
   AttendanceRecord,
-  Holiday,
   AuditEvent,
 } from "../models";
 import { policyService } from "./policy.service";
+import { calendarService } from "./calendar.service";
 import { eventEmitterService } from "./eventEmitter.service";
 import { AppError } from "../utils/AppError";
 import {
@@ -17,8 +17,6 @@ import {
   WorkType,
   getDateKey,
   addDaysToDateKey,
-  isWorkday,
-  isHoliday,
   WfhFilterQuery,
 } from "@vorldx/shared";
 
@@ -178,18 +176,9 @@ export async function createWfhRequest(
     }
   }
 
-  // 3. Prevent requesting on weekends / non-workdays
-  if (policy.workdays && !isWorkday(data.dateKey, policy.workdays, timezone)) {
-    throw new AppError(
-      400,
-      ApiErrorCode.ERR_NON_WORKING_DAY,
-      "Today is a non-working weekend or company holiday. Office attendance is not required."
-    );
-  }
-
-  // 4. Prevent requesting on official company holidays
-  const holidays = await Holiday.find({});
-  if (isHoliday(data.dateKey, holidays, timezone)) {
+  // 3. Prevent requesting on non-workdays, weekly-offs, or company holidays via unified CalendarService
+  const dayType = await calendarService.getDayType(data.dateKey, timezone, policy.workdays);
+  if (dayType !== "workday") {
     throw new AppError(
       400,
       ApiErrorCode.ERR_NON_WORKING_DAY,

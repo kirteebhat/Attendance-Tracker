@@ -5,7 +5,6 @@ import {
   Employee,
   QrChallenge,
   User,
-  Holiday,
   WfhRequest,
   AuditEvent,
   ICorrectionHistoryEntry,
@@ -13,6 +12,7 @@ import {
 import * as qrService from "./qr.service";
 import { policyService } from "./policy.service";
 import { eventEmitterService } from "./eventEmitter.service";
+import { calendarService } from "./calendar.service";
 import { AppError } from "../utils/AppError";
 import {
   ApiErrorCode,
@@ -21,8 +21,6 @@ import {
   getDateKey,
   addDaysToDateKey,
   isLate,
-  isHoliday,
-  isWorkday,
   WfhStatus,
   AttendanceFilterQuery,
   AttendanceCorrectionRequest,
@@ -966,26 +964,18 @@ export async function evaluateAbsenceAndIncompleteJob(
     }
   }
 
-  // 2. Non-workday exclusion
-  if (policy.workdays && !isWorkday(dateKey, policy.workdays, timezone)) {
+  // 2. Unified Calendar Check: exclude weekly-off, public holidays, and company off-days
+  const dayType = await calendarService.getDayType(dateKey, timezone, policy.workdays);
+  if (dayType !== "workday") {
+    const isHoliday = dayType === "public-holiday" || dayType === "company-off-day";
     return {
       evaluatedDateKey: dateKey,
       absenteesMarked: 0,
       incompleteMarked: 0,
       skipped: true,
-      message: `Target date ${dateKey} is a non-working weekend day. No absentees marked.`,
-    };
-  }
-
-  // 3. Official holiday exclusion
-  const holidays = await Holiday.find({});
-  if (isHoliday(dateKey, holidays, timezone)) {
-    return {
-      evaluatedDateKey: dateKey,
-      absenteesMarked: 0,
-      incompleteMarked: 0,
-      skipped: true,
-      message: `Target date ${dateKey} is an official company holiday. No absentees marked.`,
+      message: isHoliday
+        ? `Target date ${dateKey} is an official company holiday. No absentees marked.`
+        : `Target date ${dateKey} is a non-working weekend day. No absentees marked.`,
     };
   }
 

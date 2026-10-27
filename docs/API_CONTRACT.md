@@ -1717,7 +1717,7 @@ Mounted under `/reports`, `/api/reports`, and `/api/admin/reports`. All endpoint
 
 #### 7.2.1 `GET /api/calendar/events`
 - **Role**: `Authenticated (All)`
-- **Query Params**: `startDate` (ISO), `endDate` (ISO), `type` (optional: `holiday|companyOffDay|meeting|event`)
+- **Query Params**: `startDate` (ISO), `endDate` (ISO), `type` (optional: `holiday|companyOffDay|meeting|event`), `year` (number)
 - **Response (200 OK)**:
   ```json
   {
@@ -1737,18 +1737,84 @@ Mounted under `/reports`, `/api/reports`, and `/api/admin/reports`. All endpoint
   }
   ```
 
-#### 7.2.2 `POST /api/calendar/import`
+#### 7.2.2 `POST /api/calendar/events`
 - **Role**: `HR` / `ADMIN`
-- **Description**: Imports holidays and off-days via standard iCal (.ics) or JSON format.
-- **Request Body**: `{ "format": "json", "events": [ ... ] }`
+- **Description**: Creates a new calendar event (holiday, company off day, meeting, or event) with audit logging and `calendar.updated` socket broadcast.
+- **Request Body**:
+  ```json
+  {
+    "type": "holiday",
+    "title": "New Year Day",
+    "startDate": "2027-01-01T00:00:00.000Z",
+    "endDate": "2027-01-01T23:59:59.999Z",
+    "isFullDay": true
+  }
+  ```
+- **Response (201 Created)**: Returns created `CalendarEvent` object.
+
+#### 7.2.3 `GET /api/calendar/day-type`
+- **Role**: `Authenticated (All)`
+- **Query Params**: `date` (`YYYY-MM-DD` or ISO string), `timezone` (optional, default: `Asia/Kolkata`)
 - **Response (200 OK)**:
   ```json
   {
     "success": true,
-    "importedCount": 14,
+    "dateKey": "2026-01-26",
+    "timezone": "Asia/Kolkata",
+    "dayType": "public-holiday",
+    "isWorkingDay": false
+  }
+  ```
+
+#### 7.2.4 `GET /api/calendar/working-days`
+- **Role**: `Authenticated (All)`
+- **Query Params**: `start` (`YYYY-MM-DD`), `end` (`YYYY-MM-DD`), `timezone` (optional)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "start": "2026-01-01",
+    "end": "2026-01-31",
+    "timezone": "Asia/Kolkata",
+    "workingDaysCount": 21
+  }
+  ```
+
+#### 7.2.5 `GET /api/calendar/next-working-day`
+- **Role**: `Authenticated (All)`
+- **Query Params**: `date` (`YYYY-MM-DD`), `timezone` (optional)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "fromDate": "2026-01-23",
+    "nextWorkingDay": "2026-01-27"
+  }
+  ```
+
+#### 7.2.6 `GET /api/calendar/holidays/preview`
+- **Role**: `HR` / `ADMIN`
+- **Query Params**: `year` (optional, default: current year), `country` (optional, default: `IN`)
+- **Description**: Previews holidays from configured provider (`stub` or `public`) with conflict detection against existing manual/imported events before committing.
+- **Response (200 OK)**: Returns preview list with status `to_create`, `already_exists`, or `skip_manual_conflict`.
+
+#### 7.2.7 `POST /api/calendar/holidays/import`
+- **Role**: `HR` / `ADMIN`
+- **Description**: Imports holidays from external provider adapter. Never overwrites manual entries and marks imported items with `source: "imported"`.
+- **Request Body**: `{ "year": 2026, "country": "IN" }`
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "importedCount": 10,
     "skippedCount": 2
   }
   ```
+
+#### 7.2.8 `GET /api/calendar/export.ics`
+- **Role**: `Authenticated (All)`
+- **Query Params**: `year` (optional), `types` (comma-separated, e.g. `holiday,companyOffDay`)
+- **Description**: Streams RFC 5545 compliant `.ics` calendar file for subscription in Outlook, Google Calendar, and Apple Calendar.
 
 ---
 
@@ -2025,7 +2091,7 @@ Mounted under `/reports`, `/api/reports`, and `/api/admin/reports`. All endpoint
 
 #### 7.2.1 `GET /api/calendar/events`
 - **Role**: `Authenticated (All)`
-- **Query Params**: `startDate` (ISO), `endDate` (ISO), `type` (optional: `holiday|companyOffDay|meeting|event`)
+- **Query Params**: `startDate` (ISO), `endDate` (ISO), `type` (optional: `holiday|companyOffDay|meeting|event`), `year` (number)
 - **Response (200 OK)**:
   ```json
   {
@@ -2045,18 +2111,84 @@ Mounted under `/reports`, `/api/reports`, and `/api/admin/reports`. All endpoint
   }
   ```
 
-#### 7.2.2 `POST /api/calendar/import`
+#### 7.2.2 `POST /api/calendar/events`
 - **Role**: `HR` / `ADMIN`
-- **Description**: Imports holidays and off-days via standard iCal (.ics) or JSON format.
-- **Request Body**: `{ "format": "json", "events": [ ... ] }`
+- **Description**: Creates a new calendar event (holiday, company off day, meeting, or event) with audit logging and `calendar.updated` socket broadcast.
+- **Request Body**:
+  ```json
+  {
+    "type": "holiday",
+    "title": "New Year Day",
+    "startDate": "2027-01-01T00:00:00.000Z",
+    "endDate": "2027-01-01T23:59:59.999Z",
+    "isFullDay": true
+  }
+  ```
+- **Response (201 Created)**: Returns created `CalendarEvent` object.
+
+#### 7.2.3 `GET /api/calendar/day-type`
+- **Role**: `Authenticated (All)`
+- **Query Params**: `date` (`YYYY-MM-DD` or ISO string), `timezone` (optional, default: `Asia/Kolkata`)
 - **Response (200 OK)**:
   ```json
   {
     "success": true,
-    "importedCount": 14,
+    "dateKey": "2026-01-26",
+    "timezone": "Asia/Kolkata",
+    "dayType": "public-holiday",
+    "isWorkingDay": false
+  }
+  ```
+
+#### 7.2.4 `GET /api/calendar/working-days`
+- **Role**: `Authenticated (All)`
+- **Query Params**: `start` (`YYYY-MM-DD`), `end` (`YYYY-MM-DD`), `timezone` (optional)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "start": "2026-01-01",
+    "end": "2026-01-31",
+    "timezone": "Asia/Kolkata",
+    "workingDaysCount": 21
+  }
+  ```
+
+#### 7.2.5 `GET /api/calendar/next-working-day`
+- **Role**: `Authenticated (All)`
+- **Query Params**: `date` (`YYYY-MM-DD`), `timezone` (optional)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "fromDate": "2026-01-23",
+    "nextWorkingDay": "2026-01-27"
+  }
+  ```
+
+#### 7.2.6 `GET /api/calendar/holidays/preview`
+- **Role**: `HR` / `ADMIN`
+- **Query Params**: `year` (optional, default: current year), `country` (optional, default: `IN`)
+- **Description**: Previews holidays from configured provider (`stub` or `public`) with conflict detection against existing manual/imported events before committing.
+- **Response (200 OK)**: Returns preview list with status `to_create`, `already_exists`, or `skip_manual_conflict`.
+
+#### 7.2.7 `POST /api/calendar/holidays/import`
+- **Role**: `HR` / `ADMIN`
+- **Description**: Imports holidays from external provider adapter. Never overwrites manual entries and marks imported items with `source: "imported"`.
+- **Request Body**: `{ "year": 2026, "country": "IN" }`
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "importedCount": 10,
     "skippedCount": 2
   }
   ```
+
+#### 7.2.8 `GET /api/calendar/export.ics`
+- **Role**: `Authenticated (All)`
+- **Query Params**: `year` (optional), `types` (comma-separated, e.g. `holiday,companyOffDay`)
+- **Description**: Streams RFC 5545 compliant `.ics` calendar file for subscription in Outlook, Google Calendar, and Apple Calendar.
 
 ---
 

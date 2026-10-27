@@ -23,6 +23,7 @@ export declare const SocketEvent: {
     readonly LEAVE_REQUESTED: "leave.requested";
     readonly LEAVE_DECIDED: "leave.decided";
     readonly LEAVE_BALANCE_UPDATED: "leave.balance_updated";
+    readonly CALENDAR_UPDATED: "calendar.updated";
     readonly CALENDAR_EVENT_CREATED: "calendar.event_created";
     readonly CALENDAR_EVENT_UPDATED: "calendar.event_updated";
     readonly CALENDAR_EVENT_DELETED: "calendar.event_deleted";

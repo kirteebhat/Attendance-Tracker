@@ -10,6 +10,7 @@ import { wfhRouter } from "./wfh.routes";
 import { dashboardRouter } from "./dashboard.routes";
 import { reportRouter } from "./report.routes";
 import { auditRouter } from "./audit.routes";
+import { calendarRouter } from "./calendar.routes";
 import featureFlagRoutes from "./featureFlag.routes";
 import extensionRoutes from "./extension.routes";
 import { AppError } from "../utils/AppError";
@@ -32,6 +33,10 @@ router.use(employeeRoutes);
 
 // Attendance Policy & Holiday endpoints
 router.use(policyRoutes);
+
+// Calendar & Corporate Events Engine
+router.use("/api/calendar", calendarRouter);
+router.use("/calendar", calendarRouter);
 
 // Office QR Display & Terminal endpoints (supports both /api/displays and /api/terminals)
 router.use("/api/displays", qrRouter);

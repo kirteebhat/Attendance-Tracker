@@ -10,7 +10,9 @@ export type AuditEntityType =
   | "USER"
   | "STAFF_SESSION"
   | "TRUSTED_DEVICE"
-  | "FEATURE_FLAG";
+  | "FEATURE_FLAG"
+  | "CALENDAR"
+  | "CALENDAR_EVENT";
 
 export interface IAuditEvent extends Document {
   _id: Types.ObjectId;
@@ -41,6 +43,8 @@ const AuditEventSchema = new Schema<IAuditEvent>(
         "STAFF_SESSION",
         "TRUSTED_DEVICE",
         "FEATURE_FLAG",
+        "CALENDAR",
+        "CALENDAR_EVENT",
       ],
       required: true,
       index: true,

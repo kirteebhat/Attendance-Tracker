@@ -383,8 +383,8 @@ describe("Real-Time Socket.IO Protocol & Event Architecture", () => {
         1200
       );
 
-      // Target next Monday (ensures workday and advance notice)
-      const futureDateKey = "2026-10-26";
+      // Target future Monday (ensures workday and advance notice)
+      const futureDateKey = "2026-11-02";
 
       const res = await request(app)
         .post("/api/wfh/requests")
@@ -419,7 +419,7 @@ describe("Real-Time Socket.IO Protocol & Event Architecture", () => {
       const empASocket = await connectClient({ token: empAToken });
       const empBSocket = await connectClient({ token: empBToken });
 
-      const futureDateKey = "2026-10-27";
+      const futureDateKey = "2026-11-03";
       const createRes = await request(app)
         .post("/api/wfh/requests")
         .set("Authorization", `Bearer ${empAToken}`)

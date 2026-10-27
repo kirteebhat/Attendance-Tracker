@@ -47,6 +47,8 @@ const EnvSchema = z.object({
     .default(true),
   OTP_EXPIRY_MINUTES: z.coerce.number().int().positive().default(10),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  HOLIDAY_PROVIDER: z.string().default("stub"),
+  HOLIDAY_DEFAULT_COUNTRY: z.string().default("IN"),
   // Extension Feature Flags (defaults from environment, overridable in DB by Admin)
   FEATURE_FLAG_LEAVE: z
     .preprocess((val) => val === "true" || val === true, z.boolean())

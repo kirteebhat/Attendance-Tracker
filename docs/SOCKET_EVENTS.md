@@ -299,6 +299,26 @@ interface LeaveBalanceUpdatedPayload {
 
 ### 4.7 Calendar & Holiday Events
 
+#### `calendar.updated`
+- **Emitted When**: Any database write occurs to the calendar (event created, updated, deleted, or holidays imported).
+- **Target Rooms**: Global broadcast to all connected clients (`all`, `hr`).
+```typescript
+interface CalendarUpdatedPayload {
+  action: "create" | "update" | "delete" | "import";
+  event?: {
+    id: string;
+    type: "holiday" | "companyOffDay" | "meeting" | "event";
+    title: string;
+    startDate: string;
+    endDate: string;
+    isFullDay: boolean;
+    source: "manual" | "imported";
+  };
+  count?: number; // for bulk import operations
+  timestamp: string;
+}
+```
+
 #### `calendar.event_created`
 - **Emitted When**: Administrator adds a public holiday, company off-day, or corporate event.
 - **Target Rooms**: `all`, `hr`.
