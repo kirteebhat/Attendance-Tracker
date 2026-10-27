@@ -6,6 +6,7 @@ import {
   QrChallenge,
   User,
   WfhRequest,
+  LeaveRequest,
   AuditEvent,
   ICorrectionHistoryEntry,
 } from "../models";
@@ -992,12 +993,27 @@ export async function evaluateAbsenceAndIncompleteJob(
       status: WfhStatus.APPROVED,
     });
 
+    // Check if employee has an approved Leave request covering this date
+    const dateStart = new Date(`${dateKey}T00:00:00.000Z`);
+    const dateEnd = new Date(`${dateKey}T23:59:59.999Z`);
+    const approvedLeave = await LeaveRequest.findOne({
+      employee: emp._id,
+      status: "APPROVED",
+      startDate: { $lte: dateEnd },
+      endDate: { $gte: dateStart },
+    });
+
     const existingRecord = await AttendanceRecord.findOne({
       employee: emp._id,
       dateKey,
     });
 
     if (existingRecord) {
+      // If already marked as ON_LEAVE, skip absence evaluation
+      if (existingRecord.status === AttendanceStatus.ON_LEAVE) {
+        continue;
+      }
+
       // Mark forgotten check-outs as "INCOMPLETE"
       if (
         existingRecord.checkInTime &&
@@ -1027,8 +1043,8 @@ export async function evaluateAbsenceAndIncompleteJob(
           message: "Marked as incomplete checkout by daily cutoff job.",
         });
       }
-    } else if (!approvedWfh) {
-      // No check-in punch and no approved WFH -> Mark as ABSENT
+    } else if (!approvedWfh && !approvedLeave) {
+      // No check-in punch, no approved WFH, and no approved leave -> Mark as ABSENT
       // Concurrency-safe atomic upsert with $setOnInsert guarantees idempotency
       const result = await AttendanceRecord.updateOne(
         { employee: emp._id, dateKey },

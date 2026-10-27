@@ -4,18 +4,6 @@ import { authenticate } from "../middleware/auth";
 
 const router = Router();
 
-// 1. Leave Requests and Approvals Module
-router.use("/leave", requireFeatureFlag("leave"));
-router.get("/leave/requests", authenticate, (_req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    module: "leave",
-    status: "ACTIVE",
-    data: [],
-    message: "Leave requests and approvals module is enabled.",
-  });
-});
-
 // 2. Announcements & Auto-Generated Broadcasts Module
 router.use("/announcements", requireFeatureFlag("announcements"));
 router.get("/announcements", authenticate, (_req: Request, res: Response) => {

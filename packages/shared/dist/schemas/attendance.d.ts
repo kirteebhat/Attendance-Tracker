@@ -53,9 +53,10 @@ export declare const AttendanceRecordSchema: z.ZodObject<{
     createdAt: z.ZodString;
     updatedAt: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    employeeId: string;
     status: AttendanceStatus;
     _id: string;
+    createdAt: string;
+    employeeId: string;
     dateKey: string;
     checkInTime: string | null;
     checkOutTime: string | null;
@@ -64,19 +65,19 @@ export declare const AttendanceRecordSchema: z.ZodObject<{
     lateMinutes: number;
     isMissingCheckout: boolean;
     isManuallyCorrected: boolean;
-    createdAt: string;
+    updatedAt?: string | undefined;
     departmentId?: string | undefined;
     terminalId?: string | undefined;
     systemNotes?: string | undefined;
-    updatedAt?: string | undefined;
 }, {
-    employeeId: string;
     status: AttendanceStatus;
     _id: string;
+    createdAt: string;
+    employeeId: string;
     dateKey: string;
     checkInTime: string | null;
     checkOutTime: string | null;
-    createdAt: string;
+    updatedAt?: string | undefined;
     departmentId?: string | undefined;
     durationMinutes?: number | undefined;
     isLate?: boolean | undefined;
@@ -85,7 +86,6 @@ export declare const AttendanceRecordSchema: z.ZodObject<{
     isManuallyCorrected?: boolean | undefined;
     terminalId?: string | undefined;
     systemNotes?: string | undefined;
-    updatedAt?: string | undefined;
 }>;
 export type AttendanceRecord = z.infer<typeof AttendanceRecordSchema>;
 export declare const AttendanceTodayResponseSchema: z.ZodObject<{
@@ -160,9 +160,9 @@ export declare const AttendanceHistoryQuerySchema: z.ZodObject<{
     month?: string | undefined;
 }, {
     status?: AttendanceStatus | undefined;
-    month?: string | undefined;
     page?: number | undefined;
     limit?: number | undefined;
+    month?: string | undefined;
 }>;
 export type AttendanceHistoryQuery = z.infer<typeof AttendanceHistoryQuerySchema>;
 export declare const AttendanceStatsResponseSchema: z.ZodObject<{
@@ -210,34 +210,34 @@ export declare const AttendanceFilterQuerySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     page: number;
     limit: number;
-    sortBy: "employeeId" | "status" | "dateKey" | "createdAt";
+    sortBy: "status" | "createdAt" | "employeeId" | "dateKey";
     sortOrder: "asc" | "desc";
-    employeeId?: string | undefined;
     status?: AttendanceStatus | undefined;
-    department?: string | undefined;
-    dateKey?: string | undefined;
+    employee?: string | undefined;
     startDate?: string | undefined;
     endDate?: string | undefined;
+    employeeId?: string | undefined;
+    department?: string | undefined;
+    search?: string | undefined;
+    dateKey?: string | undefined;
     from?: string | undefined;
     to?: string | undefined;
-    employee?: string | undefined;
     workType?: string | undefined;
-    search?: string | undefined;
 }, {
-    employeeId?: string | undefined;
     status?: AttendanceStatus | undefined;
+    employee?: string | undefined;
+    startDate?: string | undefined;
+    endDate?: string | undefined;
+    employeeId?: string | undefined;
     department?: string | undefined;
-    dateKey?: string | undefined;
+    search?: string | undefined;
     page?: number | undefined;
     limit?: number | undefined;
-    startDate?: string | undefined;
-    endDate?: string | undefined;
+    dateKey?: string | undefined;
     from?: string | undefined;
     to?: string | undefined;
-    employee?: string | undefined;
     workType?: string | undefined;
-    search?: string | undefined;
-    sortBy?: "employeeId" | "status" | "dateKey" | "createdAt" | undefined;
+    sortBy?: "status" | "createdAt" | "employeeId" | "dateKey" | undefined;
     sortOrder?: "asc" | "desc" | undefined;
 }>;
 export type AttendanceFilterQuery = z.infer<typeof AttendanceFilterQuerySchema>;

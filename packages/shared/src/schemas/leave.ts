@@ -95,9 +95,49 @@ export const CreateLeaveRequestInputSchema = z.object({
 });
 export type CreateLeaveRequestInput = z.infer<typeof CreateLeaveRequestInputSchema>;
 
+export const UpdateLeaveTypeSchema = CreateLeaveTypeSchema.partial();
+export type UpdateLeaveTypeInput = z.infer<typeof UpdateLeaveTypeSchema>;
+
 export const DecideLeaveRequestInputSchema = z.object({
   status: z.enum(["APPROVED", "REJECTED"]),
   decisionNote: z.string().max(500).optional(),
 });
 export type DecideLeaveRequestInput = z.infer<typeof DecideLeaveRequestInputSchema>;
+
+export const BulkDecideLeaveRequestInputSchema = z.object({
+  requestIds: z.array(z.string().min(1)).min(1, "At least one request ID is required"),
+  status: z.enum(["APPROVED", "REJECTED"]),
+  decisionNote: z.string().max(500).optional(),
+});
+export type BulkDecideLeaveRequestInput = z.infer<typeof BulkDecideLeaveRequestInputSchema>;
+
+export const AdjustLeaveBalanceInputSchema = z.object({
+  employeeId: z.string().min(1, "Employee ID is required"),
+  typeId: z.string().min(1, "Leave Type ID is required"),
+  year: z.number().int().min(2020).max(2100).default(() => new Date().getFullYear()),
+  allotted: z.number().nonnegative().optional(),
+  carriedOver: z.number().nonnegative().optional(),
+  reason: z.string().min(3, "Reason for adjustment is required").max(300),
+});
+export type AdjustLeaveBalanceInput = z.infer<typeof AdjustLeaveBalanceInputSchema>;
+
+export const CarryForwardBalanceInputSchema = z.object({
+  fromYear: z.number().int().min(2020).max(2100),
+  toYear: z.number().int().min(2020).max(2100),
+  employeeId: z.string().optional(),
+});
+export type CarryForwardBalanceInput = z.infer<typeof CarryForwardBalanceInputSchema>;
+
+export const LeaveFilterQuerySchema = z.object({
+  status: z.enum(["ALL", "PENDING", "APPROVED", "REJECTED", "CANCELLED"]).optional(),
+  employeeId: z.string().optional(),
+  department: z.string().optional(),
+  type: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  search: z.string().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+export type LeaveFilterQuery = z.infer<typeof LeaveFilterQuerySchema>;
 

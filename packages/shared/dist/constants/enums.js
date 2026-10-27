@@ -28,6 +28,7 @@ var AttendanceStatus;
     AttendanceStatus["WEEKEND"] = "WEEKEND";
     AttendanceStatus["HOLIDAY"] = "HOLIDAY";
     AttendanceStatus["INCOMPLETE"] = "INCOMPLETE";
+    AttendanceStatus["ON_LEAVE"] = "ON_LEAVE";
 })(AttendanceStatus || (exports.AttendanceStatus = AttendanceStatus = {}));
 /**
  * Daily punch direction

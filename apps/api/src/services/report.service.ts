@@ -84,6 +84,7 @@ export async function getAttendanceSummaryReport(
   let halfDayCount = 0;
   let wfhCount = 0;
   let absentCount = 0;
+  let leaveCount = 0;
   let totalMinutes = 0;
 
   for (const r of allFiltered) {
@@ -91,6 +92,7 @@ export async function getAttendanceSummaryReport(
     if (r.status === AttendanceStatus.HALF_DAY) halfDayCount++;
     if (r.isWfh || r.status === AttendanceStatus.WFH_APPROVED) wfhCount++;
     if (r.status === AttendanceStatus.ABSENT) absentCount++;
+    if (r.status === AttendanceStatus.ON_LEAVE) leaveCount++;
     if (
       [
         AttendanceStatus.PRESENT,
@@ -114,6 +116,7 @@ export async function getAttendanceSummaryReport(
       halfDayCount,
       wfhCount,
       absentCount,
+      leaveCount,
       totalHours: Math.round((totalMinutes / 60) * 10) / 10,
     },
     pagination: {
@@ -187,6 +190,7 @@ export async function getEmployeeWiseReport(query: ReportFilterQuery) {
     let halfDays = 0;
     let wfhDays = 0;
     let absentDays = 0;
+    let leaveDays = 0;
     let totalWorkMinutes = 0;
 
     for (const r of empRecords) {
@@ -194,6 +198,7 @@ export async function getEmployeeWiseReport(query: ReportFilterQuery) {
       if (r.status === AttendanceStatus.HALF_DAY) halfDays++;
       if (r.isWfh || r.status === AttendanceStatus.WFH_APPROVED) wfhDays++;
       if (r.status === AttendanceStatus.ABSENT) absentDays++;
+      if (r.status === AttendanceStatus.ON_LEAVE) leaveDays++;
       if (
         [
           AttendanceStatus.PRESENT,
@@ -223,6 +228,7 @@ export async function getEmployeeWiseReport(query: ReportFilterQuery) {
       halfDays,
       wfhDays,
       absentDays,
+      leaveDays,
       totalWorkMinutes,
       totalWorkHours: Math.round((totalWorkMinutes / 60) * 10) / 10,
       attendanceRate,
@@ -293,12 +299,14 @@ export async function getDepartmentWiseReport(query: ReportFilterQuery) {
     let lateCount = 0;
     let wfhCount = 0;
     let absentCount = 0;
+    let leaveCount = 0;
     let totalWorkMinutes = 0;
 
     for (const r of deptRecords) {
       if (r.isLate || r.status === AttendanceStatus.LATE) lateCount++;
       if (r.isWfh || r.status === AttendanceStatus.WFH_APPROVED) wfhCount++;
       if (r.status === AttendanceStatus.ABSENT) absentCount++;
+      if (r.status === AttendanceStatus.ON_LEAVE) leaveCount++;
       if (
         [
           AttendanceStatus.PRESENT,
@@ -324,6 +332,7 @@ export async function getDepartmentWiseReport(query: ReportFilterQuery) {
       lateCount,
       wfhCount,
       absentCount,
+      leaveCount,
       totalWorkMinutes,
       totalWorkHours: Math.round((totalWorkMinutes / 60) * 10) / 10,
       attendanceRate,

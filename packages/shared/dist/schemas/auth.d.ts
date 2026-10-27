@@ -103,19 +103,19 @@ export declare const AuthUserSchema: z.ZodObject<{
     designation: z.ZodOptional<z.ZodString>;
     isVerified: z.ZodBoolean;
 }, "strip", z.ZodTypeAny, {
-    employeeId: string;
-    email: string;
     _id: string;
     name: string;
+    employeeId: string;
+    email: string;
     role: UserRole;
     isVerified: boolean;
     department?: string | undefined;
     designation?: string | undefined;
 }, {
-    employeeId: string;
-    email: string;
     _id: string;
     name: string;
+    employeeId: string;
+    email: string;
     role: UserRole;
     isVerified: boolean;
     department?: string | undefined;

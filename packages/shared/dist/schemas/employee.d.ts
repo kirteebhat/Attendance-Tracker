@@ -17,15 +17,15 @@ export declare const EmployeeRecordSchema: z.ZodObject<{
     createdAt: z.ZodString;
     updatedAt: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    employeeId: string;
-    email: string;
     _id: string;
     name: string;
-    role: UserRole;
+    createdAt: string;
+    employeeId: string;
     department: string;
+    email: string;
+    role: UserRole;
     designation: string;
     isVerified: boolean;
-    createdAt: string;
     workType: WorkType;
     joiningDate: string;
     isRegistered: boolean;
@@ -33,15 +33,15 @@ export declare const EmployeeRecordSchema: z.ZodObject<{
     shiftId?: string | undefined;
     shiftName?: string | undefined;
 }, {
-    employeeId: string;
-    email: string;
     _id: string;
     name: string;
-    role: UserRole;
+    createdAt: string;
+    employeeId: string;
     department: string;
+    email: string;
+    role: UserRole;
     designation: string;
     isVerified: boolean;
-    createdAt: string;
     joiningDate: string;
     isRegistered: boolean;
     updatedAt?: string | undefined;
@@ -61,20 +61,20 @@ export declare const EmployeeCreateSchema: z.ZodObject<{
     shiftId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     joiningDate: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    employeeId: string;
-    email: string;
     name: string;
+    employeeId: string;
     department: string;
+    email: string;
     designation: string;
     workType: WorkType;
     joiningDate: string;
     role?: UserRole | undefined;
     shiftId?: string | null | undefined;
 }, {
-    employeeId: string;
-    email: string;
     name: string;
+    employeeId: string;
     department: string;
+    email: string;
     designation: string;
     joiningDate: string;
     role?: UserRole | undefined;
@@ -93,21 +93,21 @@ export declare const EmployeeUpdateSchema: z.ZodObject<{
     shiftId: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodString>>>;
     joiningDate: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    employeeId?: string | undefined;
-    email?: string | undefined;
     name?: string | undefined;
-    role?: UserRole | undefined;
+    employeeId?: string | undefined;
     department?: string | undefined;
+    email?: string | undefined;
+    role?: UserRole | undefined;
     designation?: string | undefined;
     workType?: WorkType | undefined;
     shiftId?: string | null | undefined;
     joiningDate?: string | undefined;
 }, {
-    employeeId?: string | undefined;
-    email?: string | undefined;
     name?: string | undefined;
-    role?: UserRole | undefined;
+    employeeId?: string | undefined;
     department?: string | undefined;
+    email?: string | undefined;
+    role?: UserRole | undefined;
     designation?: string | undefined;
     workType?: WorkType | undefined;
     shiftId?: string | null | undefined;
@@ -140,26 +140,26 @@ export declare const EmployeeFilterQuerySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     page: number;
     limit: number;
-    sortBy: "employeeId" | "name" | "department" | "designation" | "createdAt" | "updatedAt" | "joiningDate";
+    sortBy: "name" | "createdAt" | "updatedAt" | "employeeId" | "department" | "designation" | "joiningDate";
     sortOrder: "asc" | "desc";
     status?: string | undefined;
+    isActive?: boolean | undefined;
     department?: string | undefined;
+    search?: string | undefined;
     designation?: string | undefined;
     workType?: WorkType | undefined;
-    search?: string | undefined;
-    isActive?: boolean | undefined;
     shiftId?: string | undefined;
 }, {
     status?: string | undefined;
+    isActive?: unknown;
     department?: string | undefined;
-    designation?: string | undefined;
+    search?: string | undefined;
     page?: number | undefined;
     limit?: number | undefined;
+    designation?: string | undefined;
     workType?: WorkType | undefined;
-    search?: string | undefined;
-    sortBy?: "employeeId" | "name" | "department" | "designation" | "createdAt" | "updatedAt" | "joiningDate" | undefined;
+    sortBy?: "name" | "createdAt" | "updatedAt" | "employeeId" | "department" | "designation" | "joiningDate" | undefined;
     sortOrder?: "asc" | "desc" | undefined;
-    isActive?: unknown;
     shiftId?: string | undefined;
 }>;
 export type EmployeeFilterQuery = z.infer<typeof EmployeeFilterQuerySchema>;

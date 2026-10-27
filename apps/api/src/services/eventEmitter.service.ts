@@ -58,6 +58,15 @@ export class EventEmitterService {
         case SocketEvent.STAFF_SECURITY_ALERT:
           this.emitStaffSecurityAlert(payload);
           break;
+        case SocketEvent.LEAVE_REQUESTED:
+          this.emitLeaveRequested(payload);
+          break;
+        case SocketEvent.LEAVE_DECIDED:
+          this.emitLeaveDecided(payload);
+          break;
+        case SocketEvent.LEAVE_BALANCE_UPDATED:
+          this.emitLeaveBalanceUpdated(payload);
+          break;
         default:
           io.emit(event, payload);
           break;
@@ -265,6 +274,62 @@ export class EventEmitterService {
       logger.debug(`[Socket] Emitted staff:security_alert to admin room`);
     } catch (err) {
       logger.error(`Failed to emit staff:security_alert:`, err);
+    }
+  }
+
+  /**
+   * Emits a new leave application event to the HR rooms and applicant
+   */
+  public emitLeaveRequested(payload: any): void {
+    const io = getSocketServer();
+    if (!io) return;
+
+    try {
+      if (payload.employeeId) {
+        io.to(SocketRoom.employee(payload.employeeId)).emit(SocketEvent.LEAVE_REQUESTED, payload);
+      }
+      io.to(SocketRoom.hr()).emit(SocketEvent.LEAVE_REQUESTED, payload);
+      io.to(SocketRoom.hrDashboard()).emit(SocketEvent.LEAVE_REQUESTED, payload);
+      logger.debug(`[Socket] Emitted leave.requested for ${payload.employeeId || payload.requestId}`);
+    } catch (err) {
+      logger.error(`Failed to emit leave.requested:`, err);
+    }
+  }
+
+  /**
+   * Emits a leave decision event (approved/rejected/cancelled) to employee and HR
+   */
+  public emitLeaveDecided(payload: any): void {
+    const io = getSocketServer();
+    if (!io) return;
+
+    try {
+      if (payload.employeeId) {
+        io.to(SocketRoom.employee(payload.employeeId)).emit(SocketEvent.LEAVE_DECIDED, payload);
+      }
+      io.to(SocketRoom.hr()).emit(SocketEvent.LEAVE_DECIDED, payload);
+      io.to(SocketRoom.hrDashboard()).emit(SocketEvent.LEAVE_DECIDED, payload);
+      logger.debug(`[Socket] Emitted leave.decided for ${payload.employeeId || payload.requestId} (${payload.status})`);
+    } catch (err) {
+      logger.error(`Failed to emit leave.decided:`, err);
+    }
+  }
+
+  /**
+   * Emits leave balance update to target employee and HR
+   */
+  public emitLeaveBalanceUpdated(payload: any): void {
+    const io = getSocketServer();
+    if (!io) return;
+
+    try {
+      if (payload.employeeId) {
+        io.to(SocketRoom.employee(payload.employeeId)).emit(SocketEvent.LEAVE_BALANCE_UPDATED, payload);
+      }
+      io.to(SocketRoom.hr()).emit(SocketEvent.LEAVE_BALANCE_UPDATED, payload);
+      logger.debug(`[Socket] Emitted leave.balance_updated for ${payload.employeeId}`);
+    } catch (err) {
+      logger.error(`Failed to emit leave.balance_updated:`, err);
     }
   }
 }

@@ -48,12 +48,12 @@ export declare const TerminalStatusUpdateRequestSchema: z.ZodObject<{
     reason: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     status?: TerminalStatus | undefined;
-    reason?: string | undefined;
     isActive?: boolean | undefined;
+    reason?: string | undefined;
 }, {
     status?: TerminalStatus | undefined;
-    reason?: string | undefined;
     isActive?: boolean | undefined;
+    reason?: string | undefined;
 }>;
 export type TerminalStatusUpdateRequest = z.infer<typeof TerminalStatusUpdateRequestSchema>;
 export declare const DisplayRegisterSchema: z.ZodObject<{
@@ -81,12 +81,12 @@ export declare const DisplayStatusUpdateSchema: z.ZodObject<{
     reason: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     status?: TerminalStatus | undefined;
-    reason?: string | undefined;
     isActive?: boolean | undefined;
+    reason?: string | undefined;
 }, {
     status?: TerminalStatus | undefined;
-    reason?: string | undefined;
     isActive?: boolean | undefined;
+    reason?: string | undefined;
 }>;
 export type DisplayStatusUpdate = z.infer<typeof DisplayStatusUpdateSchema>;
 export declare const QrTokenRequestSchema: z.ZodObject<{
@@ -157,10 +157,10 @@ export declare const TerminalRecordSchema: z.ZodObject<{
     status: TerminalStatus;
     _id: string;
     name: string;
-    terminalId: string;
-    createdAt: string;
-    location: string;
     isActive: boolean;
+    createdAt: string;
+    terminalId: string;
+    location: string;
     isPaired: boolean;
     updatedAt?: string | undefined;
     pairingCode?: string | undefined;
@@ -169,10 +169,10 @@ export declare const TerminalRecordSchema: z.ZodObject<{
 }, {
     _id: string;
     name: string;
-    terminalId: string;
-    createdAt: string;
-    location: string;
     isActive: boolean;
+    createdAt: string;
+    terminalId: string;
+    location: string;
     isPaired: boolean;
     status?: TerminalStatus | undefined;
     updatedAt?: string | undefined;

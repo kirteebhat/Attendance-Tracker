@@ -22,7 +22,8 @@ export declare enum AttendanceStatus {
     ABSENT = "ABSENT",
     WEEKEND = "WEEKEND",
     HOLIDAY = "HOLIDAY",
-    INCOMPLETE = "INCOMPLETE"
+    INCOMPLETE = "INCOMPLETE",
+    ON_LEAVE = "ON_LEAVE"
 }
 /**
  * Daily punch direction

@@ -24,6 +24,7 @@ export enum AttendanceStatus {
   WEEKEND = "WEEKEND",
   HOLIDAY = "HOLIDAY",
   INCOMPLETE = "INCOMPLETE",
+  ON_LEAVE = "ON_LEAVE",
 }
 
 /**

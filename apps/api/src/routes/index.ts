@@ -11,6 +11,7 @@ import { dashboardRouter } from "./dashboard.routes";
 import { reportRouter } from "./report.routes";
 import { auditRouter } from "./audit.routes";
 import { calendarRouter } from "./calendar.routes";
+import { leaveRouter } from "./leave.routes";
 import featureFlagRoutes from "./featureFlag.routes";
 import extensionRoutes from "./extension.routes";
 import { AppError } from "../utils/AppError";
@@ -37,6 +38,13 @@ router.use(policyRoutes);
 // Calendar & Corporate Events Engine
 router.use("/api/calendar", calendarRouter);
 router.use("/calendar", calendarRouter);
+
+// Leave Management Subsystem (protected by 'leave' feature flag)
+router.use("/api/leave", leaveRouter);
+router.use("/leave", leaveRouter);
+router.use("/api/leaves", leaveRouter);
+router.use("/leaves", leaveRouter);
+router.use("/api/admin/leave", leaveRouter);
 
 // Office QR Display & Terminal endpoints (supports both /api/displays and /api/terminals)
 router.use("/api/displays", qrRouter);

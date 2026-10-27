@@ -5,12 +5,12 @@ export declare const WfhCreateRequestSchema: z.ZodObject<{
     reason: z.ZodString;
     simulatedNow: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    dateKey: string;
     reason: string;
+    dateKey: string;
     simulatedNow?: string | undefined;
 }, {
-    dateKey: string;
     reason: string;
+    dateKey: string;
     simulatedNow?: string | undefined;
 }>;
 export type WfhCreateRequest = z.infer<typeof WfhCreateRequestSchema>;
@@ -39,27 +39,27 @@ export declare const WfhRequestRecordSchema: z.ZodObject<{
     createdAt: z.ZodString;
     updatedAt: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    employeeId: string;
     status: WfhStatus;
     _id: string;
-    dateKey: string;
     createdAt: string;
     reason: string;
-    department?: string | undefined;
+    employeeId: string;
+    dateKey: string;
     updatedAt?: string | undefined;
+    department?: string | undefined;
     employeeName?: string | undefined;
     reviewedBy?: string | undefined;
     reviewerRemarks?: string | undefined;
     reviewedAt?: string | undefined;
 }, {
-    employeeId: string;
     status: WfhStatus;
     _id: string;
-    dateKey: string;
     createdAt: string;
     reason: string;
-    department?: string | undefined;
+    employeeId: string;
+    dateKey: string;
     updatedAt?: string | undefined;
+    department?: string | undefined;
     employeeName?: string | undefined;
     reviewedBy?: string | undefined;
     reviewerRemarks?: string | undefined;
@@ -99,17 +99,17 @@ export declare const WfhFilterQuerySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     page: number;
     limit: number;
-    status?: WfhStatus | "ALL" | undefined;
+    status?: "ALL" | WfhStatus | undefined;
     department?: string | undefined;
-    month?: string | undefined;
     search?: string | undefined;
-}, {
-    status?: WfhStatus | "ALL" | undefined;
-    department?: string | undefined;
     month?: string | undefined;
+}, {
+    status?: "ALL" | WfhStatus | undefined;
+    department?: string | undefined;
+    search?: string | undefined;
     page?: number | undefined;
     limit?: number | undefined;
-    search?: string | undefined;
+    month?: string | undefined;
 }>;
 export type WfhFilterQuery = z.infer<typeof WfhFilterQuerySchema>;
 //# sourceMappingURL=wfh.d.ts.map

@@ -1616,100 +1616,91 @@ Mounted under `/reports`, `/api/reports`, and `/api/admin/reports`. All endpoint
 
 ## 7. Enterprise Extension API Specifications
 
-### 7.1 Leave Management System
+### 7.1 Leave Management System (Feature Flag: `leave`)
 
-#### 7.1.1 `GET /api/leaves/types`
-- **Role**: `Authenticated (All)`
-- **Description**: Returns all active leave types (e.g. Casual Leave, Sick Leave, Earned Leave) with quota and carry-forward configuration.
-- **Response (200 OK)**:
+> **Feature Flag Protection**: The entire Leave Management module is gated behind the `leave` feature flag via `requireFeatureFlag("leave")`. When disabled on an environment, all `/api/leave/*` endpoints return `404 Not Found`.
+
+#### 7.1.1 Configure Leave Types (HR / Admin)
+- **Endpoints**:
+  - `POST /api/leave/types` - Create a new leave type configuration
+  - `GET /api/leave/types` - List all leave types (`?includeInactive=true` for archived)
+  - `GET /api/leave/types/:id` - Retrieve single leave type
+  - `PATCH /api/leave/types/:id` (or `PUT`) - Update quota, carry-forward, half-day permission
+  - `DELETE /api/leave/types/:id` - Soft deactivate a leave type
+- **Role**: `HR` / `ADMIN` (Creation, update, and deletion); `Authenticated (All)` for listing
+- **Request Body (`POST /api/leave/types`)**:
   ```json
   {
-    "success": true,
-    "data": [
-      {
-        "_id": "6714c100...",
-        "name": "Casual Leave",
-        "code": "CL",
-        "paid": true,
-        "annualQuota": 12,
-        "carryForwardRule": { "allowed": true, "maxDays": 5, "expiryMonths": 3 },
-        "halfDayAllowed": true
-      }
-    ]
+    "name": "Privilege Leave",
+    "code": "PL",
+    "paid": true,
+    "annualQuota": 15,
+    "carryForwardRule": {
+      "allowed": true,
+      "maxDays": 10,
+      "expiryMonths": 6
+    },
+    "halfDayAllowed": true,
+    "description": "Annual earned privilege leave"
   }
   ```
+- **Auditing**: Records `AuditEvent` with `entityType: "LEAVE_TYPE"`.
 
-#### 7.1.2 `GET /api/leaves/balances`
-- **Role**: `Employee` (Own balances) / `HR` (Query with `?employeeId=...`)
-- **Description**: Returns annual leave entitlement, used, pending, and carried-over days for the requested year.
-- **Query Params**: `year` (defaults to current year)
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "year": 2026,
-    "data": [
-      {
-        "type": { "_id": "6714c100...", "name": "Casual Leave", "code": "CL" },
-        "allotted": 12,
-        "used": 3,
-        "pending": 1,
-        "carriedOver": 2,
-        "remaining": 10
-      }
-    ]
-  }
-  ```
+#### 7.1.2 Leave Balances & Rollover
+- **Endpoints**:
+  - `GET /api/leave/balances/my` (alias: `GET /api/leave/my-balances`) - Current employee's annual balances
+  - `GET /api/leave/balances` - HR directory overview of balances across employees with `year`, `department`, `employeeId` filters
+  - `POST /api/leave/balances/adjust` - HR manual adjustment of allotted/carriedOver quota with audit reason
+  - `POST /api/leave/balances/carry-forward` - Execute annual carry-forward rollover between years
+- **Balance Calculation Formula**:
+  $$\text{Available Balance} = (\text{allotted} + \text{carriedOver}) - (\text{used} + \text{pending})$$
+- **Auto-Initialization**: If an employee has no balance record for an active leave type in a queried year, the system automatically provisions an initial balance record based on `LeaveType.annualQuota`.
 
-#### 7.1.3 `POST /api/leaves/requests`
-- **Role**: `Employee`
-- **Description**: Submits a new leave request. Server calculates working days excluding public holidays and scheduled weekend off-days.
+#### 7.1.3 Apply for Leave (Employee)
+- **Endpoint**: `POST /api/leave/requests`
+- **Role**: `Employee` (or any authenticated user)
 - **Request Body**:
   ```json
   {
     "type": "6714c100...",
-    "startDate": "2026-05-11",
-    "endDate": "2026-05-13",
+    "startDate": "2026-11-09",
+    "endDate": "2026-11-13",
     "isHalfDay": false,
-    "reason": "Personal family function"
+    "halfDayType": "FIRST_HALF",
+    "reason": "Family holiday trip"
   }
   ```
-- **Response (201 Created)**:
-  ```json
-  {
-    "success": true,
-    "message": "Leave request submitted successfully",
-    "data": {
-      "_id": "6714c200...",
-      "employee": "6714c000...",
-      "type": "6714c100...",
-      "startDate": "2026-05-11T00:00:00.000Z",
-      "endDate": "2026-05-13T23:59:59.999Z",
-      "workingDays": 3,
-      "status": "PENDING"
-    }
-  }
-  ```
-- **Socket Event Dispatched**: `leave.requested` -> `hr`, `employee:${employeeId}`.
+- **Server Validations & Computations**:
+  1. **Working Days Calculation**: Uses `calendarService.countWorkingDays` to exclude weekends, public holidays, and company off-days. If `isHalfDay: true`, verifies `leaveType.halfDayAllowed === true` and assigns `0.5` days.
+  2. **Balance Sufficiency**: Requires $\text{workingDays} \le \text{Available Balance}$; throws `ERR_INSUFFICIENT_BALANCE` (400) if insufficient.
+  3. **Overlapping Leave**: Validates against any existing `PENDING` or `APPROVED` leave request for the employee; throws `ERR_OVERLAPPING_LEAVE` (409).
+  4. **WFH Conflict**: Checks for existing `APPROVED` Work From Home requests on any date in the range; throws `ERR_LEAVE_CONFLICT_WFH` (409).
+  5. **Past Date Rules**: Rejects backdated leave applications (`startDate < today`) with `ERR_LEAVE_PAST_DATE` (400).
+- **Atomic Balance Reservation**: Atomically increments `pending` by `workingDays`.
+- **Socket Events**: Dispatches `leave.requested` and `leave.balance_updated`.
 
-#### 7.1.4 `PATCH /api/leaves/requests/:id/decision`
-- **Role**: `HR` / `ADMIN`
-- **Request Body**:
-  ```json
-  {
-    "status": "APPROVED",
-    "decisionNote": "Approved as per team coverage schedule"
-  }
-  ```
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "message": "Leave request status updated",
-    "data": { "status": "APPROVED", "decidedBy": "6714c...", "decidedAt": "2026-10-27T12:00:00.000Z" }
-  }
-  ```
-- **Socket Events Dispatched**: `leave.decided`, `leave.balance_updated`.
+#### 7.1.4 Cancel Leave (Employee / HR)
+- **Endpoint**: `POST /api/leave/requests/:id/cancel` (alias: `PATCH` or `DELETE`)
+- **Permitted States**:
+  - `PENDING`: Restores balance by decrementing `pending` by `workingDays`.
+  - `APPROVED` (future dates only): Restores balance by decrementing `used` by `workingDays` and automatically reverts any `AttendanceRecord` marked `ON_LEAVE`.
+- **Socket Events**: Dispatches `leave.decided` (`status: "CANCELLED"`) and `leave.balance_updated`.
+
+#### 7.1.5 HR Review Queue & Atomic Decisions
+- **Endpoints**:
+  - `GET /api/leave/requests` - HR queue with filters (`status`, `type`, `startDate`, `endDate`, `employeeId`, `department`, `search`, `page`, `limit`)
+  - `PATCH /api/leave/requests/:id/decision` - Single decision (`APPROVED` or `REJECTED`)
+  - `POST /api/leave/requests/bulk-decision` - Bulk review with per-item atomic results
+- **Atomic Concurrency Guarantee**:
+  - Transitions only from `status: "PENDING"`.
+  - Double review or concurrent conflicting decisions return `409 Conflict` (`ERR_LEAVE_ALREADY_DECIDED`).
+- **Attendance State Machine Integration**:
+  - On `APPROVED`: Marks each working day in the range as `AttendanceStatus.ON_LEAVE` (or `HALF_DAY`).
+  - Automated Absence Job (`evaluateAbsenceAndIncompleteJob`) automatically skips employees on approved leave.
+- **Reporting Integration**:
+  - `getAttendanceLedgerReport`, `getEmployeeMonthlySummary`, and `getDepartmentAttendanceReport` include live `leaveCount` / `leaveDays`.
+- **Socket Events**: `leave.decided`, `leave.balance_updated`, `attendance.updated`.
+- **Notifications**: Creates in-app `Notification` (`type: "LEAVE_STATUS"`).
 
 ---
 
@@ -1990,100 +1981,91 @@ Mounted under `/reports`, `/api/reports`, and `/api/admin/reports`. All endpoint
 
 ## 7. Enterprise Extension API Specifications
 
-### 7.1 Leave Management System
+### 7.1 Leave Management System (Feature Flag: `leave`)
 
-#### 7.1.1 `GET /api/leaves/types`
-- **Role**: `Authenticated (All)`
-- **Description**: Returns all active leave types (e.g. Casual Leave, Sick Leave, Earned Leave) with quota and carry-forward configuration.
-- **Response (200 OK)**:
+> **Feature Flag Protection**: The entire Leave Management module is gated behind the `leave` feature flag via `requireFeatureFlag("leave")`. When disabled on an environment, all `/api/leave/*` endpoints return `404 Not Found`.
+
+#### 7.1.1 Configure Leave Types (HR / Admin)
+- **Endpoints**:
+  - `POST /api/leave/types` - Create a new leave type configuration
+  - `GET /api/leave/types` - List all leave types (`?includeInactive=true` for archived)
+  - `GET /api/leave/types/:id` - Retrieve single leave type
+  - `PATCH /api/leave/types/:id` (or `PUT`) - Update quota, carry-forward, half-day permission
+  - `DELETE /api/leave/types/:id` - Soft deactivate a leave type
+- **Role**: `HR` / `ADMIN` (Creation, update, and deletion); `Authenticated (All)` for listing
+- **Request Body (`POST /api/leave/types`)**:
   ```json
   {
-    "success": true,
-    "data": [
-      {
-        "_id": "6714c100...",
-        "name": "Casual Leave",
-        "code": "CL",
-        "paid": true,
-        "annualQuota": 12,
-        "carryForwardRule": { "allowed": true, "maxDays": 5, "expiryMonths": 3 },
-        "halfDayAllowed": true
-      }
-    ]
+    "name": "Privilege Leave",
+    "code": "PL",
+    "paid": true,
+    "annualQuota": 15,
+    "carryForwardRule": {
+      "allowed": true,
+      "maxDays": 10,
+      "expiryMonths": 6
+    },
+    "halfDayAllowed": true,
+    "description": "Annual earned privilege leave"
   }
   ```
+- **Auditing**: Records `AuditEvent` with `entityType: "LEAVE_TYPE"`.
 
-#### 7.1.2 `GET /api/leaves/balances`
-- **Role**: `Employee` (Own balances) / `HR` (Query with `?employeeId=...`)
-- **Description**: Returns annual leave entitlement, used, pending, and carried-over days for the requested year.
-- **Query Params**: `year` (defaults to current year)
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "year": 2026,
-    "data": [
-      {
-        "type": { "_id": "6714c100...", "name": "Casual Leave", "code": "CL" },
-        "allotted": 12,
-        "used": 3,
-        "pending": 1,
-        "carriedOver": 2,
-        "remaining": 10
-      }
-    ]
-  }
-  ```
+#### 7.1.2 Leave Balances & Rollover
+- **Endpoints**:
+  - `GET /api/leave/balances/my` (alias: `GET /api/leave/my-balances`) - Current employee's annual balances
+  - `GET /api/leave/balances` - HR directory overview of balances across employees with `year`, `department`, `employeeId` filters
+  - `POST /api/leave/balances/adjust` - HR manual adjustment of allotted/carriedOver quota with audit reason
+  - `POST /api/leave/balances/carry-forward` - Execute annual carry-forward rollover between years
+- **Balance Calculation Formula**:
+  $$\text{Available Balance} = (\text{allotted} + \text{carriedOver}) - (\text{used} + \text{pending})$$
+- **Auto-Initialization**: If an employee has no balance record for an active leave type in a queried year, the system automatically provisions an initial balance record based on `LeaveType.annualQuota`.
 
-#### 7.1.3 `POST /api/leaves/requests`
-- **Role**: `Employee`
-- **Description**: Submits a new leave request. Server calculates working days excluding public holidays and scheduled weekend off-days.
+#### 7.1.3 Apply for Leave (Employee)
+- **Endpoint**: `POST /api/leave/requests`
+- **Role**: `Employee` (or any authenticated user)
 - **Request Body**:
   ```json
   {
     "type": "6714c100...",
-    "startDate": "2026-05-11",
-    "endDate": "2026-05-13",
+    "startDate": "2026-11-09",
+    "endDate": "2026-11-13",
     "isHalfDay": false,
-    "reason": "Personal family function"
+    "halfDayType": "FIRST_HALF",
+    "reason": "Family holiday trip"
   }
   ```
-- **Response (201 Created)**:
-  ```json
-  {
-    "success": true,
-    "message": "Leave request submitted successfully",
-    "data": {
-      "_id": "6714c200...",
-      "employee": "6714c000...",
-      "type": "6714c100...",
-      "startDate": "2026-05-11T00:00:00.000Z",
-      "endDate": "2026-05-13T23:59:59.999Z",
-      "workingDays": 3,
-      "status": "PENDING"
-    }
-  }
-  ```
-- **Socket Event Dispatched**: `leave.requested` -> `hr`, `employee:${employeeId}`.
+- **Server Validations & Computations**:
+  1. **Working Days Calculation**: Uses `calendarService.countWorkingDays` to exclude weekends, public holidays, and company off-days. If `isHalfDay: true`, verifies `leaveType.halfDayAllowed === true` and assigns `0.5` days.
+  2. **Balance Sufficiency**: Requires $\text{workingDays} \le \text{Available Balance}$; throws `ERR_INSUFFICIENT_BALANCE` (400) if insufficient.
+  3. **Overlapping Leave**: Validates against any existing `PENDING` or `APPROVED` leave request for the employee; throws `ERR_OVERLAPPING_LEAVE` (409).
+  4. **WFH Conflict**: Checks for existing `APPROVED` Work From Home requests on any date in the range; throws `ERR_LEAVE_CONFLICT_WFH` (409).
+  5. **Past Date Rules**: Rejects backdated leave applications (`startDate < today`) with `ERR_LEAVE_PAST_DATE` (400).
+- **Atomic Balance Reservation**: Atomically increments `pending` by `workingDays`.
+- **Socket Events**: Dispatches `leave.requested` and `leave.balance_updated`.
 
-#### 7.1.4 `PATCH /api/leaves/requests/:id/decision`
-- **Role**: `HR` / `ADMIN`
-- **Request Body**:
-  ```json
-  {
-    "status": "APPROVED",
-    "decisionNote": "Approved as per team coverage schedule"
-  }
-  ```
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "message": "Leave request status updated",
-    "data": { "status": "APPROVED", "decidedBy": "6714c...", "decidedAt": "2026-10-27T12:00:00.000Z" }
-  }
-  ```
-- **Socket Events Dispatched**: `leave.decided`, `leave.balance_updated`.
+#### 7.1.4 Cancel Leave (Employee / HR)
+- **Endpoint**: `POST /api/leave/requests/:id/cancel` (alias: `PATCH` or `DELETE`)
+- **Permitted States**:
+  - `PENDING`: Restores balance by decrementing `pending` by `workingDays`.
+  - `APPROVED` (future dates only): Restores balance by decrementing `used` by `workingDays` and automatically reverts any `AttendanceRecord` marked `ON_LEAVE`.
+- **Socket Events**: Dispatches `leave.decided` (`status: "CANCELLED"`) and `leave.balance_updated`.
+
+#### 7.1.5 HR Review Queue & Atomic Decisions
+- **Endpoints**:
+  - `GET /api/leave/requests` - HR queue with filters (`status`, `type`, `startDate`, `endDate`, `employeeId`, `department`, `search`, `page`, `limit`)
+  - `PATCH /api/leave/requests/:id/decision` - Single decision (`APPROVED` or `REJECTED`)
+  - `POST /api/leave/requests/bulk-decision` - Bulk review with per-item atomic results
+- **Atomic Concurrency Guarantee**:
+  - Transitions only from `status: "PENDING"`.
+  - Double review or concurrent conflicting decisions return `409 Conflict` (`ERR_LEAVE_ALREADY_DECIDED`).
+- **Attendance State Machine Integration**:
+  - On `APPROVED`: Marks each working day in the range as `AttendanceStatus.ON_LEAVE` (or `HALF_DAY`).
+  - Automated Absence Job (`evaluateAbsenceAndIncompleteJob`) automatically skips employees on approved leave.
+- **Reporting Integration**:
+  - `getAttendanceLedgerReport`, `getEmployeeMonthlySummary`, and `getDepartmentAttendanceReport` include live `leaveCount` / `leaveDays`.
+- **Socket Events**: `leave.decided`, `leave.balance_updated`, `attendance.updated`.
+- **Notifications**: Creates in-app `Notification` (`type: "LEAVE_STATUS"`).
 
 ---
 
