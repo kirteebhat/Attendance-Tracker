@@ -122,13 +122,13 @@ export const CalendarPage: React.FC = () => {
   // 2. Approved WFH Requests Query for Overlay
   const { data: wfhResponse } = useWfhRequests({
     status: "APPROVED",
-    limit: 200,
+    limit: 100,
   });
 
   // 3. Absences Query for Overlay
   const { data: attendanceResponse } = useAttendanceRecords({
     status: AttendanceStatus.ABSENT,
-    limit: 200,
+    limit: 100,
   });
 
   // Mutations
