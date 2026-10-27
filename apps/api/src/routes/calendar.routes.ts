@@ -51,6 +51,13 @@ router.delete(
 );
 
 // Holiday Import via Provider Adapter (Preview & Merge Safe)
+router.get(
+  "/holidays/preview",
+  authenticate,
+  requireRole(UserRole.HR, UserRole.ADMIN),
+  calendarController.previewHolidays
+);
+
 router.post(
   "/holidays/preview",
   authenticate,

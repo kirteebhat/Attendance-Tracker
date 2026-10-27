@@ -1151,7 +1151,11 @@ export function useImportHolidays() {
     mutationFn: (payload: { year: number; country?: string }) =>
       api.post<{ success: boolean; importedCount: number; skippedCount: number }>(
         "/api/calendar/holidays/import",
-        payload
+        {
+          year: payload.year,
+          countryCode: payload.country || "IN",
+          country: payload.country || "IN",
+        }
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });

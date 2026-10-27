@@ -1667,91 +1667,118 @@ export const CalendarPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Preview Metrics Banner */}
-          <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 rounded-lg text-xs text-blue-900 dark:text-blue-300">
-            <div>
-              <span className="font-bold">Provider:</span> {previewData?.provider || "Configured Adapter"} ({importCountry})
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                {previewData?.toImport ?? 0} To Import
-              </span>
-              <span className="text-slate-500">
-                {previewData?.alreadyImported ?? 0} Already In Calendar
-              </span>
-              {(previewData?.conflicts ?? 0) > 0 && (
-                <span className="font-bold text-amber-700 dark:text-amber-400">
-                  {previewData?.conflicts} Manual Protected
-                </span>
-              )}
-            </div>
-          </div>
+          {/* Preview Metrics Banner & Table */}
+          {(() => {
+            const previewItems = previewData?.items || (previewData as any)?.data?.items || [];
+            const toImportCount =
+              previewData?.toImportCount ??
+              (previewData as any)?.toImport ??
+              previewItems.filter((i: any) => i.action === "create").length;
+            const alreadyImportedCount =
+              previewData?.alreadyImportedCount ??
+              (previewData as any)?.alreadyImported ??
+              previewItems.filter(
+                (i: any) => i.action === "already_exists" || i.action === "skip_already_imported"
+              ).length;
+            const manualConflictCount =
+              previewData?.manualConflictCount ??
+              (previewData as any)?.conflicts ??
+              previewItems.filter((i: any) => i.action === "skip_manual_conflict").length;
 
-          <p className="text-xs text-slate-600 dark:text-slate-400">
-            Preview of national holidays before database merge. Any custom holiday entered manually by an HR user is
-            protected and will never be overwritten.
-          </p>
+            return (
+              <>
+                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 rounded-lg text-xs text-blue-900 dark:text-blue-300">
+                  <div>
+                    <span className="font-bold">Provider:</span>{" "}
+                    {previewData?.provider ||
+                      (previewData as any)?.data?.provider ||
+                      "Configured Adapter"}{" "}
+                    ({importCountry})
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-emerald-700 dark:text-emerald-400">
+                      {toImportCount} To Import
+                    </span>
+                    <span className="text-slate-500">{alreadyImportedCount} In Calendar</span>
+                    {manualConflictCount > 0 && (
+                      <span className="font-bold text-amber-700 dark:text-amber-400">
+                        {manualConflictCount} Manual Protected
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-          {/* Preview Table */}
-          {isPreviewLoading ? (
-            <Skeleton className="h-48 w-full rounded-lg" />
-          ) : (
-            <div className="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold">
-                  <tr>
-                    <th className="py-2 px-3">Date</th>
-                    <th className="py-2 px-3">Holiday Name</th>
-                    <th className="py-2 px-3">Action Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {previewData?.items?.map((item) => (
-                    <tr key={item.date} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                      <td className="py-2 px-3 font-mono font-semibold text-slate-800 dark:text-slate-200">
-                        {item.date}
-                      </td>
-                      <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">
-                        {item.name}
-                      </td>
-                      <td className="py-2 px-3">
-                        {item.action === "create" ? (
-                          <Badge variant="success" size="sm">
-                            Ready to Import
-                          </Badge>
-                        ) : item.action === "already_exists" ? (
-                          <Badge variant="neutral" size="sm">
-                            Already In Calendar
-                          </Badge>
-                        ) : (
-                          <Badge variant="warning" size="sm">
-                            Skip Manual Conflict
-                          </Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Preview of national holidays before database merge. Any custom holiday entered
+                  manually by an HR user is protected and will never be overwritten.
+                </p>
 
-          {/* Modal Actions */}
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <Button variant="outline" size="sm" onClick={() => setShowImportModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleExecuteImport}
-              isLoading={importMutation.isPending}
-              disabled={isPreviewLoading || (previewData?.toImport ?? 0) === 0}
-            >
-              <UploadCloud className="w-4 h-4 mr-1.5" />
-              Import {previewData?.toImport ?? 0} Holidays
-            </Button>
-          </div>
+                {/* Preview Table */}
+                {isPreviewLoading ? (
+                  <Skeleton className="h-48 w-full rounded-lg" />
+                ) : (
+                  <div className="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold">
+                        <tr>
+                          <th className="py-2 px-3">Date</th>
+                          <th className="py-2 px-3">Holiday Name</th>
+                          <th className="py-2 px-3">Action Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {previewItems.map((item: any) => (
+                          <tr
+                            key={item.date}
+                            className="hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                          >
+                            <td className="py-2 px-3 font-mono font-semibold text-slate-800 dark:text-slate-200">
+                              {item.date}
+                            </td>
+                            <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">
+                              {item.name}
+                            </td>
+                            <td className="py-2 px-3">
+                              {item.action === "create" ? (
+                                <Badge variant="success" size="sm">
+                                  Ready to Import
+                                </Badge>
+                              ) : item.action === "skip_manual_conflict" ? (
+                                <Badge variant="warning" size="sm">
+                                  Skip Manual Conflict
+                                </Badge>
+                              ) : (
+                                <Badge variant="neutral" size="sm">
+                                  Already In Calendar
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Modal Actions */}
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <Button variant="outline" size="sm" onClick={() => setShowImportModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleExecuteImport}
+                    isLoading={importMutation.isPending}
+                    disabled={isPreviewLoading || toImportCount === 0}
+                  >
+                    <UploadCloud className="w-4 h-4 mr-1.5" />
+                    Import {toImportCount} Holidays
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </Modal>
     </div>

@@ -158,14 +158,17 @@ export class CalendarController {
    * POST /api/calendar/holidays/preview
    */
   public previewHolidays = asyncHandler(async (req: Request, res: Response) => {
-    const year = Number(req.body.year) || new Date().getFullYear();
-    const countryCode = req.body.countryCode || "IN";
-    const provider = req.body.provider;
+    const year = Number(req.body?.year || req.query?.year) || new Date().getFullYear();
+    const countryCode = String(
+      req.body?.countryCode || req.body?.country || req.query?.countryCode || req.query?.country || "IN"
+    );
+    const provider = (req.body?.provider || req.query?.provider) as string | undefined;
 
     const preview = await calendarService.previewImportHolidays(year, countryCode, provider);
 
     res.status(200).json({
       success: true,
+      ...preview,
       data: preview,
     });
   });
@@ -174,15 +177,21 @@ export class CalendarController {
    * POST /api/calendar/holidays/import
    */
   public importHolidays = asyncHandler(async (req: Request, res: Response) => {
-    const year = Number(req.body.year) || new Date().getFullYear();
-    const countryCode = req.body.countryCode || "IN";
-    const provider = req.body.provider;
+    const year = Number(req.body?.year || req.query?.year) || new Date().getFullYear();
+    const countryCode = String(
+      req.body?.countryCode || req.body?.country || req.query?.countryCode || req.query?.country || "IN"
+    );
+    const provider = (req.body?.provider || req.query?.provider) as string | undefined;
     const actor = this.getActorContext(req);
 
     const result = await calendarService.importHolidays(year, countryCode, actor, provider);
 
     res.status(200).json({
       success: true,
+      importedCount: result.importedCount,
+      skippedCount: result.skippedManualCount + result.alreadyExistedCount,
+      skippedManualCount: result.skippedManualCount,
+      alreadyExistedCount: result.alreadyExistedCount,
       message: `Successfully imported ${result.importedCount} holidays from ${result.provider}`,
       data: result,
     });
