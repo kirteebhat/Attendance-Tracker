@@ -9,6 +9,7 @@ export class AppError extends Error {
   public readonly code: ApiErrorCodeType;
   public readonly isOperational: boolean;
   public readonly errors?: unknown;
+  public readonly isAppError: boolean = true;
 
   constructor(
     statusCode: number,
@@ -18,12 +19,14 @@ export class AppError extends Error {
     isOperational = true
   ) {
     super(message);
+    this.name = "AppError";
     this.statusCode = statusCode;
     this.code = code;
     this.errors = errors;
     this.isOperational = isOperational;
+    this.isAppError = true;
 
-    Object.setPrototypeOf(this, new.target.prototype);
+    Object.setPrototypeOf(this, AppError.prototype);
     Error.captureStackTrace(this, this.constructor);
   }
 

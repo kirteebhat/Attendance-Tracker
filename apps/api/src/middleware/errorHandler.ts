@@ -16,11 +16,17 @@ export const errorHandler: ErrorRequestHandler = (
   let message = "An internal server error occurred.";
   let errors: unknown = undefined;
 
-  if (err instanceof AppError) {
-    statusCode = err.statusCode;
-    code = err.code;
-    message = err.message;
-    errors = err.errors;
+  const maybeAppError = err as unknown as Partial<AppError> & { isAppError?: boolean };
+
+  if (
+    err instanceof AppError ||
+    maybeAppError.isAppError === true ||
+    (typeof maybeAppError.statusCode === "number" && maybeAppError.statusCode >= 400 && maybeAppError.statusCode < 500)
+  ) {
+    statusCode = maybeAppError.statusCode || 400;
+    code = (maybeAppError.code as ApiErrorCodeType) || ApiErrorCode.ERR_BAD_REQUEST;
+    message = err.message || "An application error occurred.";
+    errors = maybeAppError.errors;
   } else if (err.name === "ZodError") {
     statusCode = 400;
     code = ApiErrorCode.ERR_INVALID_INPUT;

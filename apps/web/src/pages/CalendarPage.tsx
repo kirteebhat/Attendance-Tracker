@@ -138,8 +138,12 @@ export const CalendarPage: React.FC = () => {
   const importMutation = useImportHolidays();
 
   // Import Preview Query
-  const { data: previewData, isLoading: isPreviewLoading } =
-    usePreviewHolidayImport(importYear, importCountry, showImportModal);
+  const {
+    data: previewData,
+    isLoading: isPreviewLoading,
+    isError: isPreviewError,
+    refetch: refetchPreview,
+  } = usePreviewHolidayImport(importYear, importCountry, showImportModal);
 
   // Raw Events List
   const allEvents: CalendarEventItem[] = useMemo(() => {
@@ -1716,6 +1720,21 @@ export const CalendarPage: React.FC = () => {
                 {/* Preview Table */}
                 {isPreviewLoading ? (
                   <Skeleton className="h-48 w-full rounded-lg" />
+                ) : isPreviewError ? (
+                  <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg text-center space-y-2">
+                    <p className="text-xs text-rose-700 dark:text-rose-300 font-medium">
+                      Failed to load holiday preview from backend service.
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => refetchPreview()}>
+                      Retry Preview
+                    </Button>
+                  </div>
+                ) : previewItems.length === 0 ? (
+                  <div className="p-8 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      No holiday items found for {importCountry} ({importYear}).
+                    </p>
+                  </div>
                 ) : (
                   <div className="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg">
                     <table className="w-full text-left text-xs border-collapse">
