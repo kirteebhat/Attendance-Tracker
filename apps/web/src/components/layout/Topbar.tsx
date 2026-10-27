@@ -17,6 +17,7 @@ const routeNameMap: Record<string, string> = {
   employees: "Employee Directory",
   policies: "Policy & Shifts",
   displays: "Office QR Displays",
+  security: "Security & Sessions",
   "audit-logs": "Audit Trail",
 };
 

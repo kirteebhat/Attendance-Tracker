@@ -66,3 +66,4 @@ LeaveBalanceSchema.index({ employee: 1, type: 1, year: 1 }, { unique: true });
 LeaveBalanceSchema.index({ employee: 1, year: 1 });
 
 export const LeaveBalance = model<ILeaveBalance>("LeaveBalance", LeaveBalanceSchema);
+

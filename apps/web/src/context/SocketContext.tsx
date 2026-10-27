@@ -127,6 +127,60 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
     });
 
+    // Real-Time Staff Security & Session Eviction Handlers
+    const handleSessionRevocation = (data: {
+      userId?: string;
+      sessionId?: string;
+      reason?: string;
+    }) => {
+      const currentSessionId = tokenStorage.getSessionId();
+      const isCurrentSession = data.sessionId && currentSessionId && data.sessionId === currentSessionId;
+      const isTargetUser = !data.sessionId && data.userId;
+
+      if (isCurrentSession || isTargetUser) {
+        toast({
+          type: "error",
+          title: "Session Terminated",
+          description: data.reason || "Your staff session has been revoked. Redirecting...",
+        });
+        tokenStorage.clearTokens();
+        setTimeout(() => {
+          window.location.href = "/login?reason=session_revoked";
+        }, 800);
+      }
+    };
+
+    client.on("staff.session_revoked", handleSessionRevocation);
+    client.on(SocketEvent.STAFF_SESSION_REVOKED, handleSessionRevocation);
+
+    client.on(
+      "staff:force_logout",
+      (data: { userId?: string; targetUserId?: string; reason?: string }) => {
+        toast({
+          type: "error",
+          title: "Administrative Forced Logout",
+          description: data.reason || "An administrator has terminated your access.",
+        });
+        tokenStorage.clearTokens();
+        setTimeout(() => {
+          window.location.href = "/login?reason=forced_logout";
+        }, 800);
+      }
+    );
+
+    client.on(
+      SocketEvent.STAFF_SECURITY_ALERT,
+      (data: { action?: string; reason?: string; targetMobile?: string }) => {
+        toast({
+          type: "info",
+          title: "Staff Security Alert",
+          description: `${data.reason || "Security violation detected"}${
+            data.targetMobile ? ` (${data.targetMobile})` : ""
+          }`,
+        });
+      }
+    );
+
     setSocket(client);
 
     return () => {

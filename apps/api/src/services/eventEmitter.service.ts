@@ -52,6 +52,12 @@ export class EventEmitterService {
         case SocketEvent.DISPLAY_STATUS:
           this.emitDisplayStatus(payload as DisplayStatusPayload);
           break;
+        case SocketEvent.STAFF_SESSION_REVOKED:
+          this.emitStaffSessionRevoked(payload as { userId: string; sessionId?: string; reason?: string });
+          break;
+        case SocketEvent.STAFF_SECURITY_ALERT:
+          this.emitStaffSecurityAlert(payload);
+          break;
         default:
           io.emit(event, payload);
           break;
@@ -225,6 +231,40 @@ export class EventEmitterService {
       );
     } catch (err) {
       logger.error(`Failed to emit display.status:`, err);
+    }
+  }
+
+  /**
+   * Emits staff session revocation to target user and admin rooms
+   */
+  public emitStaffSessionRevoked(payload: { userId: string; sessionId?: string; reason?: string }): void {
+    const io = getSocketServer();
+    if (!io) return;
+
+    try {
+      if (payload.userId) {
+        io.to(SocketRoom.user(payload.userId)).emit(SocketEvent.STAFF_SESSION_REVOKED, payload);
+      }
+      io.to(SocketRoom.hr()).emit(SocketEvent.STAFF_SESSION_REVOKED, payload);
+      logger.debug(`[Socket] Emitted staff.session_revoked for user ${payload.userId}`);
+    } catch (err) {
+      logger.error(`Failed to emit staff.session_revoked:`, err);
+    }
+  }
+
+  /**
+   * Emits high-priority security alert to HR Admin room
+   */
+  public emitStaffSecurityAlert(payload: unknown): void {
+    const io = getSocketServer();
+    if (!io) return;
+
+    try {
+      io.to(SocketRoom.hr()).emit(SocketEvent.STAFF_SECURITY_ALERT, payload);
+      io.to(SocketRoom.hrDashboard()).emit(SocketEvent.STAFF_SECURITY_ALERT, payload);
+      logger.debug(`[Socket] Emitted staff:security_alert to admin room`);
+    } catch (err) {
+      logger.error(`Failed to emit staff:security_alert:`, err);
     }
   }
 }

@@ -113,3 +113,4 @@ CalendarEventSchema.pre("validate", function (next) {
 });
 
 export const CalendarEvent = model<ICalendarEvent>("CalendarEvent", CalendarEventSchema);
+

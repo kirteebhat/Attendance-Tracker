@@ -40,3 +40,4 @@ export const CheckUpdateQuerySchema = z.object({
   currentVersionCode: z.coerce.number().int().positive().optional(),
 });
 export type CheckUpdateQuery = z.infer<typeof CheckUpdateQuerySchema>;
+

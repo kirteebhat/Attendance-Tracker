@@ -33,3 +33,4 @@ export const CreateNotificationInputSchema = z.object({
   expiresAt: z.string().datetime().optional().nullable(),
 });
 export type CreateNotificationInput = z.infer<typeof CreateNotificationInputSchema>;
+

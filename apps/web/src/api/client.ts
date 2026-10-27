@@ -2,6 +2,7 @@ import { ApiErrorCode } from "@vorldx/shared";
 
 const TOKEN_KEY = "vorldx_access_token";
 const REFRESH_TOKEN_KEY = "vorldx_refresh_token";
+const SESSION_ID_KEY = "vorldx_session_id";
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -47,11 +48,20 @@ export const tokenStorage = {
   getAccessToken: (): string | null => {
     return localStorage.getItem(TOKEN_KEY);
   },
-  setTokens: (accessToken: string, refreshToken?: string): void => {
+  setTokens: (accessToken: string, refreshToken?: string, sessionId?: string): void => {
     localStorage.setItem(TOKEN_KEY, accessToken);
     if (refreshToken) {
       localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     }
+    if (sessionId) {
+      localStorage.setItem(SESSION_ID_KEY, sessionId);
+    }
+  },
+  getSessionId: (): string | null => {
+    return localStorage.getItem(SESSION_ID_KEY);
+  },
+  setSessionId: (sessionId: string): void => {
+    localStorage.setItem(SESSION_ID_KEY, sessionId);
   },
   getRefreshToken: (): string | null => {
     return localStorage.getItem(REFRESH_TOKEN_KEY);
@@ -59,6 +69,7 @@ export const tokenStorage = {
   clearTokens: (): void => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(SESSION_ID_KEY);
   },
 };
 
@@ -82,6 +93,7 @@ export async function apiRequest<T = unknown>(
 ): Promise<T> {
   const url = getFullApiUrl(endpoint);
   const token = tokenStorage.getAccessToken();
+  const sessionId = tokenStorage.getSessionId();
 
   const headers = new Headers(options.headers || {});
   headers.set("Content-Type", "application/json");
@@ -89,6 +101,10 @@ export async function apiRequest<T = unknown>(
 
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  if (sessionId && !headers.has("x-session-id")) {
+    headers.set("x-session-id", sessionId);
   }
 
   let response: Response;
@@ -109,6 +125,15 @@ export async function apiRequest<T = unknown>(
       .clone()
       .json()
       .catch(() => ({}));
+
+    // If session has been revoked, immediately clear and redirect
+    if (errorBody.code === ApiErrorCode.ERR_SESSION_REVOKED || errorBody.code === "ERR_SESSION_REVOKED") {
+      tokenStorage.clearTokens();
+      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+        window.location.href = `/login?reason=session_revoked`;
+      }
+      throw new ApiError(401, errorBody.message || "Your session has been revoked. Please sign in again.", ApiErrorCode.ERR_SESSION_REVOKED);
+    }
 
     const isTokenExpired =
       errorBody.code === ApiErrorCode.ERR_TOKEN_EXPIRED ||

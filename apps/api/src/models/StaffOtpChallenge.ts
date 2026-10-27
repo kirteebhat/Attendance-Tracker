@@ -72,3 +72,4 @@ export const StaffOtpChallenge = model<IStaffOtpChallenge>(
   "StaffOtpChallenge",
   StaffOtpChallengeSchema
 );
+

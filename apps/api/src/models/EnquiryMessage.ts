@@ -62,3 +62,4 @@ const EnquiryMessageSchema = new Schema<IEnquiryMessage>(
 EnquiryMessageSchema.index({ enquiry: 1, createdAt: 1 });
 
 export const EnquiryMessage = model<IEnquiryMessage>("EnquiryMessage", EnquiryMessageSchema);
+

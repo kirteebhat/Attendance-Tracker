@@ -6,6 +6,7 @@ export interface IEmployee extends Document {
   employeeId: string;
   name: string;
   email: string;
+  mobileNumber?: string | null;
   department: string;
   designation: string;
   workType: WorkType;
@@ -43,6 +44,13 @@ const EmployeeSchema = new Schema<IEmployee>(
       trim: true,
       lowercase: true,
       match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
+      index: true,
+    },
+    mobileNumber: {
+      type: String,
+      trim: true,
+      default: null,
+      sparse: true,
       index: true,
     },
     department: {

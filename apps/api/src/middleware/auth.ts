@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { TokenExpiredError } from "jsonwebtoken";
+import { Types } from "mongoose";
 import { env } from "../config/env";
 import { AppError } from "../utils/AppError";
 import { ApiErrorCode, UserRole } from "@vorldx/shared";
 import { TokenPayload } from "../services/auth.service";
+import { User, StaffSession } from "../models";
 
 // Module augmentation for Express Request to attach authenticated user payload
 /* eslint-disable @typescript-eslint/no-namespace */
@@ -80,4 +82,49 @@ export const requireRole = (...allowedRoles: (UserRole | string)[]) => {
 
     next();
   };
+};
+
+/**
+ * Validates active staff session and confirms session has not been revoked or locked out
+ */
+export const authenticateStaffSession = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw AppError.unauthorized("Authentication required", ApiErrorCode.ERR_UNAUTHORIZED);
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user || user.status === "INACTIVE") {
+      throw AppError.forbidden("Staff account is disabled", ApiErrorCode.ERR_FORBIDDEN);
+    }
+
+    if (user.lockoutUntil && user.lockoutUntil.getTime() > Date.now()) {
+      throw new AppError(423, ApiErrorCode.ERR_ACCOUNT_LOCKED, "Account is currently locked");
+    }
+
+    // If all sessions were revoked, refreshTokenHash is cleared
+    if (!user.refreshTokenHash) {
+      throw new AppError(401, ApiErrorCode.ERR_SESSION_REVOKED, "Your session has been revoked. Please sign in again.");
+    }
+
+    const sessionId = req.headers["x-session-id"] as string;
+    if (sessionId && Types.ObjectId.isValid(sessionId)) {
+      const session = await StaffSession.findOne({
+        _id: new Types.ObjectId(sessionId),
+        user: user._id,
+        isActive: true,
+      });
+      if (!session || session.expiresAt.getTime() < Date.now()) {
+        throw new AppError(401, ApiErrorCode.ERR_SESSION_REVOKED, "This session has been revoked or expired.");
+      }
+    }
+
+    next();
+  } catch (err) {
+    next(err);
+  }
 };

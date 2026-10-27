@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   LogOut,
   Building2,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Badge } from "../ui/Badge";
@@ -32,6 +33,7 @@ const navigation: NavItem[] = [
   { name: "Employee Directory", href: "/employees", icon: Users },
   { name: "Policy & Shifts", href: "/policies", icon: Settings2 },
   { name: "Office QR Displays", href: "/displays", icon: Tv },
+  { name: "Security & Sessions", href: "/security", icon: Lock },
   { name: "Audit Trail", href: "/audit-logs", icon: ShieldCheck },
   // Extension Modules (hidden in UI when flag is off)
   { name: "Leave Requests", href: "/leave", icon: CalendarCheck, flagKey: "leave" },

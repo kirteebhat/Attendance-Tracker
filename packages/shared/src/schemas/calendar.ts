@@ -54,3 +54,4 @@ export const CreateCalendarEventInputSchema = z.object({
   location: z.string().max(200).optional(),
 });
 export type CreateCalendarEventInput = z.infer<typeof CreateCalendarEventInputSchema>;
+

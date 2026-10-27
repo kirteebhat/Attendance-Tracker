@@ -1,6 +1,7 @@
 import { Router } from "express";
 import healthRoutes from "./health.routes";
 import authRoutes from "./auth.routes";
+import staffAuthRoutes from "./staffAuth.routes";
 import employeeRoutes from "./employee.routes";
 import policyRoutes from "./policy.routes";
 import { qrRouter } from "./qr.routes";
@@ -24,6 +25,7 @@ router.use(healthRoutes);
 
 // Core Authentication & Session endpoints
 router.use(authRoutes);
+router.use(staffAuthRoutes);
 
 // Employee Management & Directory endpoints
 router.use(employeeRoutes);

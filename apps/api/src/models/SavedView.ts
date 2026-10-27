@@ -56,3 +56,4 @@ const SavedViewSchema = new Schema<ISavedView>(
 SavedViewSchema.index({ user: 1, page: 1, name: 1 }, { unique: true });
 
 export const SavedView = model<ISavedView>("SavedView", SavedViewSchema);
+

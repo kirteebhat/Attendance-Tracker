@@ -960,5 +960,94 @@ export function useUpdateFeatureFlag() {
   });
 }
 
+// =============================================================================
+// Staff Authentication, Sessions, Hardware Security & Audit
+// =============================================================================
+
+export interface StaffSessionItem {
+  id: string;
+  ipAddress: string;
+  userAgent: string;
+  lastActivityAt: string;
+  expiresAt: string;
+  isCurrent: boolean;
+  device?: {
+    _id: string;
+    deviceName: string;
+    platform: string;
+    deviceFingerprint: string;
+  } | null;
+}
+
+export interface TrustedDeviceItem {
+  _id: string;
+  deviceFingerprint: string;
+  deviceName: string;
+  platform: "iOS" | "Android" | "Web" | "Windows" | "macOS";
+  lastUsedAt: string;
+  trustedUntil: string;
+  isRevoked: boolean;
+  createdAt: string;
+}
+
+export function useStaffSessions() {
+  return useQuery<{ success: boolean; data: StaffSessionItem[] }>({
+    queryKey: ["staff-sessions"],
+    queryFn: () => api.get("/api/auth/staff/sessions"),
+    staleTime: 1000 * 10,
+    refetchInterval: 15000,
+  });
+}
+
+export function useRevokeSession() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (sessionId: string) => api.delete(`/api/auth/staff/sessions/${sessionId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staff-sessions"] });
+    },
+  });
+}
+
+export function useRevokeAllSessions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post("/api/auth/staff/sessions/revoke-all", {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staff-sessions"] });
+    },
+  });
+}
+
+export function useTrustedDevices() {
+  return useQuery<{ success: boolean; data: TrustedDeviceItem[] }>({
+    queryKey: ["trusted-devices"],
+    queryFn: () => api.get("/api/auth/staff/devices"),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useRevokeTrustedDevice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (deviceId: string) => api.delete(`/api/auth/staff/devices/${deviceId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trusted-devices"] });
+    },
+  });
+}
+
+export function useForceLogoutStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason?: string }) =>
+      api.post(`/api/auth/staff/force-logout/${userId}`, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staff-sessions"] });
+    },
+  });
+}
+
+
 
 

@@ -119,3 +119,4 @@ AnnouncementSchema.index({ "audience.scope": 1, startsAt: -1 });
 AnnouncementSchema.index({ "readBy.user": 1 });
 
 export const Announcement = model<IAnnouncement>("Announcement", AnnouncementSchema);
+

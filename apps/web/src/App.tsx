@@ -17,6 +17,8 @@ import { EmployeesPage } from "./pages/EmployeesPage";
 import { PoliciesPage } from "./pages/PoliciesPage";
 import { DisplaysPage } from "./pages/DisplaysPage";
 import { AuditLogsPage } from "./pages/AuditLogsPage";
+import { SecurityPage } from "./pages/SecurityPage";
+import { DesignSystemPage } from "./pages/DesignSystemPage";
 import { UnauthorizedPage } from "./pages/UnauthorizedPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
@@ -55,6 +57,9 @@ export const App: React.FC = () => {
                       <Route path="/policies" element={<PoliciesPage />} />
                       <Route path="/displays" element={<DisplaysPage />} />
                       <Route path="/audit-logs" element={<AuditLogsPage />} />
+                      <Route path="/security" element={<SecurityPage />} />
+                      <Route path="/settings/security" element={<Navigate to="/security" replace />} />
+                      <Route path="/design-system" element={<DesignSystemPage />} />
                     </Route>
 
                     {/* Common Protected Fallbacks */}

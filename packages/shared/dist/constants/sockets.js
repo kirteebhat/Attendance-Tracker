@@ -45,6 +45,13 @@ exports.SocketEvent = {
     ENQUIRY_STATUS_UPDATED: "enquiry.status_updated",
     // Staff security & session events
     STAFF_SESSION_REVOKED: "staff.session_revoked",
+    STAFF_OTP_REQUESTED: "staff:otp_requested",
+    STAFF_OTP_SENT: "staff:otp_sent",
+    STAFF_OTP_VERIFIED: "staff:otp_verified",
+    STAFF_OTP_FAILED: "staff:otp_failed",
+    STAFF_OTP_LOCKED: "staff:otp_locked",
+    STAFF_SECURITY_ALERT: "staff:security_alert",
+    STAFF_FORCE_LOGOUT: "staff:force_logout",
     // App Release & OTA events
     APP_RELEASE_PUBLISHED: "app_release.published",
     // Notification events
@@ -56,6 +63,7 @@ exports.SocketEvent = {
  */
 exports.SocketRoom = {
     employee: (employeeId) => `employee:${employeeId}`,
+    user: (userId) => `user:${userId}`,
     display: (displayOrTerminalId) => `display:${displayOrTerminalId}`,
     hr: () => "hr",
     hrDashboard: () => "hr:dashboard",

@@ -12,7 +12,7 @@ import * as dashboardService from "../services/dashboard.service";
 let ioInstance: SocketIOServer | null = null;
 
 export interface AuthenticatedSocketData {
-  type: "user" | "display";
+  type: "user" | "display" | "guest";
   user?: TokenPayload;
   display?: {
     terminalId: string;
@@ -91,6 +91,14 @@ export function initSocketServer(httpServer: HttpServer): SocketIOServer {
           const message = err instanceof Error ? err.message : "ERR_TERMINAL_UNAUTHORIZED";
           return next(new Error(`ERR_TERMINAL_UNAUTHORIZED: ${message}`));
         }
+      }
+
+      // Option C: Staff Login Public Channel (for real-time OTP status line on login page)
+      if (auth.type === "staff_login" || auth.channel === "staff_login" || auth.guest === true) {
+        socket.data = {
+          type: "guest",
+        } as AuthenticatedSocketData;
+        return next();
       }
 
       // No valid credentials provided

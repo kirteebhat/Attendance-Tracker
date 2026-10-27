@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { api, tokenStorage, ApiError } from "../api/client";
 import { UserRole } from "@vorldx/shared";
+import {
+  getDeviceFingerprint,
+  getDeviceName,
+  getDevicePlatform,
+} from "../utils/deviceFingerprint";
 
 export interface AuthUser {
   id: string;
@@ -11,6 +16,23 @@ export interface AuthUser {
   department?: string;
   designation?: string;
   workType?: string;
+  mobileNumber?: string;
+}
+
+export interface StaffOtpStartResponse {
+  success: boolean;
+  message: string;
+  expiresInSeconds: number;
+  cooldownSeconds: number;
+  simulatedDemoOtp?: string;
+  demoNotice?: string;
+}
+
+export interface StaffOtpVerifyParams {
+  mobileNumber: string;
+  otp: string;
+  purpose?: "LOGIN" | "DEVICE_REGISTRATION" | "PASSWORD_RESET";
+  rememberDevice?: boolean;
 }
 
 interface AuthContextType {
@@ -18,6 +40,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: { identifier: string; password: string }) => Promise<void>;
+  requestStaffOtp: (params: { mobileNumber: string; password?: string }) => Promise<StaffOtpStartResponse>;
+  verifyStaffOtp: (params: StaffOtpVerifyParams) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -37,12 +61,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: string;
           role: string;
           status: string;
+          mobileNumber?: string;
         };
         employee: {
           name?: string;
           department?: string;
           designation?: string;
           workType?: string;
+          mobileNumber?: string;
         } | null;
       }>("/api/auth/me");
 
@@ -55,6 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         department: res.employee?.department,
         designation: res.employee?.designation,
         workType: res.employee?.workType,
+        mobileNumber: res.employee?.mobileNumber || res.user.mobileNumber,
       };
 
       setUser(userData);
@@ -110,11 +137,85 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const requestStaffOtp = async (params: {
+    mobileNumber: string;
+    password?: string;
+  }): Promise<StaffOtpStartResponse> => {
+    const fp = getDeviceFingerprint();
+    const res = await api.post<StaffOtpStartResponse>("/api/auth/staff/otp-start", {
+      mobileNumber: params.mobileNumber,
+      password: params.password,
+      deviceFingerprint: fp,
+      deviceName: getDeviceName(),
+      platform: getDevicePlatform(),
+      purpose: "LOGIN",
+    });
+    return res;
+  };
+
+  const verifyStaffOtp = async (params: StaffOtpVerifyParams): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const fp = getDeviceFingerprint();
+      const res = await api.post<{
+        success: boolean;
+        message: string;
+        data: {
+          accessToken: string;
+          refreshToken?: string;
+          session: {
+            id: string;
+            expiresAt: string;
+          };
+          user: {
+            _id: string;
+            employeeId: string;
+            email: string;
+            role: string;
+          };
+          employee?: {
+            name?: string;
+            department?: string;
+            designation?: string;
+            workType?: string;
+          } | null;
+        };
+      }>("/api/auth/staff/otp-verify", {
+        mobileNumber: params.mobileNumber,
+        otp: params.otp,
+        purpose: params.purpose || "LOGIN",
+        deviceFingerprint: fp,
+        deviceName: getDeviceName(),
+        platform: getDevicePlatform(),
+        rememberDevice: params.rememberDevice ?? true,
+      });
+
+      const { accessToken, refreshToken, session } = res.data;
+      if (accessToken) {
+        tokenStorage.setTokens(accessToken, refreshToken, session?.id);
+        await fetchProfile();
+      }
+    } catch (err) {
+      tokenStorage.clearTokens();
+      setUser(null);
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      throw new ApiError(400, "Unable to verify authentication code.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async (): Promise<void> => {
     try {
+      const sessionId = tokenStorage.getSessionId();
+      if (sessionId) {
+        await api.delete(`/api/auth/staff/sessions/${sessionId}`).catch(() => {});
+      }
       await api.post("/api/auth/logout", {
         refreshToken: tokenStorage.getRefreshToken(),
-      });
+      }).catch(() => {});
     } catch {
       // Ignore network errors on logout
     } finally {
@@ -131,6 +232,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         login,
+        requestStaffOtp,
+        verifyStaffOtp,
         logout,
         refreshProfile: async () => {
           await fetchProfile();

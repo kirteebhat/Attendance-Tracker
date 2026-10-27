@@ -89,3 +89,4 @@ AppReleaseSchema.index({ platform: 1, version: 1 }, { unique: true });
 AppReleaseSchema.index({ platform: 1, versionCode: -1 });
 
 export const AppRelease = model<IAppRelease>("AppRelease", AppReleaseSchema);
+

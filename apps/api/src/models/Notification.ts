@@ -80,3 +80,4 @@ NotificationSchema.index({ user: 1, readAt: 1, createdAt: -1 });
 NotificationSchema.index({ user: 1, createdAt: -1 });
 
 export const Notification = model<INotification>("Notification", NotificationSchema);
+

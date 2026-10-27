@@ -49,3 +49,4 @@ export const CreateAnnouncementInputSchema = z.object({
   templateKey: z.string().optional(),
 });
 export type CreateAnnouncementInput = z.infer<typeof CreateAnnouncementInputSchema>;
+

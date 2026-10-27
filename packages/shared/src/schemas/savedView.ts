@@ -21,3 +21,4 @@ export const CreateSavedViewInputSchema = z.object({
   isDefault: z.boolean().default(false),
 });
 export type CreateSavedViewInput = z.infer<typeof CreateSavedViewInputSchema>;
+

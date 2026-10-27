@@ -51,6 +51,13 @@ export const SocketEvent = {
 
   // Staff security & session events
   STAFF_SESSION_REVOKED: "staff.session_revoked",
+  STAFF_OTP_REQUESTED: "staff:otp_requested",
+  STAFF_OTP_SENT: "staff:otp_sent",
+  STAFF_OTP_VERIFIED: "staff:otp_verified",
+  STAFF_OTP_FAILED: "staff:otp_failed",
+  STAFF_OTP_LOCKED: "staff:otp_locked",
+  STAFF_SECURITY_ALERT: "staff:security_alert",
+  STAFF_FORCE_LOGOUT: "staff:force_logout",
 
   // App Release & OTA events
   APP_RELEASE_PUBLISHED: "app_release.published",
@@ -67,6 +74,7 @@ export type SocketEventType = (typeof SocketEvent)[keyof typeof SocketEvent];
  */
 export const SocketRoom = {
   employee: (employeeId: string) => `employee:${employeeId}`,
+  user: (userId: string) => `user:${userId}`,
   display: (displayOrTerminalId: string) => `display:${displayOrTerminalId}`,
   hr: () => "hr",
   hrDashboard: () => "hr:dashboard",

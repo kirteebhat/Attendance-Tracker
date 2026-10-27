@@ -87,3 +87,4 @@ EnquirySchema.index({ category: 1, status: 1 });
 EnquirySchema.index({ lastMessageAt: -1 });
 
 export const Enquiry = model<IEnquiry>("Enquiry", EnquirySchema);
+

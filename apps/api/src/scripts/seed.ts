@@ -374,14 +374,16 @@ export async function runSeed(): Promise<void> {
     adminUser = await User.create({
       employeeId: "ADM-001",
       email: "admin@vorldx.demo",
+      mobileNumber: "+919876543210",
       passwordHash: adminPasswordHash,
       role: UserRole.ADMIN,
       status: "ACTIVE",
     });
-    console.log(" Created Demo Admin user: ADM-001 (admin@vorldx.demo)");
+    console.log(" Created Demo Admin user: ADM-001 (admin@vorldx.demo / +919876543210)");
   } else {
     adminUser.passwordHash = adminPasswordHash;
     adminUser.role = UserRole.ADMIN;
+    adminUser.mobileNumber = "+919876543210";
     adminUser.status = "ACTIVE";
     await adminUser.save();
     console.log(" Updated Demo Admin user: ADM-001");
@@ -394,6 +396,7 @@ export async function runSeed(): Promise<void> {
         employeeId: "ADM-001",
         name: "System Administrator",
         email: "admin@vorldx.demo",
+        mobileNumber: "+919876543210",
         department: "Executive",
         designation: "Platform Super Admin",
         workType: WorkType.FULL_TIME,
@@ -415,18 +418,40 @@ export async function runSeed(): Promise<void> {
     hrUser = await User.create({
       employeeId: "HR-001",
       email: "hr@vorldx.demo",
+      mobileNumber: "+919876543211",
       passwordHash: hrPasswordHash,
       role: UserRole.HR,
       status: "ACTIVE",
     });
-    console.log(" Created Demo HR user: HR-001 (hr@vorldx.demo)");
+    console.log(" Created Demo HR user: HR-001 (hr@vorldx.demo / +919876543211)");
   } else {
     hrUser.passwordHash = hrPasswordHash;
     hrUser.role = UserRole.HR;
+    hrUser.mobileNumber = "+919876543211";
     hrUser.status = "ACTIVE";
     await hrUser.save();
     console.log(" Updated Demo HR user: HR-001");
   }
+
+  await Employee.findOneAndUpdate(
+    { employeeId: "HR-001" },
+    {
+      $set: {
+        employeeId: "HR-001",
+        name: "HR Operations Lead",
+        email: "hr@vorldx.demo",
+        mobileNumber: "+919876543211",
+        department: "Human Resources",
+        designation: "People Partner & HR Lead",
+        workType: WorkType.FULL_TIME,
+        shiftId: shiftIds[0],
+        joiningDate: "2022-02-01",
+        isActive: true,
+        userId: hrUser._id,
+      },
+    },
+    { upsert: true, new: true }
+  );
 
   await Employee.findOneAndUpdate(
     { employeeId: "HR-001" },

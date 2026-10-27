@@ -8,11 +8,13 @@ export interface IUser extends Document {
   _id: Types.ObjectId;
   employeeId: string;
   email: string;
+  mobileNumber?: string | null;
   passwordHash: string;
   role: UserRole;
   status: UserAccountStatus;
   failedLoginAttempts: number;
   lockoutUntil: Date | null;
+  twoFactorRequired?: boolean;
   refreshTokenHash: string | null;
   lastLoginAt?: Date;
   createdAt: Date;
@@ -39,6 +41,13 @@ const UserSchema = new Schema<IUser>(
       match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
       index: true,
     },
+    mobileNumber: {
+      type: String,
+      trim: true,
+      default: null,
+      sparse: true,
+      index: true,
+    },
     passwordHash: {
       type: String,
       required: [true, "Password hash is required"],
@@ -56,6 +65,10 @@ const UserSchema = new Schema<IUser>(
       default: "PENDING_VERIFICATION",
       required: true,
       index: true,
+    },
+    twoFactorRequired: {
+      type: Boolean,
+      default: false,
     },
     failedLoginAttempts: {
       type: Number,

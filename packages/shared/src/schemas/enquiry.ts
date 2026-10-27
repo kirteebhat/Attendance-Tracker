@@ -62,3 +62,4 @@ export const SendEnquiryMessageInputSchema = z.object({
   attachments: z.array(z.string().url()).optional(),
 });
 export type SendEnquiryMessageInput = z.infer<typeof SendEnquiryMessageInputSchema>;
+

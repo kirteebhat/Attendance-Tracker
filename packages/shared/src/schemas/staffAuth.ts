@@ -62,6 +62,7 @@ export type StaffSession = z.infer<typeof StaffSessionSchema>;
 export const StaffOtpStartInputSchema = z.object({
   mobileNumber: z.string().min(10, "Mobile number must be at least 10 digits").max(15),
   purpose: StaffOtpPurposeSchema.default("LOGIN"),
+  password: z.string().optional(), // For optional password + OTP 2FA flow
   deviceFingerprint: z.string().optional(),
   deviceName: z.string().optional(),
   platform: DevicePlatformSchema.optional(),
@@ -75,6 +76,17 @@ export const StaffOtpVerifyInputSchema = z.object({
   deviceFingerprint: z.string().optional(),
   deviceName: z.string().optional(),
   platform: DevicePlatformSchema.optional(),
-  trustDevice: z.boolean().default(false),
+  trustDevice: z.boolean().optional(),
+  rememberDevice: z.boolean().optional(),
 });
 export type StaffOtpVerifyInput = z.infer<typeof StaffOtpVerifyInputSchema>;
+
+export const ForceLogoutInputSchema = z.object({
+  reason: z.string().min(3, "Reason must be at least 3 characters").max(300).optional(),
+});
+export type ForceLogoutInput = z.infer<typeof ForceLogoutInputSchema>;
+
+export const RevokeSessionInputSchema = z.object({
+  sessionId: z.string().optional(),
+});
+export type RevokeSessionInput = z.infer<typeof RevokeSessionInputSchema>;

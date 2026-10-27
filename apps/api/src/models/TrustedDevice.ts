@@ -68,3 +68,4 @@ TrustedDeviceSchema.index({ user: 1, deviceFingerprint: 1 }, { unique: true });
 TrustedDeviceSchema.index({ user: 1, isRevoked: 1 });
 
 export const TrustedDevice = model<ITrustedDevice>("TrustedDevice", TrustedDeviceSchema);
+

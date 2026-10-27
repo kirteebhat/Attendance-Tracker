@@ -108,3 +108,4 @@ LeaveRequestSchema.pre("validate", function (next) {
 });
 
 export const LeaveRequest = model<ILeaveRequest>("LeaveRequest", LeaveRequestSchema);
+

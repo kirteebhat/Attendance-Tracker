@@ -32,6 +32,13 @@ export declare const SocketEvent: {
     readonly ENQUIRY_MESSAGE_RECEIVED: "enquiry.message_received";
     readonly ENQUIRY_STATUS_UPDATED: "enquiry.status_updated";
     readonly STAFF_SESSION_REVOKED: "staff.session_revoked";
+    readonly STAFF_OTP_REQUESTED: "staff:otp_requested";
+    readonly STAFF_OTP_SENT: "staff:otp_sent";
+    readonly STAFF_OTP_VERIFIED: "staff:otp_verified";
+    readonly STAFF_OTP_FAILED: "staff:otp_failed";
+    readonly STAFF_OTP_LOCKED: "staff:otp_locked";
+    readonly STAFF_SECURITY_ALERT: "staff:security_alert";
+    readonly STAFF_FORCE_LOGOUT: "staff:force_logout";
     readonly APP_RELEASE_PUBLISHED: "app_release.published";
     readonly NOTIFICATION_NEW: "notification.new";
     readonly NOTIFICATION_READ: "notification.read";
@@ -42,6 +49,7 @@ export type SocketEventType = (typeof SocketEvent)[keyof typeof SocketEvent];
  */
 export declare const SocketRoom: {
     readonly employee: (employeeId: string) => string;
+    readonly user: (userId: string) => string;
     readonly display: (displayOrTerminalId: string) => string;
     readonly hr: () => string;
     readonly hrDashboard: () => string;
