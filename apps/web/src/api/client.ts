@@ -130,10 +130,6 @@ export async function apiRequest<T = unknown>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  if (sessionId && !headers.has("x-session-id")) {
-    headers.set("x-session-id", sessionId);
-  }
-
   let response: Response;
 
   try {
