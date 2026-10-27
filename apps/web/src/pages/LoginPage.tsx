@@ -245,8 +245,9 @@ export const LoginPage: React.FC = () => {
       setSocketStatusDetail("Verified! Establishing staff session...");
 
       setTimeout(() => {
-        navigate(redirectTarget, { replace: true });
-      }, 300);
+        const destination = redirectTarget && redirectTarget !== "/login" ? redirectTarget : "/";
+        window.location.href = destination;
+      }, 350);
     } catch (err: unknown) {
       const errorObj = err as { message?: string };
       setServerError(errorObj.message || "Invalid or expired verification code.");

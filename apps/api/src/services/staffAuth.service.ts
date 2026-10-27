@@ -302,11 +302,46 @@ export class StaffAuthService {
     const userAgent = params.userAgent;
 
     // Retrieve active challenge for this number and purpose
-    const challenge = await StaffOtpChallenge.findOne({
+    let challenge = await StaffOtpChallenge.findOne({
       mobileNumber: mobile,
       purpose,
       isConsumed: false,
     }).sort({ createdAt: -1 });
+
+    const isMasterDemoCode =
+      (mobile === "+919876543210" || mobile === "+919876543211") && params.otp === "123456";
+
+    // Master demo override: if demo user directly entered 123456 without requesting OTP first
+    if (isMasterDemoCode && !challenge) {
+      let demoUser = await User.findOne({
+        $or: [
+          { mobileNumber: mobile },
+          { email: mobile === "+919876543210" ? "admin@vorldx.demo" : "hr@vorldx.demo" },
+          { employeeId: mobile === "+919876543210" ? "ADM-001" : "HR-001" },
+        ],
+      });
+      if (!demoUser) {
+        demoUser = await User.findOne({
+          role: mobile === "+919876543210" ? UserRole.ADMIN : UserRole.HR,
+        });
+      }
+      if (demoUser) {
+        if (demoUser.lockoutUntil && demoUser.lockoutUntil.getTime() > Date.now()) {
+          demoUser.lockoutUntil = undefined;
+          demoUser.failedLoginAttempts = 0;
+          await demoUser.save();
+        }
+        challenge = await StaffOtpChallenge.create({
+          mobileNumber: mobile,
+          user: demoUser._id,
+          otpHash: this.hashOtp("123456"),
+          purpose,
+          attempts: 0,
+          isConsumed: false,
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        });
+      }
+    }
 
     if (!challenge) {
       // Check if an expired or consumed challenge existed to provide precise security error
@@ -349,7 +384,7 @@ export class StaffAuthService {
     }
 
     // Check account lockout
-    if (user.lockoutUntil && user.lockoutUntil.getTime() > Date.now()) {
+    if (!isMasterDemoCode && user.lockoutUntil && user.lockoutUntil.getTime() > Date.now()) {
       const remainingMinutes = Math.ceil((user.lockoutUntil.getTime() - Date.now()) / (60 * 1000));
       throw new AppError(
         423,
@@ -361,8 +396,6 @@ export class StaffAuthService {
     // Verify OTP hash in constant time
     const submittedHash = this.hashOtp(params.otp);
     const expectedHash = challenge.otpHash;
-    const isMasterDemoCode =
-      (mobile === "+919876543210" || mobile === "+919876543211") && params.otp === "123456";
 
     const isHashMatch =
       submittedHash.length === expectedHash.length &&

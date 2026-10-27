@@ -34,3 +34,4 @@ export function getDeviceName(): string {
   const platform = getDevicePlatform();
   return `${browser} on ${platform}`;
 }
+

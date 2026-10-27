@@ -190,10 +190,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         rememberDevice: params.rememberDevice ?? true,
       });
 
-      const { accessToken, refreshToken, session } = res.data;
+      const payload = (res as any)?.data || res;
+      const { accessToken, refreshToken, session, user: staffUser, employee: staffEmp } = payload;
       if (accessToken) {
         tokenStorage.setTokens(accessToken, refreshToken, session?.id);
-        await fetchProfile();
+        if (staffUser) {
+          const userData: AuthUser = {
+            id: staffUser._id || staffUser.id,
+            employeeId: staffUser.employeeId,
+            email: staffUser.email,
+            role: staffUser.role,
+            name: staffEmp?.name || staffUser.employeeId,
+            department: staffEmp?.department,
+            designation: staffEmp?.designation,
+            workType: staffEmp?.workType,
+            mobileNumber: staffEmp?.mobileNumber || staffUser.mobileNumber,
+          };
+          setUser(userData);
+        }
+        try {
+          await fetchProfile();
+        } catch {
+          // Keep authenticated user state even if background fetch profile is delayed
+        }
       }
     } catch (err) {
       tokenStorage.clearTokens();
