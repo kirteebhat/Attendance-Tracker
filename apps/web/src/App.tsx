@@ -9,7 +9,6 @@ import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { RoleGuard } from "./routes/RoleGuard";
 import { AppShell } from "./components/layout/AppShell";
 import { LoginPage } from "./pages/LoginPage";
-import { DesignSystemPage } from "./pages/DesignSystemPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AttendanceLedgerPage } from "./pages/AttendanceLedgerPage";
 import { ReportsPage } from "./pages/ReportsPage";
@@ -41,8 +40,6 @@ export const App: React.FC = () => {
               <Routes>
                 {/* Public Authentication Route */}
                 <Route path="/login" element={<LoginPage />} />
-                {/* Hidden Enterprise Design System Showcase */}
-                <Route path="/design-system" element={<DesignSystemPage />} />
 
                 {/* Protected Administrative Application Shell */}
                 <Route element={<ProtectedRoute />}>

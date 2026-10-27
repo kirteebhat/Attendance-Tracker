@@ -228,4 +228,136 @@ const index_1 = require("./index");
         node_assert_1.default.strictEqual((0, index_1.getStatusDescriptor)("WEEKEND").key, "OFF_DAY");
         node_assert_1.default.strictEqual((0, index_1.getStatusDescriptor)("unknown_status").icon, "HelpCircle");
     });
+    (0, node_test_1.test)("enterprise extension schemas validate accurately", () => {
+        // 1. LeaveTypeSchema
+        const validLeaveType = index_1.LeaveTypeSchema.safeParse({
+            name: "Earned Leave",
+            code: "EL",
+            paid: true,
+            annualQuota: 18,
+            carryForwardRule: { allowed: true, maxDays: 10, expiryMonths: 6 },
+            halfDayAllowed: true,
+        });
+        node_assert_1.default.strictEqual(validLeaveType.success, true);
+        // 2. LeaveBalanceSchema
+        const validBalance = index_1.LeaveBalanceSchema.safeParse({
+            employee: "emp_123",
+            type: "lt_456",
+            year: 2026,
+            allotted: 18,
+            used: 3,
+            pending: 1,
+            carriedOver: 2,
+        });
+        node_assert_1.default.strictEqual(validBalance.success, true);
+        // 3. LeaveRequestSchema
+        const validLeaveReq = index_1.LeaveRequestSchema.safeParse({
+            employee: "emp_123",
+            type: "lt_456",
+            startDate: "2026-04-01",
+            endDate: "2026-04-03",
+            isHalfDay: false,
+            workingDays: 3,
+            reason: "Annual family retreat",
+            status: "PENDING",
+        });
+        node_assert_1.default.strictEqual(validLeaveReq.success, true);
+        // 4. CalendarEventSchema
+        const validCalEvent = index_1.CalendarEventSchema.safeParse({
+            type: "holiday",
+            title: "Diwali Celebration",
+            startDate: new Date("2026-11-08"),
+            endDate: new Date("2026-11-09"),
+            isFullDay: true,
+            source: "manual",
+        });
+        node_assert_1.default.strictEqual(validCalEvent.success, true);
+        // 5. AnnouncementSchema
+        const validAnnouncement = index_1.AnnouncementSchema.safeParse({
+            title: "Policy Update Notice",
+            body: "Updated WFH policy effective immediately.",
+            priority: "HIGH",
+            pinned: true,
+            startsAt: new Date(),
+        });
+        node_assert_1.default.strictEqual(validAnnouncement.success, true);
+        // 6. EnquirySchema
+        const validEnquiry = index_1.EnquirySchema.safeParse({
+            employee: "emp_123",
+            category: "IT",
+            subject: "VPN access issue on mobile network",
+            status: "OPEN",
+            priority: "HIGH",
+        });
+        node_assert_1.default.strictEqual(validEnquiry.success, true);
+        // 7. StaffOtpChallengeSchema & TrustedDeviceSchema & StaffSessionSchema
+        const validOtp = index_1.StaffOtpChallengeSchema.safeParse({
+            mobileNumber: "+919876543210",
+            user: "user_123",
+            otpHash: "hashed_code",
+            purpose: "LOGIN",
+            attempts: 0,
+            isConsumed: false,
+            expiresAt: new Date(Date.now() + 300000),
+        });
+        node_assert_1.default.strictEqual(validOtp.success, true);
+        const validDevice = index_1.TrustedDeviceSchema.safeParse({
+            user: "user_123",
+            deviceFingerprint: "fingerprint_12345678",
+            deviceName: "Work iPhone 15",
+            platform: "iOS",
+            lastUsedAt: new Date(),
+            trustedUntil: new Date(Date.now() + 86400000),
+            isRevoked: false,
+        });
+        node_assert_1.default.strictEqual(validDevice.success, true);
+        const validSession = index_1.StaffSessionSchema.safeParse({
+            user: "user_123",
+            tokenHash: "token_hash_123",
+            ipAddress: "127.0.0.1",
+            userAgent: "TestAgent",
+            isActive: true,
+            expiresAt: new Date(Date.now() + 86400000),
+            lastActivityAt: new Date(),
+        });
+        node_assert_1.default.strictEqual(validSession.success, true);
+        // 8. AppReleaseSchema
+        const validRelease = index_1.AppReleaseSchema.safeParse({
+            platform: "ANDROID",
+            version: "1.5.0",
+            versionCode: 10500,
+            minSupportedVersion: "1.0.0",
+            minSupportedVersionCode: 10000,
+            notes: "Performance optimizations and new scanner engine",
+            forceUpdate: false,
+            isPublished: true,
+            publishedAt: new Date(),
+        });
+        node_assert_1.default.strictEqual(validRelease.success, true);
+        // 9. SavedViewSchema
+        const validSavedView = index_1.SavedViewSchema.safeParse({
+            user: "user_123",
+            page: "attendance",
+            name: "Late Employees Today",
+            filters: { status: "LATE" },
+            isDefault: false,
+        });
+        node_assert_1.default.strictEqual(validSavedView.success, true);
+        // 10. NotificationSchema
+        const validNotification = index_1.NotificationSchema.safeParse({
+            user: "user_123",
+            type: "LEAVE_STATUS",
+            title: "Leave Approved",
+            message: "Your leave has been approved.",
+            payload: { leaveId: "leave_999" },
+        });
+        node_assert_1.default.strictEqual(validNotification.success, true);
+        // Socket events check
+        node_assert_1.default.strictEqual(index_1.SocketEvent.LEAVE_REQUESTED, "leave.requested");
+        node_assert_1.default.strictEqual(index_1.SocketEvent.CALENDAR_EVENT_CREATED, "calendar.event_created");
+        node_assert_1.default.strictEqual(index_1.SocketEvent.ANNOUNCEMENT_PUBLISHED, "announcement.published");
+        node_assert_1.default.strictEqual(index_1.SocketEvent.ENQUIRY_CREATED, "enquiry.created");
+        node_assert_1.default.strictEqual(index_1.SocketEvent.APP_RELEASE_PUBLISHED, "app_release.published");
+        node_assert_1.default.strictEqual(index_1.SocketEvent.NOTIFICATION_NEW, "notification.new");
+    });
 });

@@ -121,3 +121,4 @@ export function usePrefersReducedMotion(): boolean {
   const context = useContext(ThemeContext);
   return context ? context.prefersReducedMotion : false;
 }
+

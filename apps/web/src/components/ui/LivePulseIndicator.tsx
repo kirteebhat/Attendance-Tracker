@@ -101,3 +101,4 @@ export const LivePulseIndicator: React.FC<LivePulseIndicatorProps> = ({
     </div>
   );
 };
+

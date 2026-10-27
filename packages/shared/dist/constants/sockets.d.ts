@@ -20,6 +20,21 @@ export declare const SocketEvent: {
     readonly ATTENDANCE_FEED_ITEM: "attendance:feed_item";
     readonly STATS_DAILY_UPDATED: "stats:daily_updated";
     readonly WFH_NEW_REQUEST: "wfh:new_request";
+    readonly LEAVE_REQUESTED: "leave.requested";
+    readonly LEAVE_DECIDED: "leave.decided";
+    readonly LEAVE_BALANCE_UPDATED: "leave.balance_updated";
+    readonly CALENDAR_EVENT_CREATED: "calendar.event_created";
+    readonly CALENDAR_EVENT_UPDATED: "calendar.event_updated";
+    readonly CALENDAR_EVENT_DELETED: "calendar.event_deleted";
+    readonly ANNOUNCEMENT_PUBLISHED: "announcement.published";
+    readonly ANNOUNCEMENT_PINNED: "announcement.pinned";
+    readonly ENQUIRY_CREATED: "enquiry.created";
+    readonly ENQUIRY_MESSAGE_RECEIVED: "enquiry.message_received";
+    readonly ENQUIRY_STATUS_UPDATED: "enquiry.status_updated";
+    readonly STAFF_SESSION_REVOKED: "staff.session_revoked";
+    readonly APP_RELEASE_PUBLISHED: "app_release.published";
+    readonly NOTIFICATION_NEW: "notification.new";
+    readonly NOTIFICATION_READ: "notification.read";
 };
 export type SocketEventType = (typeof SocketEvent)[keyof typeof SocketEvent];
 /**

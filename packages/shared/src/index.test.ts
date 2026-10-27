@@ -25,6 +25,18 @@ import {
   UpdateFeatureFlagPayloadSchema,
   STATUS_REGISTRY,
   getStatusDescriptor,
+  LeaveTypeSchema,
+  LeaveBalanceSchema,
+  LeaveRequestSchema,
+  CalendarEventSchema,
+  AnnouncementSchema,
+  EnquirySchema,
+  StaffOtpChallengeSchema,
+  TrustedDeviceSchema,
+  StaffSessionSchema,
+  AppReleaseSchema,
+  SavedViewSchema,
+  NotificationSchema,
 } from "./index";
 
 describe("@vorldx/shared package exports", () => {
@@ -283,5 +295,150 @@ describe("@vorldx/shared package exports", () => {
     assert.strictEqual(getStatusDescriptor("half_day").key, "INCOMPLETE");
     assert.strictEqual(getStatusDescriptor("WEEKEND").key, "OFF_DAY");
     assert.strictEqual(getStatusDescriptor("unknown_status").icon, "HelpCircle");
+  });
+
+  test("enterprise extension schemas validate accurately", () => {
+    // 1. LeaveTypeSchema
+    const validLeaveType = LeaveTypeSchema.safeParse({
+      name: "Earned Leave",
+      code: "EL",
+      paid: true,
+      annualQuota: 18,
+      carryForwardRule: { allowed: true, maxDays: 10, expiryMonths: 6 },
+      halfDayAllowed: true,
+    });
+    assert.strictEqual(validLeaveType.success, true);
+
+    // 2. LeaveBalanceSchema
+    const validBalance = LeaveBalanceSchema.safeParse({
+      employee: "emp_123",
+      type: "lt_456",
+      year: 2026,
+      allotted: 18,
+      used: 3,
+      pending: 1,
+      carriedOver: 2,
+    });
+    assert.strictEqual(validBalance.success, true);
+
+    // 3. LeaveRequestSchema
+    const validLeaveReq = LeaveRequestSchema.safeParse({
+      employee: "emp_123",
+      type: "lt_456",
+      startDate: "2026-04-01",
+      endDate: "2026-04-03",
+      isHalfDay: false,
+      workingDays: 3,
+      reason: "Annual family retreat",
+      status: "PENDING",
+    });
+    assert.strictEqual(validLeaveReq.success, true);
+
+    // 4. CalendarEventSchema
+    const validCalEvent = CalendarEventSchema.safeParse({
+      type: "holiday",
+      title: "Diwali Celebration",
+      startDate: new Date("2026-11-08"),
+      endDate: new Date("2026-11-09"),
+      isFullDay: true,
+      source: "manual",
+    });
+    assert.strictEqual(validCalEvent.success, true);
+
+    // 5. AnnouncementSchema
+    const validAnnouncement = AnnouncementSchema.safeParse({
+      title: "Policy Update Notice",
+      body: "Updated WFH policy effective immediately.",
+      priority: "HIGH",
+      pinned: true,
+      startsAt: new Date(),
+    });
+    assert.strictEqual(validAnnouncement.success, true);
+
+    // 6. EnquirySchema
+    const validEnquiry = EnquirySchema.safeParse({
+      employee: "emp_123",
+      category: "IT",
+      subject: "VPN access issue on mobile network",
+      status: "OPEN",
+      priority: "HIGH",
+    });
+    assert.strictEqual(validEnquiry.success, true);
+
+    // 7. StaffOtpChallengeSchema & TrustedDeviceSchema & StaffSessionSchema
+    const validOtp = StaffOtpChallengeSchema.safeParse({
+      mobileNumber: "+919876543210",
+      user: "user_123",
+      otpHash: "hashed_code",
+      purpose: "LOGIN",
+      attempts: 0,
+      isConsumed: false,
+      expiresAt: new Date(Date.now() + 300000),
+    });
+    assert.strictEqual(validOtp.success, true);
+
+    const validDevice = TrustedDeviceSchema.safeParse({
+      user: "user_123",
+      deviceFingerprint: "fingerprint_12345678",
+      deviceName: "Work iPhone 15",
+      platform: "iOS",
+      lastUsedAt: new Date(),
+      trustedUntil: new Date(Date.now() + 86400000),
+      isRevoked: false,
+    });
+    assert.strictEqual(validDevice.success, true);
+
+    const validSession = StaffSessionSchema.safeParse({
+      user: "user_123",
+      tokenHash: "token_hash_123",
+      ipAddress: "127.0.0.1",
+      userAgent: "TestAgent",
+      isActive: true,
+      expiresAt: new Date(Date.now() + 86400000),
+      lastActivityAt: new Date(),
+    });
+    assert.strictEqual(validSession.success, true);
+
+    // 8. AppReleaseSchema
+    const validRelease = AppReleaseSchema.safeParse({
+      platform: "ANDROID",
+      version: "1.5.0",
+      versionCode: 10500,
+      minSupportedVersion: "1.0.0",
+      minSupportedVersionCode: 10000,
+      notes: "Performance optimizations and new scanner engine",
+      forceUpdate: false,
+      isPublished: true,
+      publishedAt: new Date(),
+    });
+    assert.strictEqual(validRelease.success, true);
+
+    // 9. SavedViewSchema
+    const validSavedView = SavedViewSchema.safeParse({
+      user: "user_123",
+      page: "attendance",
+      name: "Late Employees Today",
+      filters: { status: "LATE" },
+      isDefault: false,
+    });
+    assert.strictEqual(validSavedView.success, true);
+
+    // 10. NotificationSchema
+    const validNotification = NotificationSchema.safeParse({
+      user: "user_123",
+      type: "LEAVE_STATUS",
+      title: "Leave Approved",
+      message: "Your leave has been approved.",
+      payload: { leaveId: "leave_999" },
+    });
+    assert.strictEqual(validNotification.success, true);
+
+    // Socket events check
+    assert.strictEqual(SocketEvent.LEAVE_REQUESTED, "leave.requested");
+    assert.strictEqual(SocketEvent.CALENDAR_EVENT_CREATED, "calendar.event_created");
+    assert.strictEqual(SocketEvent.ANNOUNCEMENT_PUBLISHED, "announcement.published");
+    assert.strictEqual(SocketEvent.ENQUIRY_CREATED, "enquiry.created");
+    assert.strictEqual(SocketEvent.APP_RELEASE_PUBLISHED, "app_release.published");
+    assert.strictEqual(SocketEvent.NOTIFICATION_NEW, "notification.new");
   });
 });

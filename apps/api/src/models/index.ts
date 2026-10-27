@@ -10,3 +10,18 @@ export * from "./QrToken";
 export * from "./RegistrationOtp";
 export * from "./AuditEvent";
 export * from "./FeatureFlag";
+
+// Enterprise extension models
+export * from "./LeaveType";
+export * from "./LeaveBalance";
+export * from "./LeaveRequest";
+export * from "./CalendarEvent";
+export * from "./Announcement";
+export * from "./Enquiry";
+export * from "./EnquiryMessage";
+export * from "./StaffOtpChallenge";
+export * from "./TrustedDevice";
+export * from "./StaffSession";
+export * from "./AppRelease";
+export * from "./SavedView";
+export * from "./Notification";

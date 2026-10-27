@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { Types } from "mongoose";
 import {
   Employee,
   AttendanceRecord,
@@ -9,6 +10,19 @@ import {
   Holiday,
   QrDisplay,
   AuditEvent,
+  LeaveType,
+  LeaveBalance,
+  LeaveRequest,
+  CalendarEvent,
+  Announcement,
+  Enquiry,
+  EnquiryMessage,
+  StaffOtpChallenge,
+  TrustedDevice,
+  StaffSession,
+  AppRelease,
+  SavedView,
+  Notification,
 } from "../src/models";
 import { AttendanceStatus, WfhStatus, TerminalStatus, WorkType } from "@vorldx/shared";
 
@@ -293,5 +307,338 @@ describe("Mongoose Models & Schema Constraints", () => {
       timestamp: new Date(),
     });
     expect(audit.action).toBe("MANUAL_CORRECTION");
+  });
+
+  describe("Enterprise Extension Models & Schema Constraints", () => {
+    it("enforces unique name and code on LeaveType", async () => {
+      await LeaveType.init();
+
+      const lt1 = await LeaveType.create({
+        name: "Casual Leave",
+        code: "CL",
+        paid: true,
+        annualQuota: 12,
+        halfDayAllowed: true,
+        carryForwardRule: { allowed: true, maxDays: 5, expiryMonths: 3 },
+      });
+      expect(lt1._id).toBeDefined();
+      expect(lt1.carryForwardRule.maxDays).toBe(5);
+
+      // Duplicate name fails
+      await expect(
+        LeaveType.create({
+          name: "Casual Leave",
+          code: "DIFF",
+          annualQuota: 10,
+        })
+      ).rejects.toThrow();
+
+      // Duplicate code fails
+      await expect(
+        LeaveType.create({
+          name: "Other Leave",
+          code: "CL",
+          annualQuota: 10,
+        })
+      ).rejects.toThrow();
+    });
+
+    it("enforces unique compound index (employee, type, year) on LeaveBalance", async () => {
+      await LeaveBalance.init();
+      const empId = new Types.ObjectId();
+      const leaveTypeId = new Types.ObjectId();
+
+      const balance1 = await LeaveBalance.create({
+        employee: empId,
+        type: leaveTypeId,
+        year: 2026,
+        allotted: 12,
+        used: 2,
+        pending: 1,
+        carriedOver: 0,
+      });
+      expect(balance1._id).toBeDefined();
+
+      // Duplicate for same employee + leaveType + year must reject
+      await expect(
+        LeaveBalance.create({
+          employee: empId,
+          type: leaveTypeId,
+          year: 2026,
+          allotted: 14,
+        })
+      ).rejects.toThrow();
+
+      // Different year should succeed
+      const balanceNextYear = await LeaveBalance.create({
+        employee: empId,
+        type: leaveTypeId,
+        year: 2027,
+        allotted: 12,
+      });
+      expect(balanceNextYear.year).toBe(2027);
+    });
+
+    it("validates LeaveRequest dates and working days constraint", async () => {
+      const empId = new Types.ObjectId();
+      const leaveTypeId = new Types.ObjectId();
+
+      const req = await LeaveRequest.create({
+        employee: empId,
+        type: leaveTypeId,
+        startDate: new Date("2026-03-10"),
+        endDate: new Date("2026-03-12"),
+        isHalfDay: false,
+        workingDays: 3,
+        reason: "Family vacation trip",
+        status: "PENDING",
+      });
+      expect(req.status).toBe("PENDING");
+      expect(req.workingDays).toBe(3);
+
+      // End date before start date must fail pre-validate hook
+      await expect(
+        LeaveRequest.create({
+          employee: empId,
+          type: leaveTypeId,
+          startDate: new Date("2026-03-15"),
+          endDate: new Date("2026-03-10"),
+          isHalfDay: false,
+          workingDays: 1,
+          reason: "Invalid dates test",
+          status: "PENDING",
+        })
+      ).rejects.toThrow(/greater than or equal to start date/);
+    });
+
+    it("validates CalendarEvent types, sources, and audience", async () => {
+      const event = await CalendarEvent.create({
+        type: "holiday",
+        title: "Independence Day",
+        description: "National public holiday",
+        startDate: new Date("2026-08-15T00:00:00.000Z"),
+        endDate: new Date("2026-08-15T23:59:59.999Z"),
+        isFullDay: true,
+        source: "manual",
+        audience: { scope: "all", departments: [], roles: [], shiftIds: [] },
+      });
+      expect(event.type).toBe("holiday");
+      expect(event.source).toBe("manual");
+      expect(event.audience.scope).toBe("all");
+    });
+
+    it("validates Announcement priorities and TTL index on expiresAt", async () => {
+      await Announcement.init();
+      const announcement = await Announcement.create({
+        title: "Quarterly Town Hall",
+        body: "Join us for company-wide updates and Q&A session.",
+        priority: "HIGH",
+        pinned: true,
+        startsAt: new Date(),
+        expiresAt: new Date(Date.now() + 86400000), // 24 hours
+        source: "manual",
+        audience: { scope: "all", departments: [], roles: [] },
+      });
+      expect(announcement.priority).toBe("HIGH");
+      expect(announcement.pinned).toBe(true);
+
+      // Verify TTL index configuration
+      const indexes = await Announcement.collection.indexes();
+      const ttlIndex = indexes.find((idx) => idx.name === "expiresAt_1" || (idx.key && idx.key.expiresAt === 1));
+      expect(ttlIndex).toBeDefined();
+      expect(ttlIndex?.expireAfterSeconds).toBe(0);
+    });
+
+    it("creates Enquiry and linked EnquiryMessage thread", async () => {
+      const empId = new Types.ObjectId();
+      const hrId = new Types.ObjectId();
+
+      const enquiry = await Enquiry.create({
+        employee: empId,
+        category: "PAYROLL",
+        subject: "Discrepancy in February tax deduction",
+        status: "OPEN",
+        priority: "MEDIUM",
+        assignee: hrId,
+      });
+      expect(enquiry.category).toBe("PAYROLL");
+      expect(enquiry.status).toBe("OPEN");
+
+      const message = await EnquiryMessage.create({
+        enquiry: enquiry._id,
+        sender: empId,
+        senderRole: "EMPLOYEE",
+        message: "Hello, my tax deduction seems higher than expected.",
+        readByRecipient: false,
+      });
+      expect(message.enquiry.toString()).toBe(enquiry._id.toString());
+      expect(message.senderRole).toBe("EMPLOYEE");
+    });
+
+    it("validates StaffOtpChallenge TTL index and attempt limits", async () => {
+      await StaffOtpChallenge.init();
+      const userId = new Types.ObjectId();
+
+      const challenge = await StaffOtpChallenge.create({
+        mobileNumber: "+919876543210",
+        user: userId,
+        otpHash: "argon2_or_bcrypt_hash_sample",
+        purpose: "LOGIN",
+        attempts: 0,
+        isConsumed: false,
+        expiresAt: new Date(Date.now() + 300000),
+      });
+      expect(challenge.purpose).toBe("LOGIN");
+      expect(challenge.isConsumed).toBe(false);
+
+      // Verify TTL index on expiresAt
+      const indexes = await StaffOtpChallenge.collection.indexes();
+      const ttlIndex = indexes.find((idx) => idx.name === "expiresAt_1" || (idx.key && idx.key.expiresAt === 1));
+      expect(ttlIndex).toBeDefined();
+      expect(ttlIndex?.expireAfterSeconds).toBe(0);
+    });
+
+    it("enforces unique compound index (user, deviceFingerprint) on TrustedDevice", async () => {
+      await TrustedDevice.init();
+      const userId = new Types.ObjectId();
+
+      const dev1 = await TrustedDevice.create({
+        user: userId,
+        deviceFingerprint: "fingerprint_abc123xyz789",
+        deviceName: "MacBook Pro 16",
+        platform: "macOS",
+        trustedUntil: new Date(Date.now() + 30 * 86400000),
+      });
+      expect(dev1._id).toBeDefined();
+
+      // Duplicate fingerprint for same user must reject
+      await expect(
+        TrustedDevice.create({
+          user: userId,
+          deviceFingerprint: "fingerprint_abc123xyz789",
+          deviceName: "Different name",
+          platform: "macOS",
+          trustedUntil: new Date(Date.now() + 30 * 86400000),
+        })
+      ).rejects.toThrow();
+    });
+
+    it("enforces unique tokenHash and TTL on StaffSession", async () => {
+      await StaffSession.init();
+      const userId = new Types.ObjectId();
+
+      const session = await StaffSession.create({
+        user: userId,
+        tokenHash: "sha256_hash_token_abc_123",
+        ipAddress: "192.168.1.100",
+        userAgent: "Mozilla/5.0 Chrome/120.0",
+        isActive: true,
+        expiresAt: new Date(Date.now() + 7 * 86400000),
+      });
+      expect(session.isActive).toBe(true);
+
+      // Duplicate tokenHash must reject
+      await expect(
+        StaffSession.create({
+          user: userId,
+          tokenHash: "sha256_hash_token_abc_123",
+          ipAddress: "192.168.1.101",
+          userAgent: "Safari",
+          expiresAt: new Date(Date.now() + 7 * 86400000),
+        })
+      ).rejects.toThrow();
+
+      // Verify TTL index on expiresAt
+      const indexes = await StaffSession.collection.indexes();
+      const ttlIndex = indexes.find((idx) => idx.name === "expiresAt_1" || (idx.key && idx.key.expiresAt === 1));
+      expect(ttlIndex).toBeDefined();
+      expect(ttlIndex?.expireAfterSeconds).toBe(0);
+    });
+
+    it("enforces unique compound index (platform, version) on AppRelease", async () => {
+      await AppRelease.init();
+
+      const rel1 = await AppRelease.create({
+        platform: "ANDROID",
+        version: "2.1.0",
+        versionCode: 20100,
+        minSupportedVersion: "1.0.0",
+        notes: "Bug fixes and performance improvements",
+        forceUpdate: false,
+      });
+      expect(rel1._id).toBeDefined();
+
+      // Duplicate platform + version must reject
+      await expect(
+        AppRelease.create({
+          platform: "ANDROID",
+          version: "2.1.0",
+          versionCode: 20101,
+          minSupportedVersion: "1.0.0",
+          notes: "Another build",
+        })
+      ).rejects.toThrow();
+
+      // Different platform should succeed
+      const relIos = await AppRelease.create({
+        platform: "IOS",
+        version: "2.1.0",
+        versionCode: 20100,
+        minSupportedVersion: "1.0.0",
+        notes: "iOS Release",
+      });
+      expect(relIos.platform).toBe("IOS");
+    });
+
+    it("enforces unique compound index (user, page, name) on SavedView", async () => {
+      await SavedView.init();
+      const userId = new Types.ObjectId();
+
+      const view1 = await SavedView.create({
+        user: userId,
+        page: "attendance",
+        name: "Late Arrivals Filter",
+        filters: { status: "LATE" },
+        isDefault: false,
+      });
+      expect(view1._id).toBeDefined();
+
+      // Duplicate view name for same user and page must reject
+      await expect(
+        SavedView.create({
+          user: userId,
+          page: "attendance",
+          name: "Late Arrivals Filter",
+          filters: { status: "LATE" },
+        })
+      ).rejects.toThrow();
+
+      // Same name on different page should succeed
+      const view2 = await SavedView.create({
+        user: userId,
+        page: "wfh",
+        name: "Late Arrivals Filter",
+      });
+      expect(view2.page).toBe("wfh");
+    });
+
+    it("creates Notification with type and readAt tracking", async () => {
+      const userId = new Types.ObjectId();
+
+      const notification = await Notification.create({
+        user: userId,
+        type: "LEAVE_STATUS",
+        title: "Leave Request Approved",
+        message: "Your leave request for March 10 - March 12 has been approved by HR.",
+        payload: { requestId: "req_12345", workingDays: 3 },
+        readAt: null,
+      });
+      expect(notification.type).toBe("LEAVE_STATUS");
+      expect(notification.readAt).toBeNull();
+
+      notification.readAt = new Date();
+      await notification.save();
+      expect(notification.readAt).toBeInstanceOf(Date);
+    });
   });
 });

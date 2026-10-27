@@ -1610,3 +1610,311 @@ Mounted under `/reports`, `/api/reports`, and `/api/admin/reports`. All endpoint
   ```
 - **Audit Logging**:
   - Appends to `auditevents`: `{ entityType: "POLICY", entityId: holiday._id, action: "DELETE", previousValue: deletedHoliday }`.
+
+
+---
+
+## 7. Enterprise Extension API Specifications
+
+### 7.1 Leave Management System
+
+#### 7.1.1 `GET /api/leaves/types`
+- **Role**: `Authenticated (All)`
+- **Description**: Returns all active leave types (e.g. Casual Leave, Sick Leave, Earned Leave) with quota and carry-forward configuration.
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "_id": "6714c100...",
+        "name": "Casual Leave",
+        "code": "CL",
+        "paid": true,
+        "annualQuota": 12,
+        "carryForwardRule": { "allowed": true, "maxDays": 5, "expiryMonths": 3 },
+        "halfDayAllowed": true
+      }
+    ]
+  }
+  ```
+
+#### 7.1.2 `GET /api/leaves/balances`
+- **Role**: `Employee` (Own balances) / `HR` (Query with `?employeeId=...`)
+- **Description**: Returns annual leave entitlement, used, pending, and carried-over days for the requested year.
+- **Query Params**: `year` (defaults to current year)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "year": 2026,
+    "data": [
+      {
+        "type": { "_id": "6714c100...", "name": "Casual Leave", "code": "CL" },
+        "allotted": 12,
+        "used": 3,
+        "pending": 1,
+        "carriedOver": 2,
+        "remaining": 10
+      }
+    ]
+  }
+  ```
+
+#### 7.1.3 `POST /api/leaves/requests`
+- **Role**: `Employee`
+- **Description**: Submits a new leave request. Server calculates working days excluding public holidays and scheduled weekend off-days.
+- **Request Body**:
+  ```json
+  {
+    "type": "6714c100...",
+    "startDate": "2026-05-11",
+    "endDate": "2026-05-13",
+    "isHalfDay": false,
+    "reason": "Personal family function"
+  }
+  ```
+- **Response (201 Created)**:
+  ```json
+  {
+    "success": true,
+    "message": "Leave request submitted successfully",
+    "data": {
+      "_id": "6714c200...",
+      "employee": "6714c000...",
+      "type": "6714c100...",
+      "startDate": "2026-05-11T00:00:00.000Z",
+      "endDate": "2026-05-13T23:59:59.999Z",
+      "workingDays": 3,
+      "status": "PENDING"
+    }
+  }
+  ```
+- **Socket Event Dispatched**: `leave.requested` -> `hr`, `employee:${employeeId}`.
+
+#### 7.1.4 `PATCH /api/leaves/requests/:id/decision`
+- **Role**: `HR` / `ADMIN`
+- **Request Body**:
+  ```json
+  {
+    "status": "APPROVED",
+    "decisionNote": "Approved as per team coverage schedule"
+  }
+  ```
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Leave request status updated",
+    "data": { "status": "APPROVED", "decidedBy": "6714c...", "decidedAt": "2026-10-27T12:00:00.000Z" }
+  }
+  ```
+- **Socket Events Dispatched**: `leave.decided`, `leave.balance_updated`.
+
+---
+
+### 7.2 Working Calendar & Events API
+
+#### 7.2.1 `GET /api/calendar/events`
+- **Role**: `Authenticated (All)`
+- **Query Params**: `startDate` (ISO), `endDate` (ISO), `type` (optional: `holiday|companyOffDay|meeting|event`)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "_id": "6714c300...",
+        "type": "holiday",
+        "title": "Republic Day",
+        "startDate": "2026-01-26T00:00:00.000Z",
+        "endDate": "2026-01-26T23:59:59.999Z",
+        "isFullDay": true,
+        "source": "manual",
+        "audience": { "scope": "all" }
+      }
+    ]
+  }
+  ```
+
+#### 7.2.2 `POST /api/calendar/import`
+- **Role**: `HR` / `ADMIN`
+- **Description**: Imports holidays and off-days via standard iCal (.ics) or JSON format.
+- **Request Body**: `{ "format": "json", "events": [ ... ] }`
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "importedCount": 14,
+    "skippedCount": 2
+  }
+  ```
+
+---
+
+### 7.3 Announcements API
+
+#### 7.3.1 `GET /api/announcements`
+- **Role**: `Authenticated (All)`
+- **Description**: Returns active announcements sorted by pinned status, priority, and date. Automatically filters out expired items.
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "_id": "6714c400...",
+        "title": "Town Hall Meeting Tomorrow",
+        "body": "Executive briefing at 1:00 PM on Google Meet.",
+        "priority": "HIGH",
+        "pinned": true,
+        "startsAt": "2026-10-27T00:00:00.000Z",
+        "expiresAt": "2026-10-28T23:59:59.000Z",
+        "source": "manual",
+        "isRead": false
+      }
+    ]
+  }
+  ```
+
+#### 7.3.2 `POST /api/announcements`
+- **Role**: `HR` / `ADMIN`
+- **Request Body**:
+  ```json
+  {
+    "title": "Office Deep Clean Schedule",
+    "body": "Office sanitization scheduled for Friday evening.",
+    "priority": "MEDIUM",
+    "pinned": false,
+    "startsAt": "2026-10-30T10:00:00.000Z"
+  }
+  ```
+- **Socket Event Dispatched**: `announcement.published` -> `all`.
+
+#### 7.3.3 `POST /api/announcements/:id/read`
+- **Role**: `Authenticated`
+- **Description**: Marks announcement as read by the calling user.
+
+---
+
+### 7.4 Support Enquiries & Tickets API
+
+#### 7.4.1 `GET /api/enquiries`
+- **Role**: `Employee` (Own tickets) / `HR` (All department tickets)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "_id": "6714c500...",
+        "category": "PAYROLL",
+        "subject": "Form 16 Tax Certificate Download",
+        "status": "OPEN",
+        "priority": "MEDIUM",
+        "lastMessageAt": "2026-10-27T10:30:00.000Z"
+      }
+    ]
+  }
+  ```
+
+#### 7.4.2 `POST /api/enquiries`
+- **Role**: `Employee`
+- **Request Body**:
+  ```json
+  {
+    "category": "ATTENDANCE",
+    "subject": "Missing Punch In Correction",
+    "message": "Badge reader was calibrating when I arrived at 9:02 AM."
+  }
+  ```
+- **Response (201 Created)**: Ticket initialized with embedded thread entry.
+- **Socket Event Dispatched**: `enquiry.created` -> `hr`.
+
+#### 7.4.3 `POST /api/enquiries/:id/messages`
+- **Role**: `Requester` / `HR Staff`
+- **Request Body**: `{ "message": "We have updated your punch log." }`
+- **Socket Event Dispatched**: `enquiry.message_received`.
+
+---
+
+### 7.5 Staff Mobile OTP & Device Security API
+
+#### 7.5.1 `POST /api/auth/staff/otp-start`
+- **Role**: `Public` (Rate-limited)
+- **Description**: Generates a 6-digit OTP sent via SMS to verified staff mobile numbers for passwordless admin/HR login.
+- **Request Body**: `{ "mobileNumber": "+919876543210", "purpose": "LOGIN" }`
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Security code dispatched via SMS",
+    "expiresInSeconds": 300
+  }
+  ```
+
+#### 7.5.2 `POST /api/auth/staff/otp-verify`
+- **Role**: `Public`
+- **Request Body**:
+  ```json
+  {
+    "mobileNumber": "+919876543210",
+    "otp": "849201",
+    "deviceFingerprint": "hw_mac_fp_88291a",
+    "deviceName": "Kirtee MacBook Pro",
+    "trustDevice": true
+  }
+  ```
+- **Response (200 OK)**: Returns JWT access token, refresh token, and registers device in `TrustedDevice`.
+
+---
+
+### 7.6 App Release & OTA Management API
+
+#### 7.6.1 `GET /api/releases/check-update`
+- **Role**: `Public`
+- **Query Params**: `platform=ANDROID&currentVersion=1.0.0&currentVersionCode=10000`
+- **Response (200 OK)**:
+  ```json
+  {
+    "updateAvailable": true,
+    "forceUpdate": false,
+    "latestVersion": "1.2.0",
+    "latestVersionCode": 10200,
+    "notes": "Fast QR scanner engine and offline punch cache",
+    "downloadUrl": "https://cdn.vorldx.demo/releases/app-v1.2.0.apk"
+  }
+  ```
+
+---
+
+### 7.7 Saved Views API
+
+#### 7.7.1 `GET /api/saved-views`
+- **Role**: `Authenticated`
+- **Query Params**: `page=attendance`
+- **Response (200 OK)**: Returns list of user's saved filter views for that table.
+
+#### 7.7.2 `POST /api/saved-views`
+- **Role**: `Authenticated`
+- **Request Body**:
+  ```json
+  {
+    "page": "attendance",
+    "name": "Only Late Employees",
+    "filters": { "status": "LATE" },
+    "isDefault": false
+  }
+  ```
+
+---
+
+### 7.8 Notifications API
+
+#### 7.8.1 `GET /api/notifications`
+- **Role**: `Authenticated`
+- **Response (200 OK)**: Returns unread & recent notifications with payload metadata.
+
+#### 7.8.2 `PATCH /api/notifications/:id/read`
+- **Role**: `Authenticated`
+- **Description**: Marks a notification as read and synchronizes read status via `notification.read`.

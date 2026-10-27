@@ -244,6 +244,231 @@ interface DisplayStatusPayload {
 
 ---
 
+### 4.6 Leave Management Events
+
+#### `leave.requested`
+- **Emitted When**: An employee submits a new leave request.
+- **Target Rooms**: `hr`, `hr:dashboard`, `employee:${employeeId}`.
+```typescript
+interface LeaveRequestedPayload {
+  requestId: string;
+  employeeId: string;
+  employeeName: string;
+  leaveType: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  isHalfDay: boolean;
+  halfDayType?: "FIRST_HALF" | "SECOND_HALF";
+  workingDays: number;
+  reason: string;
+  createdAt: string;
+}
+```
+
+#### `leave.decided`
+- **Emitted When**: HR or Manager reviews and approves/rejects a leave request.
+- **Target Rooms**: `employee:${employeeId}`, `hr`, `hr:dashboard`.
+```typescript
+interface LeaveDecidedPayload {
+  requestId: string;
+  employeeId: string;
+  status: "APPROVED" | "REJECTED";
+  decidedBy: string;
+  decidedByName?: string;
+  decisionNote?: string;
+  decidedAt: string;
+}
+```
+
+#### `leave.balance_updated`
+- **Emitted When**: Annual quota allotted, leave approved/cancelled, or carry-forward executed.
+- **Target Rooms**: `employee:${employeeId}`, `hr`.
+```typescript
+interface LeaveBalanceUpdatedPayload {
+  employeeId: string;
+  leaveTypeId: string;
+  year: number;
+  allotted: number;
+  used: number;
+  pending: number;
+  remaining: number;
+}
+```
+
+---
+
+### 4.7 Calendar & Holiday Events
+
+#### `calendar.event_created`
+- **Emitted When**: Administrator adds a public holiday, company off-day, or corporate event.
+- **Target Rooms**: `all`, `hr`.
+```typescript
+interface CalendarEventCreatedPayload {
+  eventId: string;
+  type: "holiday" | "companyOffDay" | "meeting" | "event";
+  title: string;
+  startDate: string;
+  endDate: string;
+  isFullDay: boolean;
+  source: "manual" | "imported";
+  audience: { scope: string; departments: string[]; roles: string[] };
+}
+```
+
+#### `calendar.event_updated` / `calendar.event_deleted`
+- **Emitted When**: Calendar event is modified or removed from schedule.
+- **Target Rooms**: `all`, `hr`.
+```typescript
+interface CalendarEventModifiedPayload {
+  eventId: string;
+  action: "UPDATED" | "DELETED";
+  timestamp: string;
+}
+```
+
+---
+
+### 4.8 Announcement Broadcast Events
+
+#### `announcement.published`
+- **Emitted When**: HR/Admin broadcasts a company-wide or department announcement.
+- **Target Rooms**: Scoped according to audience (`all`, `department:${dept}`, `role:${role}`).
+```typescript
+interface AnnouncementPublishedPayload {
+  announcementId: string;
+  title: string;
+  body: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  pinned: boolean;
+  startsAt: string;
+  expiresAt?: string | null;
+  source: "manual" | "auto";
+  templateKey?: string;
+}
+```
+
+#### `announcement.pinned`
+- **Emitted When**: An announcement is pinned to or unpinned from top banners.
+- **Target Rooms**: `all`.
+```typescript
+interface AnnouncementPinnedPayload {
+  announcementId: string;
+  pinned: boolean;
+}
+```
+
+---
+
+### 4.9 Enquiry & Support Ticket Events
+
+#### `enquiry.created`
+- **Emitted When**: Employee opens a new HR support ticket.
+- **Target Rooms**: `hr`, `employee:${employeeId}`.
+```typescript
+interface EnquiryCreatedPayload {
+  enquiryId: string;
+  employeeId: string;
+  category: "PAYROLL" | "ATTENDANCE" | "LEAVE" | "BENEFITS" | "IT" | "GENERAL";
+  subject: string;
+  priority: "LOW" | "MEDIUM" | "HIGH";
+  createdAt: string;
+}
+```
+
+#### `enquiry.message_received`
+- **Emitted When**: New reply posted in the enquiry conversation thread.
+- **Target Rooms**: `employee:${employeeId}`, `user:${assigneeId}`, `hr`.
+```typescript
+interface EnquiryMessageReceivedPayload {
+  enquiryId: string;
+  messageId: string;
+  senderId: string;
+  senderRole: "EMPLOYEE" | "HR" | "ADMIN";
+  message: string;
+  attachments?: string[];
+  createdAt: string;
+}
+```
+
+#### `enquiry.status_updated`
+- **Emitted When**: Ticket status changes (e.g. IN_PROGRESS -> RESOLVED).
+- **Target Rooms**: `employee:${employeeId}`, `hr`.
+```typescript
+interface EnquiryStatusUpdatedPayload {
+  enquiryId: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  updatedBy: string;
+  closedAt?: string | null;
+}
+```
+
+---
+
+### 4.10 Staff Security & Session Events
+
+#### `staff.session_revoked`
+- **Emitted When**: Administrator revokes staff session or untrusted device.
+- **Target Rooms**: `user:${userId}`.
+```typescript
+interface StaffSessionRevokedPayload {
+  userId: string;
+  sessionId?: string;
+  reason: "LOGOUT" | "ADMIN_REVOCATION" | "DEVICE_UNTRUSTED" | "EXPIRED";
+  timestamp: string;
+}
+```
+
+---
+
+### 4.11 App Release & OTA Events
+
+#### `app_release.published`
+- **Emitted When**: New application build or critical OTA update is released.
+- **Target Rooms**: `all`.
+```typescript
+interface AppReleasePublishedPayload {
+  platform: "ANDROID" | "IOS" | "WEB" | "DISPLAY";
+  version: string;
+  versionCode: number;
+  minSupportedVersion: string;
+  forceUpdate: boolean;
+  notes: string;
+  publishedAt: string;
+}
+```
+
+---
+
+### 4.12 Notification Push Events
+
+#### `notification.new`
+- **Emitted When**: System triggers targeted push notification.
+- **Target Rooms**: `user:${userId}`.
+```typescript
+interface NotificationNewPayload {
+  notificationId: string;
+  userId: string;
+  type: "LEAVE_STATUS" | "WFH_STATUS" | "ANNOUNCEMENT" | "ENQUIRY_REPLY" | "SYSTEM" | "SECURITY";
+  title: string;
+  message: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+}
+```
+
+#### `notification.read`
+- **Emitted When**: Notification is marked read on one device and synchronized across tabs.
+- **Target Rooms**: `user:${userId}`.
+```typescript
+interface NotificationReadPayload {
+  notificationId?: string; // If undefined, all notifications marked read
+  userId: string;
+  readAt: string;
+}
+```
+
+---
+
 ## 5. Reconnection & State Resynchronization Protocol
 
 Because mobile devices experience network transitions and display terminals reboot, the system implements a dual-layer resynchronization mechanism:

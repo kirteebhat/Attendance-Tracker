@@ -28,6 +28,28 @@ exports.SocketEvent = {
     ATTENDANCE_FEED_ITEM: "attendance:feed_item",
     STATS_DAILY_UPDATED: "stats:daily_updated",
     WFH_NEW_REQUEST: "wfh:new_request",
+    // Leave module events
+    LEAVE_REQUESTED: "leave.requested",
+    LEAVE_DECIDED: "leave.decided",
+    LEAVE_BALANCE_UPDATED: "leave.balance_updated",
+    // Calendar & holiday events
+    CALENDAR_EVENT_CREATED: "calendar.event_created",
+    CALENDAR_EVENT_UPDATED: "calendar.event_updated",
+    CALENDAR_EVENT_DELETED: "calendar.event_deleted",
+    // Announcement events
+    ANNOUNCEMENT_PUBLISHED: "announcement.published",
+    ANNOUNCEMENT_PINNED: "announcement.pinned",
+    // Enquiry & support ticket events
+    ENQUIRY_CREATED: "enquiry.created",
+    ENQUIRY_MESSAGE_RECEIVED: "enquiry.message_received",
+    ENQUIRY_STATUS_UPDATED: "enquiry.status_updated",
+    // Staff security & session events
+    STAFF_SESSION_REVOKED: "staff.session_revoked",
+    // App Release & OTA events
+    APP_RELEASE_PUBLISHED: "app_release.published",
+    // Notification events
+    NOTIFICATION_NEW: "notification.new",
+    NOTIFICATION_READ: "notification.read",
 };
 /**
  * Socket room name generator utilities

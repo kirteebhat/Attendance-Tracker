@@ -13,6 +13,9 @@ erDiagram
     EMPLOYEE ||--o{ WFH_REQUEST : "submits"
     EMPLOYEE ||--o{ QR_CHALLENGE : "redeems"
     EMPLOYEE ||--o{ REGISTRATION_OTP : "verifies with"
+    EMPLOYEE ||--o{ LEAVE_BALANCE : "has annual balances"
+    EMPLOYEE ||--o{ LEAVE_REQUEST : "applies for"
+    EMPLOYEE ||--o{ ENQUIRY : "opens tickets"
     ATTENDANCE_POLICY ||--|{ SHIFT : "embeds active shifts"
     EMPLOYEE }o--|| SHIFT : "assigned to"
     ATTENDANCE_RECORD ||--o| ORIGINAL_VALUES : "embeds unedited history"
@@ -20,6 +23,16 @@ erDiagram
     USER ||--o{ AUDIT_EVENT : "performs"
     USER ||--o{ WFH_REQUEST : "reviews"
     USER ||--o{ ATTENDANCE_RECORD : "corrects"
+    USER ||--o{ LEAVE_REQUEST : "decides"
+    USER ||--o{ STAFF_OTP_CHALLENGE : "authenticates via OTP"
+    USER ||--o{ TRUSTED_DEVICE : "trusts hardware"
+    USER ||--o{ STAFF_SESSION : "establishes"
+    USER ||--o{ SAVED_VIEW : "configures"
+    USER ||--o{ NOTIFICATION : "receives"
+    USER ||--o{ ENQUIRY_MESSAGE : "posts in thread"
+    LEAVE_TYPE ||--o{ LEAVE_BALANCE : "defines quota for"
+    LEAVE_TYPE ||--o{ LEAVE_REQUEST : "categorizes"
+    ENQUIRY ||--|{ ENQUIRY_MESSAGE : "contains thread messages"
 
     EMPLOYEE {
         ObjectId _id PK
@@ -46,6 +59,157 @@ erDiagram
         Date lastLoginAt
         Date createdAt
         Date updatedAt
+    }
+
+    LEAVE_TYPE {
+        ObjectId _id PK
+        string name UK "e.g. Casual Leave"
+        string code UK "e.g. CL"
+        boolean paid "Paid vs unpaid flag"
+        int annualQuota "Annual allotted days"
+        object carryForwardRule "Max carry-over & expiry"
+        boolean halfDayAllowed
+        boolean isActive
+    }
+
+    LEAVE_BALANCE {
+        ObjectId _id PK
+        ObjectId employee FK "Ref Employee"
+        ObjectId type FK "Ref LeaveType"
+        int year "Calendar year"
+        float allotted "Total quota"
+        float used "Consumed days"
+        float pending "Awaiting review"
+        float carriedOver "Carried forward from previous year"
+    }
+
+    LEAVE_REQUEST {
+        ObjectId _id PK
+        ObjectId employee FK "Ref Employee"
+        ObjectId type FK "Ref LeaveType"
+        Date startDate "Beginning of leave window"
+        Date endDate "Conclusion of leave window"
+        boolean isHalfDay
+        string halfDayType "FIRST_HALF | SECOND_HALF"
+        float workingDays "Computed by server"
+        string reason
+        string status "PENDING | APPROVED | REJECTED | CANCELLED"
+        ObjectId decidedBy FK "Ref User"
+        string decisionNote
+    }
+
+    CALENDAR_EVENT {
+        ObjectId _id PK
+        string type "holiday | companyOffDay | meeting | event"
+        string title
+        Date startDate
+        Date endDate
+        boolean isFullDay
+        string source "manual | imported"
+        object audience "Scope, departments, roles, shiftIds"
+        string externalId "iCal sync UID"
+    }
+
+    ANNOUNCEMENT {
+        ObjectId _id PK
+        string title
+        string body
+        string priority "LOW | MEDIUM | HIGH | URGENT"
+        boolean pinned
+        Date startsAt
+        Date expiresAt "TTL index"
+        string source "manual | auto"
+        string templateKey
+        array readBy "User read receipts"
+    }
+
+    ENQUIRY {
+        ObjectId _id PK
+        ObjectId employee FK "Ref Employee"
+        string category "PAYROLL | ATTENDANCE | LEAVE | BENEFITS | IT | GENERAL"
+        string subject
+        string status "OPEN | IN_PROGRESS | RESOLVED | CLOSED"
+        string priority "LOW | MEDIUM | HIGH"
+        ObjectId assignee FK "Ref User"
+        Date lastMessageAt
+        Date closedAt
+    }
+
+    ENQUIRY_MESSAGE {
+        ObjectId _id PK
+        ObjectId enquiry FK "Ref Enquiry"
+        ObjectId sender FK "Ref User"
+        string senderRole "EMPLOYEE | HR | ADMIN"
+        string message
+        array attachments
+        boolean readByRecipient
+        Date createdAt
+    }
+
+    STAFF_OTP_CHALLENGE {
+        ObjectId _id PK
+        string mobileNumber "E.164 phone number"
+        ObjectId user FK "Ref User"
+        string otpHash "bcrypt/argon2 hash"
+        string purpose "LOGIN | DEVICE_REGISTRATION | PASSWORD_RESET"
+        int attempts "Max 5"
+        boolean isConsumed
+        Date expiresAt "TTL index (300s)"
+    }
+
+    TRUSTED_DEVICE {
+        ObjectId _id PK
+        ObjectId user FK "Ref User"
+        string deviceFingerprint "Hardware fingerprint"
+        string deviceName
+        string platform "iOS | Android | Web | Windows | macOS"
+        Date lastUsedAt
+        Date trustedUntil
+        boolean isRevoked
+    }
+
+    STAFF_SESSION {
+        ObjectId _id PK
+        ObjectId user FK "Ref User"
+        string tokenHash UK "SHA-256 session hash"
+        ObjectId deviceId FK "Ref TrustedDevice"
+        string ipAddress
+        string userAgent
+        boolean isActive
+        Date expiresAt "TTL index"
+        Date lastActivityAt
+    }
+
+    APP_RELEASE {
+        ObjectId _id PK
+        string platform "ANDROID | IOS | WEB | DISPLAY"
+        string version "SemVer string"
+        int versionCode "Integer build number"
+        string minSupportedVersion
+        boolean forceUpdate
+        string notes "Changelog"
+        Date publishedAt
+    }
+
+    SAVED_VIEW {
+        ObjectId _id PK
+        ObjectId user FK "Ref User"
+        string page "attendance | employees | wfh"
+        string name "User custom view title"
+        object filters "Saved query filters"
+        object sort
+        boolean isDefault
+    }
+
+    NOTIFICATION {
+        ObjectId _id PK
+        ObjectId user FK "Ref User"
+        string type "LEAVE_STATUS | WFH_STATUS | ANNOUNCEMENT | ENQUIRY_REPLY | SYSTEM | SECURITY"
+        string title
+        string message
+        object payload "Deep-link metadata"
+        Date readAt "Null if unread"
+        Date expiresAt "Optional TTL"
     }
 
     ATTENDANCE_RECORD {
@@ -205,27 +369,48 @@ The following database indexes guarantee data integrity, race-condition safety, 
 | `qr_displays`        | `{ terminalId: 1 }`               | `unique: true`               | Ensures unique terminal identifiers.                                                                                                                  |
 | `qr_displays`        | `{ pairingCode: 1 }`              | `unique: true, sparse: true` | Prevents duplicate active pairing codes while ignoring unpaired/cleared codes.                                                                        |
 | `holidays`           | `{ dateKey: 1 }`                  | `unique: true`               | Eliminates duplicate holiday calendar entries on the same date.                                                                                       |
+| `leave_types`        | `{ name: 1 }`                     | `unique: true`               | Prevents duplicate leave type naming.                                                                                                                  |
+| `leave_types`        | `{ code: 1 }`                     | `unique: true`               | Enforces unique leave category acronyms (CL, SL, EL).                                                                                                 |
+| `leave_balances`     | **`{ employee: 1, type: 1, year: 1 }`** | **`unique: true`**     | **Guarantees exactly one quota ledger entry per employee per leave category per year.**                                                              |
+| `trusted_devices`    | **`{ user: 1, deviceFingerprint: 1 }`** | **`unique: true`**     | Restricts device recognition to one hardware fingerprint entry per staff account.                                                                    |
+| `staff_sessions`     | `{ tokenHash: 1 }`                | `unique: true`               | Prevents token collision for active staff session tokens.                                                                                              |
+| `app_releases`       | **`{ platform: 1, version: 1 }`** | **`unique: true`**           | Guarantees exactly one release record per operating platform and semver.                                                                              |
+| `saved_views`        | **`{ user: 1, page: 1, name: 1 }`** | **`unique: true`**         | Enforces unique view preset naming per user per portal table.                                                                                         |
 
 ---
 
 ### 2.2 Time-To-Live (TTL) Auto-Purge Indexes
 
-| Collection          | Indexed Field | TTL Expiration            | Behavior                                                                                                                             |
-| ------------------- | ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `qr_challenges`     | `createdAt`   | `expireAfterSeconds: 120` | Dynamic QR redemption records are automatically purged by MongoDB 2 minutes after creation, keeping collection size tightly bounded. |
-| `registration_otps` | `expiresAt`   | `expireAfterSeconds: 0`   | Registration OTP records are automatically purged the exact moment their `expiresAt` timestamp is reached.                           |
+| Collection              | Indexed Field | TTL Expiration            | Behavior                                                                                                                             |
+| ----------------------- | ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `qr_challenges`         | `createdAt`   | `expireAfterSeconds: 120` | Dynamic QR redemption records are automatically purged by MongoDB 2 minutes after creation, keeping collection size tightly bounded. |
+| `registration_otps`     | `expiresAt`   | `expireAfterSeconds: 0`   | Registration OTP records are automatically purged the exact moment their `expiresAt` timestamp is reached.                           |
+| `staff_otp_challenges`  | `expiresAt`   | `expireAfterSeconds: 0`   | Staff mobile OTP challenges are automatically purged upon expiry (5 minutes).                                                        |
+| `staff_sessions`        | `expiresAt`   | `expireAfterSeconds: 0`   | Inactive or expired staff session tokens are automatically removed from the database.                                                 |
+| `announcements`         | `expiresAt`   | `expireAfterSeconds: 0`   | Time-sensitive company announcements are automatically decommissioned when their validity concludes.                                 |
+| `notifications`         | `expiresAt`   | `expireAfterSeconds: 0`   | Old historical notification records are purged after organizational retention limits.                                                |
 
 ---
 
 ### 2.3 Query & Analytical Compound Indexes
 
-| Collection           | Compound Index                                  | Query Pattern Supported                                               |
-| -------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
-| `attendance_records` | `{ dateKey: 1, department: 1, status: 1 }`      | HR dashboard summary counts and departmental daily rollups.           |
-| `attendance_records` | `{ employeeId: 1, dateKey: -1 }`                | Employee personal attendance history and monthly metric aggregations. |
-| `wfh_requests`       | `{ status: 1, dateKey: 1 }`                     | HR pending review queue and date filtering.                           |
-| `audit_events`       | `{ entityType: 1, entityId: 1, timestamp: -1 }` | Complete chronological audit log inspection for a specific entity.    |
-| `employees`          | `{ department: 1, isActive: 1 }`                | Roster filtering by active status and department.                     |
+| Collection             | Compound Index                                  | Query Pattern Supported                                               |
+| ---------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
+| `attendance_records`   | `{ dateKey: 1, department: 1, status: 1 }`      | HR dashboard summary counts and departmental daily rollups.           |
+| `attendance_records`   | `{ employeeId: 1, dateKey: -1 }`                | Employee personal attendance history and monthly metric aggregations. |
+| `wfh_requests`         | `{ status: 1, dateKey: 1 }`                     | HR pending review queue and date filtering.                           |
+| `audit_events`         | `{ entityType: 1, entityId: 1, timestamp: -1 }` | Complete chronological audit log inspection for a specific entity.    |
+| `employees`            | `{ department: 1, isActive: 1 }`                | Roster filtering by active status and department.                     |
+| `leave_requests`       | `{ employee: 1, status: 1, startDate: 1, endDate: 1 }` | Fast calculation of approved/pending leave requests and range checks. |
+| `leave_requests`       | `{ status: 1, startDate: 1 }`                   | HR managerial queue for upcoming pending leave approvals.             |
+| `calendar_events`      | `{ startDate: 1, endDate: 1 }`                  | Range filtering for calendar views and month agendas.                 |
+| `calendar_events`      | `{ type: 1, startDate: 1 }`                     | Direct lookup of all declared public holidays and company off-days.  |
+| `announcements`        | `{ pinned: -1, priority: -1, startsAt: -1 }`    | Priority inbox ordering for urgent and pinned announcements.          |
+| `enquiries`            | `{ employee: 1, status: 1 }`                    | Employee support portal ticket status overview.                       |
+| `enquiries`            | `{ assignee: 1, status: 1 }`                    | HR agent assigned ticket queues.                                      |
+| `enquiry_messages`     | `{ enquiry: 1, createdAt: 1 }`                  | Chronological conversation rendering for support ticket threads.      |
+| `staff_otp_challenges` | `{ mobileNumber: 1, purpose: 1, isConsumed: 1 }`| Rapid OTP verification by mobile number and active challenge state.   |
+| `notifications`        | `{ user: 1, readAt: 1, createdAt: -1 }`         | Real-time unread notification badge counts and user notifications.    |
 
 ---
 
