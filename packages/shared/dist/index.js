@@ -27,6 +27,7 @@ __exportStar(require("./schemas/employee"), exports);
 __exportStar(require("./schemas/policy"), exports);
 __exportStar(require("./schemas/report"), exports);
 __exportStar(require("./schemas/audit"), exports);
+__exportStar(require("./schemas/featureFlag"), exports);
 // Types
 __exportStar(require("./types"), exports);
 // Time & State Utilities

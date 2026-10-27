@@ -1,7 +1,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 export type AuditEntityType =
-  "ATTENDANCE_RECORD" | "WFH_REQUEST" | "EMPLOYEE" | "POLICY" | "TERMINAL" | "AUTH";
+  "ATTENDANCE_RECORD" | "WFH_REQUEST" | "EMPLOYEE" | "POLICY" | "TERMINAL" | "AUTH" | "FEATURE_FLAG";
 
 export interface IAuditEvent extends Document {
   _id: Types.ObjectId;
@@ -21,7 +21,7 @@ const AuditEventSchema = new Schema<IAuditEvent>(
   {
     entityType: {
       type: String,
-      enum: ["ATTENDANCE_RECORD", "WFH_REQUEST", "EMPLOYEE", "POLICY", "TERMINAL", "AUTH"],
+      enum: ["ATTENDANCE_RECORD", "WFH_REQUEST", "EMPLOYEE", "POLICY", "TERMINAL", "AUTH", "FEATURE_FLAG"],
       required: true,
       index: true,
     },

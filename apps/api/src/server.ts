@@ -6,6 +6,7 @@ import { connectDatabase, disconnectDatabase } from "./config/database";
 import { logger } from "./utils/logger";
 import { startAbsenceCronJob, stopAbsenceCronJob } from "./jobs/absence.cron";
 import { initSocketServer, closeSocketServer } from "./sockets/socketServer";
+import { featureFlagService } from "./services/featureFlag.service";
 
 let httpServer: HttpServer;
 let io: SocketIOServer;
@@ -14,6 +15,7 @@ export async function startServer(): Promise<{ httpServer: HttpServer; io: Socke
   // Connect to persistent MongoDB database
   try {
     await connectDatabase();
+    await featureFlagService.initializeDefaultFlags();
   } catch (err) {
     logger.error(
       "Initial MongoDB connection failed. Server will continue with degraded health status.",

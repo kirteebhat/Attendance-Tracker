@@ -14,12 +14,14 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Badge } from "../ui/Badge";
+import { useFeatureFlags, FeatureFlagsMap } from "../../api/queries";
 
 interface NavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   roles?: string[];
+  flagKey?: keyof FeatureFlagsMap;
 }
 
 const navigation: NavItem[] = [
@@ -31,10 +33,28 @@ const navigation: NavItem[] = [
   { name: "Policy & Shifts", href: "/policies", icon: Settings2 },
   { name: "Office QR Displays", href: "/displays", icon: Tv },
   { name: "Audit Trail", href: "/audit-logs", icon: ShieldCheck },
+  // Extension Modules (hidden in UI when flag is off)
+  { name: "Leave Requests", href: "/leave", icon: CalendarCheck, flagKey: "leave" },
+  { name: "Announcements", href: "/announcements", icon: LayoutDashboard, flagKey: "announcements" },
+  { name: "Enquiries & Helpdesk", href: "/enquiries", icon: Users, flagKey: "enquiries" },
+  { name: "Working Calendar", href: "/calendar", icon: Settings2, flagKey: "calendarImport" },
+  { name: "3D Floor View", href: "/three-d", icon: Tv, flagKey: "threeD" },
 ];
 
 export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobile }) => {
   const { user, logout } = useAuth();
+  const { data: flagData } = useFeatureFlags();
+  const flags = flagData?.data;
+
+  const visibleNav = navigation.filter((item) => {
+    if (item.flagKey && (!flags || !flags[item.flagKey])) {
+      return false;
+    }
+    if (item.roles && user?.role && !item.roles.includes(user.role)) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <aside className="flex flex-col h-full bg-slate-900 text-slate-300 w-64 border-r border-slate-800 shrink-0 select-none">
@@ -58,7 +78,7 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
         <div className="px-3 pb-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
           Management
         </div>
-        {navigation.map((item) => {
+        {visibleNav.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink

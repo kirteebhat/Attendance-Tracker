@@ -20,6 +20,9 @@ import {
   isLate,
   validateShift,
   validatePolicyShifts,
+  FeatureFlagsSchema,
+  DEFAULT_FEATURE_FLAGS,
+  UpdateFeatureFlagPayloadSchema,
 } from "./index";
 
 describe("@vorldx/shared package exports", () => {
@@ -218,5 +221,30 @@ describe("@vorldx/shared package exports", () => {
     ]);
     assert.strictEqual(duplicateShifts.valid, false);
     assert.ok(duplicateShifts.error?.includes("Duplicate shift name"));
+  });
+
+  test("feature flag schemas validate properly", () => {
+    assert.strictEqual(DEFAULT_FEATURE_FLAGS.leave, false);
+    assert.strictEqual(DEFAULT_FEATURE_FLAGS.announcements, false);
+    assert.strictEqual(DEFAULT_FEATURE_FLAGS.enquiries, false);
+    assert.strictEqual(DEFAULT_FEATURE_FLAGS.calendarImport, false);
+    assert.strictEqual(DEFAULT_FEATURE_FLAGS.threeD, false);
+    assert.strictEqual(DEFAULT_FEATURE_FLAGS.otaUpdates, false);
+
+    const parsed = FeatureFlagsSchema.parse({});
+    assert.deepStrictEqual(parsed, DEFAULT_FEATURE_FLAGS);
+
+    const validPayload = UpdateFeatureFlagPayloadSchema.safeParse({
+      key: "leave",
+      enabled: true,
+      reason: "Rolling out leave module for beta",
+    });
+    assert.strictEqual(validPayload.success, true);
+
+    const invalidPayload = UpdateFeatureFlagPayloadSchema.safeParse({
+      key: "unsupportedFeature",
+      enabled: true,
+    });
+    assert.strictEqual(invalidPayload.success, false);
   });
 });

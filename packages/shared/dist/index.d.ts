@@ -9,6 +9,7 @@ export * from "./schemas/employee";
 export * from "./schemas/policy";
 export * from "./schemas/report";
 export * from "./schemas/audit";
+export * from "./schemas/featureFlag";
 export * from "./types";
 export * from "./utils/time";
 //# sourceMappingURL=index.d.ts.map

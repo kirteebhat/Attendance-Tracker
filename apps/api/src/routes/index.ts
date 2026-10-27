@@ -9,6 +9,8 @@ import { wfhRouter } from "./wfh.routes";
 import { dashboardRouter } from "./dashboard.routes";
 import { reportRouter } from "./report.routes";
 import { auditRouter } from "./audit.routes";
+import featureFlagRoutes from "./featureFlag.routes";
+import extensionRoutes from "./extension.routes";
 import { AppError } from "../utils/AppError";
 import { ApiErrorCode, UserRole } from "@vorldx/shared";
 import { validate } from "../middleware/validate";
@@ -57,6 +59,10 @@ router.use("/api/admin/reports", reportRouter);
 router.use("/audit-logs", auditRouter);
 router.use("/api/audit-logs", auditRouter);
 router.use("/api/admin/audit-logs", auditRouter);
+
+// Feature Flags & Extension endpoints
+router.use("/api", featureFlagRoutes);
+router.use("/api", extensionRoutes);
 
 // Test routes for integration verification (active in non-production)
 if (process.env.NODE_ENV !== "production") {

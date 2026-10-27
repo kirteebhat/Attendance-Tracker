@@ -47,6 +47,25 @@ const EnvSchema = z.object({
     .default(true),
   OTP_EXPIRY_MINUTES: z.coerce.number().int().positive().default(10),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  // Extension Feature Flags (defaults from environment, overridable in DB by Admin)
+  FEATURE_FLAG_LEAVE: z
+    .preprocess((val) => val === "true" || val === true, z.boolean())
+    .default(false),
+  FEATURE_FLAG_ANNOUNCEMENTS: z
+    .preprocess((val) => val === "true" || val === true, z.boolean())
+    .default(false),
+  FEATURE_FLAG_ENQUIRIES: z
+    .preprocess((val) => val === "true" || val === true, z.boolean())
+    .default(false),
+  FEATURE_FLAG_CALENDAR_IMPORT: z
+    .preprocess((val) => val === "true" || val === true, z.boolean())
+    .default(false),
+  FEATURE_FLAG_THREE_D: z
+    .preprocess((val) => val === "true" || val === true, z.boolean())
+    .default(false),
+  FEATURE_FLAG_OTA_UPDATES: z
+    .preprocess((val) => val === "true" || val === true, z.boolean())
+    .default(false),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

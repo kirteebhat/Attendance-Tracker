@@ -175,4 +175,25 @@ const index_1 = require("./index");
         node_assert_1.default.strictEqual(duplicateShifts.valid, false);
         node_assert_1.default.ok(duplicateShifts.error?.includes("Duplicate shift name"));
     });
+    (0, node_test_1.test)("feature flag schemas validate properly", () => {
+        node_assert_1.default.strictEqual(index_1.DEFAULT_FEATURE_FLAGS.leave, false);
+        node_assert_1.default.strictEqual(index_1.DEFAULT_FEATURE_FLAGS.announcements, false);
+        node_assert_1.default.strictEqual(index_1.DEFAULT_FEATURE_FLAGS.enquiries, false);
+        node_assert_1.default.strictEqual(index_1.DEFAULT_FEATURE_FLAGS.calendarImport, false);
+        node_assert_1.default.strictEqual(index_1.DEFAULT_FEATURE_FLAGS.threeD, false);
+        node_assert_1.default.strictEqual(index_1.DEFAULT_FEATURE_FLAGS.otaUpdates, false);
+        const parsed = index_1.FeatureFlagsSchema.parse({});
+        node_assert_1.default.deepStrictEqual(parsed, index_1.DEFAULT_FEATURE_FLAGS);
+        const validPayload = index_1.UpdateFeatureFlagPayloadSchema.safeParse({
+            key: "leave",
+            enabled: true,
+            reason: "Rolling out leave module for beta",
+        });
+        node_assert_1.default.strictEqual(validPayload.success, true);
+        const invalidPayload = index_1.UpdateFeatureFlagPayloadSchema.safeParse({
+            key: "unsupportedFeature",
+            enabled: true,
+        });
+        node_assert_1.default.strictEqual(invalidPayload.success, false);
+    });
 });

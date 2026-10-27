@@ -12,6 +12,7 @@ export * from "./schemas/employee";
 export * from "./schemas/policy";
 export * from "./schemas/report";
 export * from "./schemas/audit";
+export * from "./schemas/featureFlag";
 
 // Types
 export * from "./types";

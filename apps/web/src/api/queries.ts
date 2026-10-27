@@ -932,4 +932,33 @@ export async function downloadReportCsv(endpoint: string, filename: string) {
   window.URL.revokeObjectURL(url);
 }
 
+export interface FeatureFlagsMap {
+  leave: boolean;
+  announcements: boolean;
+  enquiries: boolean;
+  calendarImport: boolean;
+  threeD: boolean;
+  otaUpdates: boolean;
+}
+
+export function useFeatureFlags() {
+  return useQuery<{ success: boolean; data: FeatureFlagsMap }>({
+    queryKey: ["feature-flags"],
+    queryFn: () => api.get("/api/feature-flags"),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useUpdateFeatureFlag() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { key: string; enabled: boolean; reason?: string }) =>
+      api.patch("/api/admin/feature-flags", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feature-flags"] });
+    },
+  });
+}
+
+
 

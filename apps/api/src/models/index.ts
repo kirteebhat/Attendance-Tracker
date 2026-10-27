@@ -9,3 +9,4 @@ export * from "./QrChallenge";
 export * from "./QrToken";
 export * from "./RegistrationOtp";
 export * from "./AuditEvent";
+export * from "./FeatureFlag";
