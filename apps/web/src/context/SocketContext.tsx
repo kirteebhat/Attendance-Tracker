@@ -23,7 +23,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -41,7 +41,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!token) return;
 
     // Connect to WebSocket server
-    const wsUrl = import.meta.env.VITE_API_URL || undefined;
+    const isLocalhost =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+    const wsUrl =
+      import.meta.env.VITE_API_URL ||
+      import.meta.env.NEXT_PUBLIC_API_URL ||
+      (isLocalhost ? undefined : "https://attendance-tracker-56du.onrender.com");
+
     const client = ioClient(wsUrl, {
       auth: { token },
       transports: ["websocket", "polling"],
@@ -135,7 +142,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }) => {
       const currentSessionId = tokenStorage.getSessionId();
       const isCurrentSession = data.sessionId && currentSessionId && data.sessionId === currentSessionId;
-      const isTargetUser = !data.sessionId && data.userId;
+      const isTargetUser = !data.sessionId && data.userId && user && (data.userId === user.id || data.userId === (user as any)._id);
 
       if (isCurrentSession || isTargetUser) {
         toast({
@@ -156,15 +163,19 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     client.on(
       "staff:force_logout",
       (data: { userId?: string; targetUserId?: string; reason?: string }) => {
-        toast({
-          type: "error",
-          title: "Administrative Forced Logout",
-          description: data.reason || "An administrator has terminated your access.",
-        });
-        tokenStorage.clearTokens();
-        setTimeout(() => {
-          window.location.href = "/login?reason=forced_logout";
-        }, 800);
+        const targetId = data.targetUserId || data.userId;
+        const matchesUser = targetId && user && (targetId === user.id || targetId === (user as any)._id);
+        if (matchesUser) {
+          toast({
+            type: "error",
+            title: "Administrative Forced Logout",
+            description: data.reason || "An administrator has terminated your access.",
+          });
+          tokenStorage.clearTokens();
+          setTimeout(() => {
+            window.location.href = "/login?reason=forced_logout";
+          }, 800);
+        }
       }
     );
 

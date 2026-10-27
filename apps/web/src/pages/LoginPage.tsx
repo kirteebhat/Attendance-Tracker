@@ -104,9 +104,24 @@ export const LoginPage: React.FC = () => {
     },
   });
 
+  // Auto-redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      const destination = redirectTarget && redirectTarget !== "/login" ? redirectTarget : "/";
+      navigate(destination, { replace: true });
+    }
+  }, [isAuthenticated, isLoading, redirectTarget, navigate]);
+
   // Real-Time Socket Connection for Login Channel
   useEffect(() => {
-    const wsUrl = import.meta.env.VITE_API_URL || undefined;
+    const isLocalhost =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+    const wsUrl =
+      import.meta.env.VITE_API_URL ||
+      import.meta.env.NEXT_PUBLIC_API_URL ||
+      (isLocalhost ? undefined : "https://attendance-tracker-56du.onrender.com");
+
     const socket = ioClient(wsUrl, {
       auth: { type: "staff_login", channel: "staff_login" },
       transports: ["websocket", "polling"],
@@ -264,7 +279,8 @@ export const LoginPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await login(data);
-      navigate(redirectTarget, { replace: true });
+      const destination = redirectTarget && redirectTarget !== "/login" ? redirectTarget : "/";
+      window.location.href = destination;
     } catch (err: unknown) {
       const errorObj = err as { message?: string };
       setServerError(errorObj.message || "Invalid credentials. Please verify and try again.");

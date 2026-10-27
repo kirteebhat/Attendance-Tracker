@@ -50,6 +50,7 @@ export function createApp(): Express {
         "Content-Type",
         "Authorization",
         "x-request-id",
+        "x-session-id",
         "x-terminal-id",
         "x-terminal-secret",
         "x-display-id",

@@ -49,13 +49,31 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<AuthUser | null>(() => tokenStorage.getCachedUser<AuthUser>());
+  const [isLoading, setIsLoading] = useState<boolean>(() => !tokenStorage.getCachedUser<AuthUser>());
 
   const fetchProfile = useCallback(async (): Promise<AuthUser | null> => {
     try {
       const res = await api.get<{
-        user: {
+        success?: boolean;
+        data?: {
+          user: {
+            _id: string;
+            employeeId: string;
+            email: string;
+            role: string;
+            status: string;
+            mobileNumber?: string;
+          };
+          employee?: {
+            name?: string;
+            department?: string;
+            designation?: string;
+            workType?: string;
+            mobileNumber?: string;
+          } | null;
+        };
+        user?: {
           _id: string;
           employeeId: string;
           email: string;
@@ -63,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           status: string;
           mobileNumber?: string;
         };
-        employee: {
+        employee?: {
           name?: string;
           department?: string;
           designation?: string;
@@ -72,23 +90,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } | null;
       }>("/api/auth/me");
 
+      const resUser = res?.user || res?.data?.user;
+      const resEmp = res?.employee || res?.data?.employee;
+
+      if (!resUser) {
+        throw new Error("No user in profile response");
+      }
+
       const userData: AuthUser = {
-        id: res.user._id,
-        employeeId: res.user.employeeId,
-        email: res.user.email,
-        role: res.user.role,
-        name: res.employee?.name || res.user.employeeId,
-        department: res.employee?.department,
-        designation: res.employee?.designation,
-        workType: res.employee?.workType,
-        mobileNumber: res.employee?.mobileNumber || res.user.mobileNumber,
+        id: resUser._id,
+        employeeId: resUser.employeeId,
+        email: resUser.email,
+        role: resUser.role,
+        name: resEmp?.name || (resUser as any).name || resUser.employeeId,
+        department: resEmp?.department || (resUser as any).department,
+        designation: resEmp?.designation || (resUser as any).designation,
+        workType: resEmp?.workType || (resUser as any).workType,
+        mobileNumber: resEmp?.mobileNumber || resUser.mobileNumber,
       };
 
       setUser(userData);
+      tokenStorage.setCachedUser(userData);
       return userData;
     } catch {
-      setUser(null);
-      tokenStorage.clearTokens();
+      const token = tokenStorage.getAccessToken();
+      if (!token) {
+        setUser(null);
+        tokenStorage.setCachedUser(null);
+      }
       return null;
     }
   }, []);
@@ -123,6 +152,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (res.accessToken) {
         tokenStorage.setTokens(res.accessToken, res.refreshToken);
+        if (res.user) {
+          const userData: AuthUser = {
+            id: res.user._id,
+            employeeId: res.user.employeeId,
+            email: res.user.email,
+            role: res.user.role,
+            name: res.employee?.name || res.user.employeeId,
+            department: res.employee?.department,
+            designation: res.employee?.designation,
+          };
+          setUser(userData);
+          tokenStorage.setCachedUser(userData);
+          tokenStorage.setCachedUser(userData);
+        }
         await fetchProfile();
       }
     } catch (err) {
@@ -207,6 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             mobileNumber: staffEmp?.mobileNumber || staffUser.mobileNumber,
           };
           setUser(userData);
+          tokenStorage.setCachedUser(userData);
         }
         try {
           await fetchProfile();

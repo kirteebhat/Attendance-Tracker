@@ -3,6 +3,7 @@ import { ApiErrorCode } from "@vorldx/shared";
 const TOKEN_KEY = "vorldx_access_token";
 const REFRESH_TOKEN_KEY = "vorldx_refresh_token";
 const SESSION_ID_KEY = "vorldx_session_id";
+const USER_KEY = "vorldx_cached_user";
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -66,14 +67,40 @@ export const tokenStorage = {
   getRefreshToken: (): string | null => {
     return localStorage.getItem(REFRESH_TOKEN_KEY);
   },
+  getCachedUser: <U = unknown>(): U | null => {
+    try {
+      const raw = localStorage.getItem(USER_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
+  setCachedUser: <U = unknown>(user: U | null): void => {
+    if (user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_KEY);
+    }
+  },
   clearTokens: (): void => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(SESSION_ID_KEY);
+    localStorage.removeItem(USER_KEY);
   },
 };
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const isLocalhost =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+const DEFAULT_PROD_API = "https://attendance-tracker-56du.onrender.com";
+
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.NEXT_PUBLIC_API_URL ||
+  (isLocalhost ? "" : DEFAULT_PROD_API)
+).replace(/\/$/, "");
 
 export function getFullApiUrl(endpoint: string): string {
   if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
