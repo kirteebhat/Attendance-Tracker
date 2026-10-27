@@ -1160,6 +1160,53 @@ export function useImportHolidays() {
   });
 }
 
+export function useCreateCalendarEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      title: string;
+      type: "holiday" | "companyOffDay" | "meeting" | "event";
+      startDate: string;
+      endDate: string;
+      isFullDay?: boolean;
+      description?: string;
+      location?: string;
+      audience?: { scope: "all" | "department" | "role"; departments?: string[]; roles?: string[] };
+    }) => api.post<{ success: boolean; data: CalendarEventItem }>("/api/calendar/events", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      queryClient.invalidateQueries({ queryKey: ["holidays"] });
+    },
+  });
+}
+
+export function useUpdateCalendarEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<{
+        title: string;
+        type: "holiday" | "companyOffDay" | "meeting" | "event";
+        startDate: string;
+        endDate: string;
+        isFullDay?: boolean;
+        description?: string;
+        location?: string;
+        audience?: { scope: "all" | "department" | "role"; departments?: string[]; roles?: string[] };
+      }>;
+    }) =>
+      api.put<{ success: boolean; data: CalendarEventItem }>(`/api/calendar/events/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      queryClient.invalidateQueries({ queryKey: ["holidays"] });
+    },
+  });
+}
+
 export function useDeleteCalendarEvent() {
   const queryClient = useQueryClient();
   return useMutation({

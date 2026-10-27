@@ -120,7 +120,6 @@ export async function apiRequest<T = unknown>(
 ): Promise<T> {
   const url = getFullApiUrl(endpoint);
   const token = tokenStorage.getAccessToken();
-  const sessionId = tokenStorage.getSessionId();
 
   const headers = new Headers(options.headers || {});
   headers.set("Content-Type", "application/json");
@@ -256,6 +255,13 @@ export const api = {
     apiRequest<T>(endpoint, {
       ...options,
       method: "POST",
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }),
+
+  put: <T = unknown>(endpoint: string, body?: unknown, options?: RequestInit) =>
+    apiRequest<T>(endpoint, {
+      ...options,
+      method: "PUT",
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
 
