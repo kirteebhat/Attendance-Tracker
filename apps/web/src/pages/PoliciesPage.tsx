@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
   useActivePolicy,
   useUpdatePolicy,
@@ -10,6 +11,7 @@ import {
   PolicyShift,
   HolidayItem,
 } from "../api/queries";
+import { getFullApiUrl } from "../api/client";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -32,6 +34,8 @@ import {
   Save,
   Home,
   CheckCircle2,
+  Download,
+  ExternalLink,
 } from "lucide-react";
 
 const WORKDAY_OPTIONS = [
@@ -854,16 +858,42 @@ export const PoliciesPage: React.FC = () => {
                 Official holidays exempt employees from automated absentee penalties and required punches
               </p>
             </div>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={() => setShowAddHolidayModal(true)}
-              className="gap-1.5 text-xs font-semibold"
-            >
-              <Plus className="w-4 h-4" />
-              Add Holiday
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  window.open(getFullApiUrl(`/api/calendar/export.ics?year=${currentYear}`), "_blank");
+                }}
+                className="gap-1.5 text-xs font-semibold"
+                title="Download RFC 5545 iCalendar stream"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-600" />
+                Export .ICS
+              </Button>
+              <Link to="/calendar">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs font-semibold text-blue-700 border-blue-200 hover:bg-blue-50"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                  Working Calendar
+                </Button>
+              </Link>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => setShowAddHolidayModal(true)}
+                className="gap-1.5 text-xs font-semibold"
+              >
+                <Plus className="w-4 h-4" />
+                Add Holiday
+              </Button>
+            </div>
           </div>
 
           {isHolidaysLoading ? (

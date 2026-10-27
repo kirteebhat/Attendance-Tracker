@@ -1048,6 +1048,130 @@ export function useForceLogoutStaff() {
   });
 }
 
+// ==========================================
+// Working Calendar & Holiday Engine Hooks
+// ==========================================
+
+export interface CalendarEventItem {
+  _id: string;
+  type: "holiday" | "companyOffDay" | "meeting" | "event";
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  isFullDay: boolean;
+  source: "manual" | "imported";
+  audience?: {
+    scope: string;
+    departments?: string[];
+  };
+}
+
+export interface DayTypeResponse {
+  success: boolean;
+  dateKey: string;
+  timezone: string;
+  dayType: "workday" | "weekly-off" | "public-holiday" | "company-off-day";
+  isWorkingDay: boolean;
+}
+
+export interface WorkingDaysResponse {
+  success: boolean;
+  start: string;
+  end: string;
+  timezone: string;
+  workingDaysCount: number;
+}
+
+export interface HolidayPreviewItem {
+  date: string;
+  name: string;
+  description?: string;
+  action: "create" | "already_exists" | "skip_manual_conflict";
+  existingTitle?: string;
+  reason?: string;
+}
+
+export interface HolidayPreviewResponse {
+  success: boolean;
+  provider: string;
+  countryCode: string;
+  year: number;
+  totalFound: number;
+  toImport: number;
+  conflicts: number;
+  alreadyImported: number;
+  items: HolidayPreviewItem[];
+}
+
+export function useCalendarEvents(year?: number) {
+  return useQuery<{ success: boolean; data: CalendarEventItem[] }>({
+    queryKey: ["calendar-events", year],
+    queryFn: () =>
+      api.get<{ success: boolean; data: CalendarEventItem[] }>(
+        `/api/calendar/events${year ? `?year=${year}` : ""}`
+      ),
+    staleTime: 1000 * 60,
+  });
+}
+
+export function useDayType(date: string, enabled = true) {
+  return useQuery<DayTypeResponse>({
+    queryKey: ["calendar-day-type", date],
+    queryFn: () => api.get<DayTypeResponse>(`/api/calendar/day-type?date=${date}`),
+    enabled: enabled && !!date,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useWorkingDaysCount(start: string, end: string, enabled = true) {
+  return useQuery<WorkingDaysResponse>({
+    queryKey: ["calendar-working-days", start, end],
+    queryFn: () =>
+      api.get<WorkingDaysResponse>(`/api/calendar/working-days?start=${start}&end=${end}`),
+    enabled: enabled && !!start && !!end && start <= end,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function usePreviewHolidayImport(year: number, country = "IN", enabled = false) {
+  return useQuery<HolidayPreviewResponse>({
+    queryKey: ["calendar-preview-holidays", year, country],
+    queryFn: () =>
+      api.get<HolidayPreviewResponse>(
+        `/api/calendar/holidays/preview?year=${year}&country=${country}`
+      ),
+    enabled: enabled && !!year,
+  });
+}
+
+export function useImportHolidays() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { year: number; country?: string }) =>
+      api.post<{ success: boolean; importedCount: number; skippedCount: number }>(
+        "/api/calendar/holidays/import",
+        payload
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      queryClient.invalidateQueries({ queryKey: ["holidays"] });
+    },
+  });
+}
+
+export function useDeleteCalendarEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete<{ success: boolean; message: string }>(`/api/calendar/events/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      queryClient.invalidateQueries({ queryKey: ["holidays"] });
+    },
+  });
+}
+
 
 
 

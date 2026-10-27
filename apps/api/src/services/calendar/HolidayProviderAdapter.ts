@@ -11,3 +11,4 @@ export interface IHolidayProvider {
   readonly providerName: string;
   fetchHolidays(year: number, countryCode?: string): Promise<ExternalHoliday[]>;
 }
+

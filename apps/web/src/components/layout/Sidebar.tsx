@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   CalendarCheck,
+  Calendar,
   BarChart3,
   Home,
   Users,
@@ -32,6 +33,7 @@ const navigation: NavItem[] = [
   { name: "WFH Approvals", href: "/wfh", icon: Home },
   { name: "Employee Directory", href: "/employees", icon: Users },
   { name: "Policy & Shifts", href: "/policies", icon: Settings2 },
+  { name: "Working Calendar", href: "/calendar", icon: Calendar },
   { name: "Office QR Displays", href: "/displays", icon: Tv },
   { name: "Security & Sessions", href: "/security", icon: Lock },
   { name: "Audit Trail", href: "/audit-logs", icon: ShieldCheck },
@@ -39,7 +41,6 @@ const navigation: NavItem[] = [
   { name: "Leave Requests", href: "/leave", icon: CalendarCheck, flagKey: "leave" },
   { name: "Announcements", href: "/announcements", icon: LayoutDashboard, flagKey: "announcements" },
   { name: "Enquiries & Helpdesk", href: "/enquiries", icon: Users, flagKey: "enquiries" },
-  { name: "Working Calendar", href: "/calendar", icon: Settings2, flagKey: "calendarImport" },
   { name: "3D Floor View", href: "/three-d", icon: Tv, flagKey: "threeD" },
 ];
 
