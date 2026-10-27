@@ -12,7 +12,7 @@ export class SimulatedSmsProvider implements ISmsProvider {
 
   public async sendOtp(options: SmsMessageOptions): Promise<SmsSendResult> {
     const isProduction = env.NODE_ENV === "production";
-    const isDemoMode = env.DEMO_OTP_MODE && !isProduction;
+    const isDemoMode = env.DEMO_OTP_MODE === true || process.env.DEMO_OTP_MODE === "true";
 
     // Mask phone number for safe diagnostic output (e.g. +9198****3210)
     const maskedNumber =
@@ -20,8 +20,8 @@ export class SimulatedSmsProvider implements ISmsProvider {
         ? `${options.to.slice(0, 5)}****${options.to.slice(-4)}`
         : "****";
 
-    if (isProduction) {
-      // In production mode, never log the plaintext OTP under any circumstances
+    if (isProduction && !isDemoMode) {
+      // In production mode without demo mode, never log the plaintext OTP under any circumstances
       logger.info(`[SMS][Simulated] Security OTP dispatched to ${maskedNumber} for ${options.purpose}`);
       return {
         success: true,

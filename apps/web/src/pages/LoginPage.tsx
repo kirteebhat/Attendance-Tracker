@@ -561,27 +561,31 @@ export const LoginPage: React.FC = () => {
                     </label>
                   </div>
 
-                  {/* Simulated Demo OTP Banner for local/demo mode */}
-                  {simulatedOtp && (
-                    <div className="p-3 bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800 rounded-xl flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-xs text-cyan-900 dark:text-cyan-200">
-                        <Sparkles className="w-4 h-4 text-cyan-500 shrink-0" />
-                        <div>
-                          <span className="font-semibold block">Demo Mode Simulated Code:</span>
-                          <span className="font-mono text-base font-bold tracking-widest text-cyan-600 dark:text-cyan-400">
-                            {simulatedOtp}
-                          </span>
-                        </div>
+                  {/* Simulated Demo OTP Banner */}
+                  <div className="p-3 bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800 rounded-xl flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs text-cyan-900 dark:text-cyan-200">
+                      <Sparkles className="w-4 h-4 text-cyan-500 shrink-0" />
+                      <div>
+                        <span className="font-semibold block">
+                          {simulatedOtp ? "Generated Demo Code:" : "Demo Staff OTP Code:"}
+                        </span>
+                        <span className="font-mono text-base font-bold tracking-widest text-cyan-600 dark:text-cyan-400">
+                          {simulatedOtp || "123456"}
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setOtpValue(simulatedOtp)}
-                        className="px-2.5 py-1 text-[11px] font-semibold bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors shrink-0"
-                      >
-                        Auto-fill
-                      </button>
                     </div>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => setOtpValue(simulatedOtp || "123456")}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors shrink-0"
+                    >
+                      Auto-fill
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 text-center">
+                    Note: Telecom SMS is simulated. Use the code above or click <span className="font-semibold text-cyan-400">Auto-fill</span> to test.
+                  </p>
 
                   {/* Actions */}
                   <div className="space-y-2">

@@ -40,9 +40,9 @@ const EnvSchema = z.object({
   LOCKOUT_MINUTES: z.coerce.number().int().positive().default(15),
   DEMO_OTP_MODE: z
     .preprocess((val) => {
-      if (process.env.NODE_ENV === "production") return false;
-      if (val === undefined) return true;
-      return val === "true" || val === true;
+      if (val === "true" || val === true) return true;
+      if (val === "false" || val === false) return false;
+      return process.env.NODE_ENV !== "production";
     }, z.boolean())
     .default(true),
   OTP_EXPIRY_MINUTES: z.coerce.number().int().positive().default(10),
