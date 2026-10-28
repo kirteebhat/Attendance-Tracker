@@ -2010,44 +2010,123 @@ Guarded by `requireFeatureFlag("announcements")`. When the flag is disabled, all
 
 ### 7.4 Support Enquiries & Tickets API
 
+> **Feature Flag Guard**: Protected by the `enquiries` feature flag (`FEATURE_FLAG_ENQUIRIES`). All endpoints return `404 ERR_NOT_FOUND` when the flag is disabled.
+> **Rate Limit**: Maximum 5 ticket creations per 15 minutes per user window (`429 ERR_RATE_LIMIT_EXCEEDED`).
+> **Attachments**: Optional image attachments allowed on ticket creation and message replies. Strictly enforced: max 5MB (`MAX_ENQUIRY_ATTACHMENT_SIZE_BYTES = 5242880`), allowed mime types: `image/jpeg`, `image/png`, `image/webp`, `image/gif`.
+
 #### 7.4.1 `GET /api/enquiries`
-- **Role**: `Employee` (Own tickets) / `HR` (All department tickets)
+- **Role**: `Employee` (Only own tickets) / `HR` & `ADMIN` (All company tickets)
+- **Query Parameters**:
+  - `status`: `OPEN` | `IN_PROGRESS` | `RESOLVED` | `CLOSED`
+  - `category`: `ATTENDANCE` | `LEAVE` | `WFH` | `PAYROLL` | `TECHNICAL` | `OTHER`
+  - `priority`: `LOW` | `MEDIUM` | `HIGH` | `URGENT`
+  - `assigneeId`: ObjectId
+  - `search`: Keyword string matched against ticket number or subject
+  - `page`: Page number (default: 1)
+  - `limit`: Page size (default: 20, max: 100)
 - **Response (200 OK)**:
   ```json
   {
     "success": true,
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 1,
     "data": [
       {
-        "_id": "6714c500...",
-        "category": "PAYROLL",
-        "subject": "Form 16 Tax Certificate Download",
-        "status": "OPEN",
-        "priority": "MEDIUM",
-        "lastMessageAt": "2026-10-27T10:30:00.000Z"
+        "_id": "671f...",
+        "ticketNumber": "ENQ-2026-92812",
+        "category": "ATTENDANCE",
+        "subject": "Missing check-in on Monday",
+        "status": "IN_PROGRESS",
+        "priority": "HIGH",
+        "firstResponseAt": "2026-10-28T16:30:00.000Z",
+        "lastMessageAt": "2026-10-28T16:30:00.000Z"
       }
     ]
   }
   ```
 
 #### 7.4.2 `POST /api/enquiries`
-- **Role**: `Employee`
+- **Role**: `Employee` / `HR` / `ADMIN`
 - **Request Body**:
   ```json
   {
     "category": "ATTENDANCE",
     "subject": "Missing Punch In Correction",
-    "message": "Badge reader was calibrating when I arrived at 9:02 AM."
+    "message": "Badge reader was calibrating when I arrived at 9:02 AM.",
+    "priority": "HIGH",
+    "attachment": {
+      "name": "reader_photo.png",
+      "mimeType": "image/png",
+      "sizeBytes": 204800,
+      "url": "https://cdn.vorldx.test/reader_photo.png"
+    }
   }
   ```
 - **Response (201 Created)**: Ticket initialized with embedded thread entry.
-- **Socket Event Dispatched**: `enquiry.created` -> `hr`.
+- **Socket Event Dispatched**: `enquiry.created`
+- **In-App Notification**: Sent to HR personnel.
 
-#### 7.4.3 `POST /api/enquiries/:id/messages`
-- **Role**: `Requester` / `HR Staff`
-- **Request Body**: `{ "message": "We have updated your punch log." }`
-- **Socket Event Dispatched**: `enquiry.message_received`.
+#### 7.4.3 `GET /api/enquiries/:id`
+- **Role**: `Owner Employee` / `HR` / `ADMIN` (Other employees receive `403 ERR_FORBIDDEN`)
+- **Response (200 OK)**: Complete ticket metadata and chronologically ordered conversation thread. Automatically marks unread incoming messages as read.
 
----
+#### 7.4.4 `POST /api/enquiries/:id/messages`
+- **Role**: `Owner Employee` / `HR` / `ADMIN`
+- **Behavior**:
+  - If HR responds for the first time on an `OPEN` ticket, records `firstResponseAt = new Date()` and shifts status to `IN_PROGRESS`.
+  - Rejects message sending on `CLOSED` tickets unless reopened first.
+- **Request Body**:
+  ```json
+  {
+    "message": "We have checked the kiosk logs and confirmed your attendance.",
+    "attachment": {
+      "name": "kiosk_log.jpg",
+      "mimeType": "image/jpeg",
+      "sizeBytes": 102400
+    }
+  }
+  ```
+- **Response (201 Created)**: Message appended to thread.
+- **Socket Event Dispatched**: `enquiry.message_received`
+- **In-App Notification**: Sent to Employee if HR replied, or to assigned HR if Employee replied.
+
+#### 7.4.5 `PATCH /api/enquiries/:id/status`
+- **Role**: `HR` / `ADMIN` (Employees can only set `RESOLVED` or `CLOSED` on their own tickets)
+- **Request Body**:
+  ```json
+  {
+    "status": "RESOLVED",
+    "note": "Issue resolved by attendance operations."
+  }
+  ```
+- **Behavior**: Sets `resolvedAt` and computes `reopenDeadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)`.
+- **Socket Event Dispatched**: `enquiry.status_updated`
+- **In-App Notification**: Sent to ticket owner.
+
+#### 7.4.6 `POST /api/enquiries/:id/reopen`
+- **Role**: `Owner Employee` / `HR` / `ADMIN`
+- **Request Body**:
+  ```json
+  {
+    "reason": "The attendance record still displays absent in monthly ledger."
+  }
+  ```
+- **Behavior**: Enforces 7-day reopen window. If `Date.now() > reopenDeadline`, returns `400 ERR_ENQUIRY_REOPEN_EXPIRED`. On success, sets status to `IN_PROGRESS` and appends reopen reason to thread.
+- **Socket Event Dispatched**: `enquiry.status_updated`
+
+#### 7.4.7 `PATCH /api/enquiries/:id/assign`
+- **Role**: `HR` / `ADMIN` only
+- **Request Body**:
+  ```json
+  {
+    "assigneeId": "6714c500..."
+  }
+  ```
+- **Response (200 OK)**: Ticket assignee updated.
+- **Socket Event Dispatched**: `enquiry.assigned`
+- **In-App Notification**: Sent to new assignee.
 
 ### 7.5 Staff Mobile OTP & Device Security API
 

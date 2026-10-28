@@ -13,6 +13,7 @@ import { auditRouter } from "./audit.routes";
 import { calendarRouter } from "./calendar.routes";
 import { leaveRouter } from "./leave.routes";
 import { announcementRouter } from "./announcement.routes";
+import { enquiryRouter } from "./enquiry.routes";
 import featureFlagRoutes from "./featureFlag.routes";
 import extensionRoutes from "./extension.routes";
 import { AppError } from "../utils/AppError";
@@ -50,6 +51,10 @@ router.use("/api/admin/leave", leaveRouter);
 // Announcements & Broadcasts Subsystem (protected by 'announcements' feature flag)
 router.use("/api/announcements", announcementRouter);
 router.use("/announcements", announcementRouter);
+
+// Support Enquiries & Ticket Resolution Subsystem (protected by 'enquiries' feature flag)
+router.use("/api/enquiries", enquiryRouter);
+router.use("/enquiries", enquiryRouter);
 
 // Office QR Display & Terminal endpoints (supports both /api/displays and /api/terminals)
 router.use("/api/displays", qrRouter);
