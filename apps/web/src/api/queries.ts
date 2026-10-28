@@ -2073,6 +2073,148 @@ export function useReopenEnquiry() {
   });
 }
 
+// ============================================================================
+// APP RELEASES & OTA UPDATES
+// ============================================================================
+
+export interface AppReleaseItem {
+  _id: string;
+  platform: "ANDROID" | "IOS" | "WEB" | "DISPLAY" | "MOBILE";
+  version: string;
+  versionCode: number;
+  minSupportedVersion: string;
+  minSupportedVersionCode: number;
+  notes: string;
+  downloadUrl?: string;
+  bundleUrl?: string;
+  forceUpdate: boolean;
+  channel: "production" | "development" | "staging";
+  isPublished: boolean;
+  publishedAt: string;
+  publishedBy?: {
+    _id: string;
+    name?: string;
+    email?: string;
+    employeeId?: string;
+  } | null;
+  createdAt: string;
+}
+
+export interface AppReleasesResponse {
+  success: boolean;
+  data: AppReleaseItem[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface CheckUpdateResult {
+  updateAvailable: boolean;
+  forceUpdate: boolean;
+  currentVersion: string;
+  latestVersion?: string;
+  minSupportedVersion?: string;
+  notes?: string;
+  downloadUrl?: string;
+  bundleUrl?: string;
+  channel?: string;
+  publishedAt?: string;
+  otaUpdatesEnabled: boolean;
+  message?: string;
+}
+
+export interface DeploymentVersionResult {
+  version: string;
+  buildNumber: number;
+  timestamp: string;
+  otaUpdatesEnabled: boolean;
+  environment: string;
+}
+
+export function useAppReleases(filters: {
+  platform?: string;
+  channel?: string;
+  page?: number;
+  limit?: number;
+}) {
+  return useQuery<AppReleasesResponse>({
+    queryKey: ["app-releases", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.platform && filters.platform !== "ALL") params.set("platform", filters.platform);
+      if (filters.channel && filters.channel !== "ALL") params.set("channel", filters.channel);
+      if (filters.page) params.set("page", String(filters.page));
+      if (filters.limit) params.set("limit", String(filters.limit));
+
+      return api.get<AppReleasesResponse>(`/api/updates/releases?${params.toString()}`);
+    },
+    staleTime: 1000 * 30,
+  });
+}
+
+export function usePublishRelease() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      platform: string;
+      version: string;
+      versionCode?: number;
+      minSupportedVersion?: string;
+      minSupportedVersionCode?: number;
+      notes: string;
+      downloadUrl?: string;
+      bundleUrl?: string;
+      forceUpdate?: boolean;
+      channel?: string;
+    }) =>
+      api.post<{ success: boolean; message: string; data: AppReleaseItem }>(
+        "/api/updates/releases",
+        payload
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["app-releases"] });
+      queryClient.invalidateQueries({ queryKey: ["deployment-version"] });
+    },
+  });
+}
+
+export function useDeleteRelease() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete<{ success: boolean; message: string }>(`/api/updates/releases/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["app-releases"] });
+      queryClient.invalidateQueries({ queryKey: ["deployment-version"] });
+    },
+  });
+}
+
+export function useCheckAppUpdate(platform = "WEB", currentVersion = "1.2.0", channel = "production") {
+  return useQuery<CheckUpdateResult>({
+    queryKey: ["check-app-update", platform, currentVersion, channel],
+    queryFn: () =>
+      api.get<CheckUpdateResult>(
+        `/api/updates/check?platform=${platform}&version=${currentVersion}&channel=${channel}`
+      ),
+    refetchInterval: 1000 * 60 * 3, // Check every 3 minutes
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useDeploymentVersion() {
+  return useQuery<DeploymentVersionResult>({
+    queryKey: ["deployment-version"],
+    queryFn: () => api.get<DeploymentVersionResult>("/api/version"),
+    refetchInterval: 1000 * 60 * 3,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+
 
 
 

@@ -19,7 +19,9 @@ export type AuditEntityType =
   | "ANNOUNCEMENT"
   | "ANNOUNCEMENT_TEMPLATE"
   | "ENQUIRY"
-  | "ENQUIRY_MESSAGE";
+  | "ENQUIRY_MESSAGE"
+  | "APP_RELEASE"
+  | "OTA_UPDATE";
 
 export interface IAuditEvent extends Document {
   _id: Types.ObjectId;
@@ -59,6 +61,8 @@ const AuditEventSchema = new Schema<IAuditEvent>(
         "ANNOUNCEMENT_TEMPLATE",
         "ENQUIRY",
         "ENQUIRY_MESSAGE",
+        "APP_RELEASE",
+        "OTA_UPDATE",
       ],
       required: true,
       index: true,

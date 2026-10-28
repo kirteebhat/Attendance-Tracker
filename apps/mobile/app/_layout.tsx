@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "../src/context/AuthContext";
 import { ToastProvider } from "../src/components/Toast";
 import { OfflineBanner } from "../src/components/OfflineBanner";
+import { UpdateSheet } from "../src/components/UpdateSheet";
 import { colors } from "../src/theme";
 
 export default function RootLayout() {
@@ -14,6 +15,7 @@ export default function RootLayout() {
         <ToastProvider>
           <StatusBar style="light" />
           <OfflineBanner />
+          <UpdateSheet />
           <Stack
             screenOptions={{
               headerStyle: { backgroundColor: colors.background.surface },

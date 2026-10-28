@@ -22,6 +22,7 @@ import { CalendarPage } from "./pages/CalendarPage";
 import { LeavePage } from "./pages/LeavePage";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
 import { EnquiriesPage } from "./pages/EnquiriesPage";
+import { AppReleasesPage } from "./pages/AppReleasesPage";
 import { DesignSystemPage } from "./pages/DesignSystemPage";
 import { UnauthorizedPage } from "./pages/UnauthorizedPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -70,6 +71,8 @@ export const App: React.FC = () => {
                       <Route path="/audit-logs" element={<AuditLogsPage />} />
                       <Route path="/security" element={<SecurityPage />} />
                       <Route path="/settings/security" element={<Navigate to="/security" replace />} />
+                      <Route path="/releases" element={<AppReleasesPage />} />
+                      <Route path="/admin/releases" element={<Navigate to="/releases" replace />} />
                       <Route path="/design-system" element={<DesignSystemPage />} />
                     </Route>
 

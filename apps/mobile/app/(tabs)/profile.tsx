@@ -20,12 +20,30 @@ import {
   EmployeeDetails,
   PolicyData,
 } from "../../src/services";
+import {
+  useAppUpdates,
+  APP_VERSION,
+  APP_BUILD_NUMBER,
+  APP_CHANNEL,
+} from "../../src/services/updateService";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { showToast } = useToast();
   const [loggingOut, setLoggingOut] = useState(false);
+  const { checkNow, isChecking, updateInfo } = useAppUpdates();
+
+  const handleManualCheckUpdates = async () => {
+    await checkNow();
+    if (!updateInfo?.updateAvailable) {
+      showToast({
+        title: "Up to Date",
+        message: `You are running the latest version (v${APP_VERSION}).`,
+        type: "success",
+      });
+    }
+  };
 
   // Dynamic employment and policy data
   const [employeeDetails, setEmployeeDetails] = useState<EmployeeDetails | null>(null);
@@ -292,6 +310,29 @@ export default function ProfileScreen() {
           </View>
           <StatusBadge status="ACTIVE" label="CONNECTED" />
         </View>
+
+        <View style={styles.detailDivider} />
+
+        <TouchableOpacity
+          onPress={handleManualCheckUpdates}
+          style={styles.settingItem}
+          accessibilityLabel="Check for application updates"
+          accessibilityRole="button"
+        >
+          <View style={styles.detailIconBox}>
+            <Icon name="cloud-download-outline" size={18} color={colors.accent.indigo} />
+          </View>
+          <View style={styles.settingContent}>
+            <Text style={styles.settingTitle}>Application Version</Text>
+            <Text style={styles.settingSubtitle}>
+              v{APP_VERSION} (Build {APP_BUILD_NUMBER}) • {APP_CHANNEL.toUpperCase()}
+            </Text>
+          </View>
+          <StatusBadge
+            status={updateInfo?.updateAvailable ? "LATE" : "PRESENT"}
+            label={isChecking ? "CHECKING" : updateInfo?.updateAvailable ? "UPDATE" : "LATEST"}
+          />
+        </TouchableOpacity>
       </Card>
 
       {/* 5. Logout Section (Clears Tokens and Socket Connection) */}

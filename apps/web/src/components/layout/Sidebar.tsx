@@ -15,6 +15,7 @@ import {
   Lock,
   Megaphone,
   LifeBuoy,
+  Package,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Badge } from "../ui/Badge";
@@ -47,6 +48,7 @@ const navigation: NavItem[] = [
   { name: "Policy & Shifts", href: "/policies", icon: Settings2 },
   { name: "Office QR Displays", href: "/displays", icon: Tv },
   { name: "Security & Sessions", href: "/security", icon: Lock },
+  { name: "App Releases & OTA", href: "/releases", icon: Package },
   { name: "Audit Trail", href: "/audit-logs", icon: ShieldCheck },
   // Optional Extension Modules
   { name: "3D Floor View", href: "/three-d", icon: Tv, flagKey: "threeD" },
@@ -148,6 +150,13 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
           <Badge variant="info" size="sm" className="shrink-0 uppercase font-mono">
             {user?.role}
           </Badge>
+        </div>
+        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2.5 px-0.5">
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span>Platform</span>
+          </span>
+          <span className="font-mono text-slate-400">v1.2.0</span>
         </div>
         <button
           onClick={() => logout()}

@@ -28,3 +28,4 @@ export * from "./types";
 
 // Time & State Utilities
 export * from "./utils/time";
+export * from "./utils/semver";

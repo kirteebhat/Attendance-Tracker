@@ -49,6 +49,9 @@ export const colors = {
     wfhBg: "rgba(99, 102, 241, 0.15)",
     demo: "#8B5CF6", // Violet demo badge
     demoBg: "rgba(139, 92, 246, 0.15)",
+    warning: "#F59E0B",
+    danger: "#EF4444",
+    success: "#10B981",
   },
   text: {
     primary: "#F8FAFC", // High contrast white
@@ -71,6 +74,7 @@ export const spacing = {
 } as const;
 
 export const radii = {
+  xs: 4,
   sm: 8,
   md: 12,
   lg: 16,
@@ -87,6 +91,14 @@ export const typography = {
   xl: { fontSize: 20, lineHeight: 28 },
   xxl: { fontSize: 24, lineHeight: 32 },
   hero: { fontSize: 32, lineHeight: 40 },
+  sizes: {
+    xs: 11,
+    sm: 13,
+    md: 15,
+    lg: 17,
+    xl: 20,
+    xxl: 24,
+  },
 } as const;
 
 export const shadows = {

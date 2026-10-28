@@ -41,3 +41,4 @@ __exportStar(require("./schemas/notification"), exports);
 __exportStar(require("./types"), exports);
 // Time & State Utilities
 __exportStar(require("./utils/time"), exports);
+__exportStar(require("./utils/semver"), exports);

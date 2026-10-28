@@ -13,7 +13,7 @@ export interface ToastOptions {
 }
 
 interface ToastContextValue {
-  showToast: (options: ToastOptions) => void;
+  showToast: (optionsOrTitle: ToastOptions | string, message?: string, type?: ToastType) => void;
   hideToast: () => void;
 }
 
@@ -35,7 +35,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [fadeAnim, translateYAnim]);
 
   const showToast = useCallback(
-    (options: ToastOptions) => {
+    (optionsOrTitle: ToastOptions | string, message?: string, type?: ToastType) => {
+      const options: ToastOptions =
+        typeof optionsOrTitle === "string"
+          ? { title: optionsOrTitle, message, type: type || "info" }
+          : optionsOrTitle;
+
       if (timerRef.current) clearTimeout(timerRef.current);
       setToast(options);
 

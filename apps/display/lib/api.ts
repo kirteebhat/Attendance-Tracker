@@ -106,3 +106,28 @@ export async function fetchRotatingChallenge(
 
   return data as QrTokenResponse;
 }
+
+export interface DisplayUpdateCheckResult {
+  updateAvailable: boolean;
+  forceUpdate: boolean;
+  latestVersion?: string;
+  notes?: string;
+}
+
+export async function checkDisplayUpdate(currentVersion = "1.0.0"): Promise<DisplayUpdateCheckResult> {
+  try {
+    const res = await fetch(`${API_BASE}/api/updates/check?platform=DISPLAY&version=${currentVersion}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return { updateAvailable: false, forceUpdate: false };
+    const data = await res.json();
+    return {
+      updateAvailable: !!data.updateAvailable,
+      forceUpdate: !!data.forceUpdate,
+      latestVersion: data.latestVersion,
+      notes: data.notes,
+    };
+  } catch {
+    return { updateAvailable: false, forceUpdate: false };
+  }
+}

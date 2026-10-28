@@ -14,6 +14,8 @@ import { calendarRouter } from "./calendar.routes";
 import { leaveRouter } from "./leave.routes";
 import { announcementRouter } from "./announcement.routes";
 import { enquiryRouter } from "./enquiry.routes";
+import { updateRouter } from "./update.routes";
+import { updateController } from "../controllers/update.controller";
 import featureFlagRoutes from "./featureFlag.routes";
 import extensionRoutes from "./extension.routes";
 import { AppError } from "../utils/AppError";
@@ -55,6 +57,12 @@ router.use("/announcements", announcementRouter);
 // Support Enquiries & Ticket Resolution Subsystem (protected by 'enquiries' feature flag)
 router.use("/api/enquiries", enquiryRouter);
 router.use("/enquiries", enquiryRouter);
+
+// OTA Updates & App Release Management
+router.use("/api/updates", updateRouter);
+router.use("/updates", updateRouter);
+router.get("/api/version", updateController.getVersion);
+router.get("/version.json", updateController.getVersion);
 
 // Office QR Display & Terminal endpoints (supports both /api/displays and /api/terminals)
 router.use("/api/displays", qrRouter);
