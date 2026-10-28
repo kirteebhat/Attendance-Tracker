@@ -139,6 +139,36 @@ export function initSocketServer(httpServer: HttpServer): SocketIOServer {
         );
       }
 
+      // Enquiry thread room joining & typing indicators
+      socket.on("enquiry.join", (enquiryId: string) => {
+        if (enquiryId) {
+          socket.join(`enquiry:${enquiryId}`);
+        }
+      });
+
+      socket.on("enquiry.leave", (enquiryId: string) => {
+        if (enquiryId) {
+          socket.leave(`enquiry:${enquiryId}`);
+        }
+      });
+
+      socket.on("enquiry.typing", (payload: { enquiryId: string; isTyping: boolean; userName?: string }) => {
+        if (payload?.enquiryId) {
+          socket.to(`enquiry:${payload.enquiryId}`).emit("enquiry.typing", {
+            ...payload,
+            userId: user.userId,
+            employeeId: user.employeeId,
+            role: user.role,
+          });
+          socket.broadcast.emit("enquiry.typing", {
+            ...payload,
+            userId: user.userId,
+            employeeId: user.employeeId,
+            role: user.role,
+          });
+        }
+      });
+
       // Resync Handler: Allows clients to request authoritative data on reconnection
       socket.on(
         SocketEvent.RESYNC,

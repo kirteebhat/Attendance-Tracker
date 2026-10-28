@@ -77,6 +77,13 @@ export default function RootLayout() {
                 headerShadowVisible: false,
               }}
             />
+            <Stack.Screen
+              name="enquiries"
+              options={{
+                title: "Contact HR & Enquiries",
+                headerShadowVisible: false,
+              }}
+            />
           </Stack>
         </ToastProvider>
       </AuthProvider>

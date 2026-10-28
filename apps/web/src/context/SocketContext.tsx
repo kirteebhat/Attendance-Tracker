@@ -188,6 +188,56 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     );
 
+    // Real-Time Enquiry & Helpdesk Event Handlers
+    client.on(
+      "enquiry.created",
+      (data: { ticketNumber?: string; subject?: string; category?: string }) => {
+        queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+        toast({
+          type: "info",
+          title: `New Enquiry ${data.ticketNumber || ""}`,
+          description: `[${data.category || "General"}] ${data.subject || "New enquiry received"}`,
+        });
+      }
+    );
+
+    client.on(
+      "enquiry.message_received",
+      (data: { enquiryId?: string; ticketNumber?: string; senderRole?: string; message?: string }) => {
+        queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+        if (data.enquiryId) {
+          queryClient.invalidateQueries({ queryKey: ["enquiry-details", data.enquiryId] });
+        }
+        if (data.senderRole === "EMPLOYEE") {
+          toast({
+            type: "info",
+            title: `Reply on ${data.ticketNumber || "Enquiry"}`,
+            description: `${data.message ? (data.message.length > 60 ? data.message.slice(0, 57) + "..." : data.message) : "New message in thread"}`,
+          });
+        }
+      }
+    );
+
+    client.on(
+      "enquiry.status_updated",
+      (data: { enquiryId?: string; ticketNumber?: string; status?: string }) => {
+        queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+        if (data.enquiryId) {
+          queryClient.invalidateQueries({ queryKey: ["enquiry-details", data.enquiryId] });
+        }
+      }
+    );
+
+    client.on(
+      "enquiry.assigned",
+      (data: { enquiryId?: string; ticketNumber?: string; assigneeName?: string }) => {
+        queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+        if (data.enquiryId) {
+          queryClient.invalidateQueries({ queryKey: ["enquiry-details", data.enquiryId] });
+        }
+      }
+    );
+
     // Real-Time Staff Security & Session Eviction Handlers
     const handleSessionRevocation = (data: {
       userId?: string;

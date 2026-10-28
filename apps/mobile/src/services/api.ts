@@ -557,5 +557,129 @@ export const announcementsApi = {
   },
 };
 
+export interface EnquiryAttachmentItem {
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  url?: string;
+  dataUrl?: string;
+}
+
+export interface EnquiryMessageItem {
+  _id: string;
+  enquiry: string;
+  sender: {
+    _id: string;
+    email: string;
+    role: string;
+    name?: string;
+  } | string;
+  senderRole: "EMPLOYEE" | "HR" | "ADMIN";
+  message: string;
+  attachments: EnquiryAttachmentItem[];
+  readByRecipient: boolean;
+  createdAt: string;
+}
+
+export interface MobileEnquiryItem {
+  _id: string;
+  ticketNumber: string;
+  category: "ATTENDANCE" | "LEAVE" | "WFH" | "PAYROLL" | "TECHNICAL" | "OTHER" | "BENEFITS" | "IT" | "GENERAL";
+  subject: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  assignee?: { _id: string; name?: string; email: string; employeeId?: string } | null;
+  firstResponseAt?: string | null;
+  resolvedAt?: string | null;
+  closedAt?: string | null;
+  reopenDeadline?: string | null;
+  lastMessageAt: string;
+  createdAt: string;
+  attachments?: EnquiryAttachmentItem[];
+}
+
+export const enquiryApi = {
+  async getMyEnquiries(params?: {
+    status?: string;
+    category?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    success: boolean;
+    data: MobileEnquiryItem[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const query = new URLSearchParams();
+    if (params?.status) query.set("status", params.status);
+    if (params?.category) query.set("category", params.category);
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+
+    const qs = query.toString();
+    return apiRequest(`/api/enquiries${qs ? `?${qs}` : ""}`);
+  },
+
+  async getEnquiryById(id: string): Promise<{
+    success: boolean;
+    data: MobileEnquiryItem;
+    messages: EnquiryMessageItem[];
+  }> {
+    return apiRequest(`/api/enquiries/${id}`);
+  },
+
+  async createEnquiry(payload: {
+    category: string;
+    subject: string;
+    message: string;
+    priority?: string;
+    attachment?: EnquiryAttachmentItem;
+    attachments?: EnquiryAttachmentItem[];
+  }): Promise<{
+    success: boolean;
+    message: string;
+    data: MobileEnquiryItem;
+    initialMessage: EnquiryMessageItem;
+  }> {
+    return apiRequest("/api/enquiries", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async sendMessage(
+    id: string,
+    payload: {
+      message: string;
+      attachment?: EnquiryAttachmentItem;
+      attachments?: EnquiryAttachmentItem[];
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: EnquiryMessageItem;
+  }> {
+    return apiRequest(`/api/enquiries/${id}/messages`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async reopenEnquiry(
+    id: string,
+    reason: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: MobileEnquiryItem;
+  }> {
+    return apiRequest(`/api/enquiries/${id}/reopen`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  },
+};
+
 
 

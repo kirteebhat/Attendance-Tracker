@@ -1852,6 +1852,227 @@ export function useTriggerAutoAnnouncements() {
   });
 }
 
+// ============================================================================
+// ENQUIRIES & HELPDESK MODULE
+// ============================================================================
+
+export interface EnquiryAttachment {
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  url?: string;
+  dataUrl?: string;
+}
+
+export interface EnquirySender {
+  _id: string;
+  email: string;
+  role: string;
+  name?: string;
+  employeeId?: string;
+  avatar?: string;
+}
+
+export interface EnquiryMessage {
+  _id: string;
+  enquiry: string;
+  sender: EnquirySender | string;
+  senderRole: "EMPLOYEE" | "HR" | "ADMIN";
+  message: string;
+  attachments: EnquiryAttachment[];
+  readByRecipient: boolean;
+  createdAt: string;
+}
+
+export interface EnquiryItem {
+  _id: string;
+  ticketNumber: string;
+  employee: {
+    _id: string;
+    name: string;
+    employeeId: string;
+    department: string;
+    designation: string;
+  };
+  employeeUser: string;
+  category: "ATTENDANCE" | "LEAVE" | "WFH" | "PAYROLL" | "TECHNICAL" | "OTHER" | "BENEFITS" | "IT" | "GENERAL";
+  subject: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  assignee?: {
+    _id: string;
+    name?: string;
+    email: string;
+    role: string;
+    employeeId?: string;
+  } | null;
+  firstResponseAt?: string | null;
+  resolvedAt?: string | null;
+  closedAt?: string | null;
+  reopenDeadline?: string | null;
+  lastMessageAt: string;
+  attachments: EnquiryAttachment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EnquiriesResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  data: EnquiryItem[];
+}
+
+export interface EnquiriesFilters {
+  status?: string;
+  category?: string;
+  priority?: string;
+  assigneeId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function useEnquiries(filters: EnquiriesFilters = {}) {
+  const query = new URLSearchParams();
+  if (filters.status && filters.status !== "ALL") query.set("status", filters.status);
+  if (filters.category && filters.category !== "ALL") query.set("category", filters.category);
+  if (filters.priority && filters.priority !== "ALL") query.set("priority", filters.priority);
+  if (filters.assigneeId && filters.assigneeId !== "ALL") query.set("assigneeId", filters.assigneeId);
+  if (filters.search) query.set("search", filters.search);
+  if (filters.page) query.set("page", String(filters.page));
+  if (filters.limit) query.set("limit", String(filters.limit));
+
+  const qs = query.toString();
+  return useQuery<EnquiriesResponse>({
+    queryKey: ["enquiries", filters],
+    queryFn: () => api.get<EnquiriesResponse>(`/api/enquiries${qs ? `?${qs}` : ""}`),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useEnquiryDetails(id?: string | null) {
+  return useQuery<{
+    success: boolean;
+    data: EnquiryItem;
+    messages: EnquiryMessage[];
+  }>({
+    queryKey: ["enquiry-details", id],
+    queryFn: () => api.get(`/api/enquiries/${id}`),
+    enabled: !!id,
+    staleTime: 1000 * 10,
+  });
+}
+
+export function useCreateEnquiry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      category: string;
+      subject: string;
+      message: string;
+      priority?: string;
+      attachment?: EnquiryAttachment;
+      attachments?: EnquiryAttachment[];
+    }) => api.post<{ success: boolean; message: string; data: EnquiryItem }>("/api/enquiries", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+    },
+  });
+}
+
+export function useSendEnquiryMessage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: {
+        message: string;
+        attachment?: EnquiryAttachment;
+        attachments?: EnquiryAttachment[];
+      };
+    }) =>
+      api.post<{ success: boolean; message: string; data: EnquiryMessage }>(
+        `/api/enquiries/${id}/messages`,
+        payload
+      ),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["enquiry-details", id] });
+    },
+  });
+}
+
+export function useUpdateEnquiryStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      status,
+      note,
+    }: {
+      id: string;
+      status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+      note?: string;
+    }) =>
+      api.patch<{ success: boolean; message: string; data: EnquiryItem }>(
+        `/api/enquiries/${id}/status`,
+        { status, note }
+      ),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["enquiry-details", id] });
+    },
+  });
+}
+
+export function useAssignEnquiry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      assigneeId,
+    }: {
+      id: string;
+      assigneeId: string;
+    }) =>
+      api.patch<{ success: boolean; message: string; data: EnquiryItem }>(
+        `/api/enquiries/${id}/assign`,
+        { assigneeId }
+      ),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["enquiry-details", id] });
+    },
+  });
+}
+
+export function useReopenEnquiry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      reason,
+    }: {
+      id: string;
+      reason: string;
+    }) =>
+      api.post<{ success: boolean; message: string; data: EnquiryItem }>(
+        `/api/enquiries/${id}/reopen`,
+        { reason }
+      ),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["enquiry-details", id] });
+    },
+  });
+}
+
 
 
 

@@ -233,21 +233,32 @@ export default function HomeScreen() {
             </Text>
           </View>
 
-          {/* Announcement Feed Shortcut Bell */}
-          <TouchableOpacity
-            style={styles.bellButton}
-            onPress={() => router.push("/announcements" as any)}
-            accessibilityLabel="View Announcements"
-          >
-            <Icon name="megaphone-outline" size={20} color={colors.accent.cyan} />
-            {unreadAnnouncementsCount > 0 && (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>
-                  {unreadAnnouncementsCount > 9 ? "9+" : unreadAnnouncementsCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {/* Contact HR & Enquiries Shortcut */}
+            <TouchableOpacity
+              style={styles.bellButton}
+              onPress={() => router.push("/enquiries" as any)}
+              accessibilityLabel="Contact HR & Enquiries"
+            >
+              <Icon name="chatbubbles-outline" size={20} color={colors.accent.cyan} />
+            </TouchableOpacity>
+
+            {/* Announcement Feed Shortcut Bell */}
+            <TouchableOpacity
+              style={styles.bellButton}
+              onPress={() => router.push("/announcements" as any)}
+              accessibilityLabel="View Announcements"
+            >
+              <Icon name="megaphone-outline" size={20} color={colors.accent.cyan} />
+              {unreadAnnouncementsCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>
+                    {unreadAnnouncementsCount > 9 ? "9+" : unreadAnnouncementsCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </Card>
 
@@ -348,6 +359,29 @@ export default function HomeScreen() {
             testID="home-goto-wfh-btn"
           >
             <Text style={styles.wfhActionText}>Apply</Text>
+            <Icon name="chevron-forward" size={14} color={colors.accent.cyan} />
+          </TouchableOpacity>
+        </View>
+      </Card>
+
+      {/* 3.5 Contact HR & Support Card */}
+      <Card variant="surface" style={[styles.wfhSummaryCard, { marginTop: spacing.sm }]}>
+        <View style={styles.wfhRow}>
+          <View style={[styles.iconPill, { backgroundColor: `${colors.accent.cyan}20` }]}>
+            <Icon name="help-buoy-outline" size={20} color={colors.accent.cyan} />
+          </View>
+          <View style={styles.wfhInfo}>
+            <Text style={styles.wfhTitle}>Contact HR & Helpdesk</Text>
+            <Text style={styles.wfhSubtitle}>
+              Questions regarding attendance, leaves, payroll, or dispute resolution
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push("/enquiries" as any)}
+            style={styles.wfhActionBtn}
+            testID="home-goto-enquiries-btn"
+          >
+            <Text style={styles.wfhActionText}>Help</Text>
             <Icon name="chevron-forward" size={14} color={colors.accent.cyan} />
           </TouchableOpacity>
         </View>

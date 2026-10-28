@@ -14,6 +14,7 @@ import {
   Building2,
   Lock,
   Megaphone,
+  LifeBuoy,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Badge } from "../ui/Badge";
@@ -22,6 +23,7 @@ import {
   FeatureFlagsMap,
   useLeaveRequests,
   useUnreadAnnouncementsCount,
+  useEnquiries,
 } from "../../api/queries";
 
 interface NavItem {
@@ -36,6 +38,7 @@ const navigation: NavItem[] = [
   { name: "Executive Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Attendance Ledger", href: "/attendance", icon: CalendarCheck },
   { name: "Leave Requests", href: "/leave", icon: CalendarCheck },
+  { name: "Support Enquiries", href: "/enquiries", icon: LifeBuoy },
   { name: "WFH Approvals", href: "/wfh", icon: Home },
   { name: "Working Calendar", href: "/calendar", icon: Calendar },
   { name: "Announcements", href: "/announcements", icon: Megaphone },
@@ -46,7 +49,6 @@ const navigation: NavItem[] = [
   { name: "Security & Sessions", href: "/security", icon: Lock },
   { name: "Audit Trail", href: "/audit-logs", icon: ShieldCheck },
   // Optional Extension Modules
-  { name: "Enquiries & Helpdesk", href: "/enquiries", icon: Users, flagKey: "enquiries" },
   { name: "3D Floor View", href: "/three-d", icon: Tv, flagKey: "threeD" },
 ];
 
@@ -60,6 +62,9 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
 
   const { data: unreadAnnouncementsData } = useUnreadAnnouncementsCount();
   const unreadAnnouncementsCount = unreadAnnouncementsData?.unreadCount || 0;
+
+  const { data: openEnquiriesData } = useEnquiries({ status: "OPEN", limit: 1 });
+  const openEnquiriesCount = openEnquiriesData?.total || 0;
 
   const visibleNav = navigation.filter((item) => {
     if (item.flagKey && (!flags || !flags[item.flagKey])) {
@@ -114,6 +119,11 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
               {item.href === "/leave" && pendingLeaveCount > 0 && (
                 <span className="ml-auto px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500 text-slate-950 shadow-xs">
                   {pendingLeaveCount}
+                </span>
+              )}
+              {item.href === "/enquiries" && openEnquiriesCount > 0 && (
+                <span className="ml-auto px-2 py-0.5 text-[11px] font-bold rounded-full bg-cyan-400 text-slate-950 shadow-xs">
+                  {openEnquiriesCount}
                 </span>
               )}
               {item.href === "/announcements" && unreadAnnouncementsCount > 0 && (

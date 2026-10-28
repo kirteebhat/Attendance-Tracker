@@ -51,6 +51,12 @@ export async function getMobileSocket(): Promise<Socket | null> {
       "wfh.decided",
       "wfh.created",
       "policy.updated",
+      "announcement.published",
+      "enquiry.created",
+      "enquiry.message_received",
+      "enquiry.status_updated",
+      "enquiry.assigned",
+      "enquiry.typing",
     ];
 
     handledEvents.forEach((eventName) => {
@@ -106,6 +112,16 @@ export function subscribeToSocketEvent(
   return () => {
     eventSubscribers.get(eventName)?.delete(callback);
   };
+}
+
+/**
+ * Emits an event through the mobile socket
+ */
+export async function emitMobileSocketEvent(eventName: string, payload: unknown): Promise<void> {
+  const socket = await getMobileSocket();
+  if (socket && socket.connected) {
+    socket.emit(eventName, payload);
+  }
 }
 
 /**
