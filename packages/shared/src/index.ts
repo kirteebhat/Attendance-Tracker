@@ -22,6 +22,7 @@ export * from "./schemas/staffAuth";
 export * from "./schemas/appRelease";
 export * from "./schemas/savedView";
 export * from "./schemas/notification";
+export * from "./schemas/analytics";
 
 // Types
 export * from "./types";

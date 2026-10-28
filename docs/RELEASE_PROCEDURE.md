@@ -147,3 +147,4 @@ Lobby kiosk screens must never reboot while an employee is actively clocking in 
    - An audit record `PUBLISH_APP_RELEASE` is logged.
    - An auto-announcement hook triggers a global broadcast: *"Update available: vX.Y.Z"*.
    - A real-time `app_release.published` socket event notifies all connected devices.
+

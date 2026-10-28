@@ -129,3 +129,4 @@ export const VersionUpdateBanner: React.FC = () => {
     </aside>
   );
 };
+

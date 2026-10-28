@@ -16,6 +16,7 @@ import { announcementRouter } from "./announcement.routes";
 import { enquiryRouter } from "./enquiry.routes";
 import { updateRouter } from "./update.routes";
 import { updateController } from "../controllers/update.controller";
+import { analyticsRouter } from "./analytics.routes";
 import featureFlagRoutes from "./featureFlag.routes";
 import extensionRoutes from "./extension.routes";
 import { AppError } from "../utils/AppError";
@@ -82,6 +83,11 @@ router.use("/api/admin/wfh", wfhRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/api/dashboard", dashboardRouter);
 router.use("/api/admin/dashboard", dashboardRouter);
+
+// Live Attendance Analytics endpoints
+router.use("/analytics", analyticsRouter);
+router.use("/api/analytics", analyticsRouter);
+router.use("/api/admin/analytics", analyticsRouter);
 
 // Reporting & CSV Export endpoints
 router.use("/reports", reportRouter);

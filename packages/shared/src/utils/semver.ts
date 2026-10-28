@@ -51,3 +51,4 @@ export function isVersionOlder(current: string, target: string): boolean {
 export function isBelowMinSupportedVersion(current: string, minSupported: string): boolean {
   return compareSemver(current, minSupported) < 0;
 }
+

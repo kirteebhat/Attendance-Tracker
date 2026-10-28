@@ -563,3 +563,4 @@ export const AppReleasesPage: React.FC = () => {
     </div>
   );
 };
+

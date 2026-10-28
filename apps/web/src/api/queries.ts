@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, tokenStorage, getFullApiUrl } from "./client";
-import { AttendanceStatus, WorkType } from "@vorldx/shared";
+import { AttendanceStatus, WorkType, LiveAttendanceAnalyticsResponse, LiveAnalyticsQuery } from "@vorldx/shared";
 
 export interface DashboardDayTrend {
   dateKey: string;
@@ -184,6 +184,26 @@ export function useDashboardSummary() {
     queryFn: () => api.get<DashboardSummaryData>("/api/dashboard/summary"),
     staleTime: 1000 * 30,
     refetchOnWindowFocus: true,
+  });
+}
+
+export function useLiveAnalytics(params?: {
+  dateKey?: string;
+  department?: string;
+  simulatedNow?: string;
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.dateKey) searchParams.set("dateKey", params.dateKey);
+  if (params?.department) searchParams.set("department", params.department);
+  if (params?.simulatedNow) searchParams.set("simulatedNow", params.simulatedNow);
+  const qs = searchParams.toString();
+
+  return useQuery<LiveAttendanceAnalyticsResponse>({
+    queryKey: ["live-attendance-analytics", params?.dateKey, params?.department],
+    queryFn: () =>
+      api.get<LiveAttendanceAnalyticsResponse>(`/api/analytics/live${qs ? `?${qs}` : ""}`),
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: false,
   });
 }
 
