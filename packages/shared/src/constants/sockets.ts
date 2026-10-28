@@ -66,6 +66,10 @@ export const SocketEvent = {
   // Notification events
   NOTIFICATION_NEW: "notification.new",
   NOTIFICATION_READ: "notification.read",
+
+  // Presence & Online status events
+  HR_PRESENCE: "hr:presence",
+  PRESENCE_UPDATED: "presence.updated",
 } as const;
 
 export type SocketEventType = (typeof SocketEvent)[keyof typeof SocketEvent];

@@ -11,6 +11,50 @@ import * as dashboardService from "../services/dashboard.service";
 
 let ioInstance: SocketIOServer | null = null;
 
+export interface ActiveHrSocketRecord {
+  socketId: string;
+  userId: string;
+  email: string;
+  name: string;
+  role: string;
+  employeeId: string;
+}
+
+const activeHrSockets = new Map<string, ActiveHrSocketRecord>();
+
+export function getActiveHrPresence(): {
+  count: number;
+  users: Array<{ userId: string; email: string; name: string; role: string; employeeId: string }>;
+} {
+  const uniqueUsers = new Map<
+    string,
+    { userId: string; email: string; name: string; role: string; employeeId: string }
+  >();
+  for (const hr of activeHrSockets.values()) {
+    if (!uniqueUsers.has(hr.userId)) {
+      uniqueUsers.set(hr.userId, {
+        userId: hr.userId,
+        email: hr.email,
+        name: hr.name,
+        role: hr.role,
+        employeeId: hr.employeeId,
+      });
+    }
+  }
+  const users = Array.from(uniqueUsers.values());
+  return {
+    count: users.length,
+    users,
+  };
+}
+
+export function broadcastHrPresence(): void {
+  if (!ioInstance) return;
+  const presence = getActiveHrPresence();
+  ioInstance.to(SocketRoom.hr()).emit(SocketEvent.HR_PRESENCE, presence);
+  ioInstance.to(SocketRoom.hrDashboard()).emit(SocketEvent.HR_PRESENCE, presence);
+}
+
 export interface AuthenticatedSocketData {
   type: "user" | "display" | "guest";
   user?: TokenPayload;
@@ -130,9 +174,35 @@ export function initSocketServer(httpServer: HttpServer): SocketIOServer {
       ) {
         socket.join(SocketRoom.hr());
         socket.join(SocketRoom.hrDashboard());
+
+        const hrUserId = user.userId || user.employeeId;
+        const hrName = (user as unknown as { name?: string }).name || (user.email ? user.email.split("@")[0] : "HR Staff");
+        activeHrSockets.set(socket.id, {
+          socketId: socket.id,
+          userId: hrUserId,
+          email: user.email,
+          name: hrName,
+          role: user.role,
+          employeeId: user.employeeId,
+        });
+
         logger.info(
-          `[Socket] User ${user.email} (${user.role}) connected -> joined rooms: employee:${user.employeeId}, hr, hr:dashboard`
+          `[Socket] User ${user.email} (${user.role}) connected -> joined rooms: employee:${user.employeeId}, hr, hr:dashboard. Active HR count: ${getActiveHrPresence().count}`
         );
+
+        // Immediate presence push to newly connected HR user + broadcast to all HR users
+        socket.emit(SocketEvent.HR_PRESENCE, getActiveHrPresence());
+        broadcastHrPresence();
+
+        // Inbound: get active HR presence on demand
+        socket.on("hr:get_presence", (_req, callback) => {
+          const presence = getActiveHrPresence();
+          if (typeof callback === "function") {
+            callback(presence);
+          } else {
+            socket.emit(SocketEvent.HR_PRESENCE, presence);
+          }
+        });
       } else {
         logger.info(
           `[Socket] Employee ${user.employeeId} connected -> joined room: employee:${user.employeeId}`
@@ -316,6 +386,10 @@ export function initSocketServer(httpServer: HttpServer): SocketIOServer {
 
     socket.on("disconnect", (reason) => {
       logger.debug(`[Socket] Client disconnected (${socket.id}): ${reason}`);
+      if (activeHrSockets.has(socket.id)) {
+        activeHrSockets.delete(socket.id);
+        broadcastHrPresence();
+      }
     });
   });
 

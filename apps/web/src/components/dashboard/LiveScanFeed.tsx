@@ -184,21 +184,29 @@ export const LiveScanFeed: React.FC<LiveScanFeedProps> = ({ scans = [], isLive =
             return (
               <article
                 key={item.id || `${item.employeeId}_${item.scanTime}`}
-                className={`py-3 px-2 rounded-lg transition-all hover:bg-slate-50 dark:hover:bg-slate-800/40 flex items-center justify-between gap-3 ${
+                className={`py-3 px-2.5 rounded-xl transition-all duration-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 flex items-center justify-between gap-3 ${
                   isLatest
-                    ? "animate-in fade-in slide-in-from-top-3 duration-500 bg-cyan-50/40 dark:bg-cyan-950/20"
+                    ? "animate-in fade-in slide-in-from-top-3 duration-500 bg-gradient-to-r from-emerald-50/50 via-cyan-50/30 to-transparent dark:from-emerald-950/30 dark:via-cyan-950/20 dark:to-transparent ring-1 ring-emerald-400/40 dark:ring-emerald-500/30 shadow-sm"
                     : ""
                 }`}
               >
                 {/* Employee Info & Avatar */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs shrink-0">
-                    {item.employeeName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
+                  <div className="relative">
+                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-xs shrink-0">
+                      {item.employeeName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+                    {isLatest && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 border border-white dark:border-slate-900" />
+                      </span>
+                    )}
                   </div>
 
                   <div className="min-w-0">

@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
 import { useTheme } from "../../context/ThemeContext";
 import { Badge } from "../ui/Badge";
+import { HROnlineIndicator } from "../ui/HROnlineIndicator";
 
 interface TopbarProps {
   onOpenMobile: () => void;
@@ -138,6 +139,11 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenMobile }) => {
               <span className="hidden sm:inline">Offline</span>
             </>
           )}
+        </div>
+
+        {/* HR Staff Presence Indicator */}
+        <div className="hidden md:block">
+          <HROnlineIndicator variant="pill" />
         </div>
 
         {/* User Pill */}

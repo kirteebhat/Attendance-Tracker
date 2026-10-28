@@ -17,6 +17,7 @@ import { enquiryRouter } from "./enquiry.routes";
 import { updateRouter } from "./update.routes";
 import { updateController } from "../controllers/update.controller";
 import { analyticsRouter } from "./analytics.routes";
+import { presenceRouter } from "./presence.routes";
 import featureFlagRoutes from "./featureFlag.routes";
 import extensionRoutes from "./extension.routes";
 import { AppError } from "../utils/AppError";
@@ -102,6 +103,9 @@ router.use("/api/admin/audit-logs", auditRouter);
 // Feature Flags & Extension endpoints
 router.use("/api", featureFlagRoutes);
 router.use("/api", extensionRoutes);
+
+// Real-Time HR Presence endpoints
+router.use(presenceRouter);
 
 // Test routes for integration verification (active in non-production)
 if (process.env.NODE_ENV !== "production") {

@@ -7,7 +7,6 @@ import {
   UserMinus,
   CalendarDays,
   RotateCw,
-  Percent,
 } from "lucide-react";
 import { useDashboardSummary } from "../api/queries";
 import { useLiveAttendanceAnalytics } from "../hooks/useLiveAttendanceAnalytics";
@@ -23,6 +22,8 @@ import { StatCardSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { ErrorState } from "../components/ui/ErrorState";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
+import { LazyAttendanceOrb3D } from "../components/3d/LazyAttendanceOrb3D";
+import { HROnlineIndicator } from "../components/ui/HROnlineIndicator";
 
 export const DashboardPage: React.FC = () => {
   // Executive summary query (trends & audit activity)
@@ -154,6 +155,7 @@ export const DashboardPage: React.FC = () => {
                 LIVE STREAM
               </span>
             )}
+            <HROnlineIndicator variant="compact" />
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Real-time workforce attendance metrics, dynamic QR scan activity, and compliance trends.
@@ -161,12 +163,12 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Animated Daily Attendance Rate Indicator */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs">
-            <Percent className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          {/* Animated 3D Attendance Hero Orb & Rate Indicator */}
+          <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
+            <LazyAttendanceOrb3D attendanceRate={attendanceRate} size={46} />
             <div className="text-xs">
-              <span className="text-slate-500 dark:text-slate-400">Attendance:</span>{" "}
-              <strong className="font-bold text-slate-900 dark:text-slate-100">
+              <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-semibold">Attendance</span>{" "}
+              <strong className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">
                 <AnimatedCounter value={attendanceRate} suffix="%" />
               </strong>
             </div>
