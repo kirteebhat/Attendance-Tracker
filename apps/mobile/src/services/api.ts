@@ -521,4 +521,41 @@ export const policyApi = {
   },
 };
 
+export interface MobileAnnouncementItem {
+  _id: string;
+  title: string;
+  body: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  pinned: boolean;
+  startsAt: string;
+  expiresAt?: string | null;
+  audience: {
+    scope: "all" | "department" | "role";
+    departments?: string[];
+    roles?: string[];
+  };
+  source: "manual" | "auto";
+  templateKey?: string;
+  isAuto?: boolean;
+  isRead?: boolean;
+  createdAt: string;
+}
+
+export const announcementsApi = {
+  async getAnnouncements(limit: number = 30): Promise<{ success: boolean; data: MobileAnnouncementItem[] }> {
+    return apiRequest<{ success: boolean; data: MobileAnnouncementItem[] }>(`/api/announcements?limit=${limit}`);
+  },
+
+  async getUnreadCount(): Promise<{ success: boolean; unreadCount: number }> {
+    return apiRequest<{ success: boolean; unreadCount: number }>("/api/announcements/unread-count");
+  },
+
+  async markAsRead(id: string): Promise<{ success: boolean; message: string }> {
+    return apiRequest<{ success: boolean; message: string }>(`/api/announcements/${id}/read`, {
+      method: "POST",
+    });
+  },
+};
+
+
 

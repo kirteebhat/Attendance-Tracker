@@ -347,6 +347,22 @@ export class AnnouncementService {
   // Employee Viewing & Read Tracking
   // =========================================================================
 
+  public async getPublicAnnouncements(limit = 10): Promise<Array<any>> {
+    const now = new Date();
+    const announcements = await Announcement.find({
+      "audience.scope": "all",
+      startsAt: { $lte: now },
+      $or: [{ expiresAt: null }, { expiresAt: { $exists: false } }, { expiresAt: { $gt: now } }],
+    })
+      .sort({ pinned: -1, startsAt: -1 })
+      .limit(limit);
+
+    return announcements.map((a) => ({
+      ...a.toObject(),
+      isAuto: a.isAuto,
+    }));
+  }
+
   public async getAnnouncementsForUser(
     user: { userId: string; role: string; employeeId?: string },
     query: AnnouncementListQuery = {}

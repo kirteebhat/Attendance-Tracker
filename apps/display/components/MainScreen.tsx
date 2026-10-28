@@ -6,6 +6,7 @@ import { io, Socket } from "socket.io-client";
 import { StoredDisplayCredentials, clearStoredCredentials } from "../lib/storage";
 import { fetchRotatingChallenge, DisplayApiError, QrTokenResponse } from "../lib/api";
 import { CountdownRing } from "./CountdownRing";
+import { AnnouncementTicker } from "./AnnouncementTicker";
 import {
   Wifi,
   WifiOff,
@@ -477,6 +478,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
           </div>
         )}
       </main>
+
+      {/* Optional Slim Announcement Ticker at the Bottom */}
+      <AnnouncementTicker />
 
       {/* BOTTOM TELEMETRY & PRIVACY GUARANTEE */}
       <footer className="relative z-10 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">

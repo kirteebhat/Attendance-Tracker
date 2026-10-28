@@ -652,4 +652,41 @@ describe("Announcements Subsystem behind Feature Flag (apps/api)", () => {
     expect(notifications.length).toBeGreaterThan(0);
     expect(notifications[0].title).toContain("[URGENT] Urgent Server Outage Maintenance");
   });
+
+  // =========================================================================
+  // 13. Public / Display Kiosk Announcements (Ticker API)
+  // =========================================================================
+  it("serves active company-wide announcements on GET /api/announcements/public without authentication", async () => {
+    // 1. Company-wide active announcement
+    await announcementService.createManualAnnouncement(
+      {
+        title: "Annual Company Retreat",
+        body: "All employees please assemble in main courtyard.",
+        priority: "HIGH",
+        pinned: true,
+        audience: { scope: "all", departments: [], roles: [] },
+      },
+      { userId: adminUserId }
+    );
+
+    // 2. Department-specific announcement (should NOT appear on public kiosk)
+    await announcementService.createManualAnnouncement(
+      {
+        title: "Confidential Finance Audit",
+        body: "Finance department internal metrics only.",
+        priority: "HIGH",
+        audience: { scope: "department", departments: ["Finance"], roles: [] },
+      },
+      { userId: adminUserId }
+    );
+
+    // Call public endpoint without Bearer token
+    const publicRes = await request(app).get("/api/announcements/public");
+    expect(publicRes.status).toBe(200);
+    expect(publicRes.body.success).toBe(true);
+    expect(Array.isArray(publicRes.body.data)).toBe(true);
+    expect(publicRes.body.data.length).toBe(1);
+    expect(publicRes.body.data[0].title).toBe("Annual Company Retreat");
+    expect(publicRes.body.data[0].pinned).toBe(true);
+  });
 });

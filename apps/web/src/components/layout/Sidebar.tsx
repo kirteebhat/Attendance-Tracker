@@ -13,10 +13,16 @@ import {
   LogOut,
   Building2,
   Lock,
+  Megaphone,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Badge } from "../ui/Badge";
-import { useFeatureFlags, FeatureFlagsMap, useLeaveRequests } from "../../api/queries";
+import {
+  useFeatureFlags,
+  FeatureFlagsMap,
+  useLeaveRequests,
+  useUnreadAnnouncementsCount,
+} from "../../api/queries";
 
 interface NavItem {
   name: string;
@@ -39,7 +45,7 @@ const navigation: NavItem[] = [
   { name: "Security & Sessions", href: "/security", icon: Lock },
   { name: "Audit Trail", href: "/audit-logs", icon: ShieldCheck },
   // Optional Extension Modules
-  { name: "Announcements", href: "/announcements", icon: LayoutDashboard, flagKey: "announcements" },
+  { name: "Announcements", href: "/announcements", icon: Megaphone, flagKey: "announcements" },
   { name: "Enquiries & Helpdesk", href: "/enquiries", icon: Users, flagKey: "enquiries" },
   { name: "3D Floor View", href: "/three-d", icon: Tv, flagKey: "threeD" },
 ];
@@ -51,6 +57,9 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
 
   const { data: pendingLeaveData } = useLeaveRequests({ status: "PENDING", limit: 1 });
   const pendingLeaveCount = pendingLeaveData?.pagination?.total || 0;
+
+  const { data: unreadAnnouncementsData } = useUnreadAnnouncementsCount();
+  const unreadAnnouncementsCount = unreadAnnouncementsData?.unreadCount || 0;
 
   const visibleNav = navigation.filter((item) => {
     if (item.flagKey && (!flags || !flags[item.flagKey])) {
@@ -105,6 +114,11 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
               {item.href === "/leave" && pendingLeaveCount > 0 && (
                 <span className="ml-auto px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500 text-slate-950 shadow-xs">
                   {pendingLeaveCount}
+                </span>
+              )}
+              {item.href === "/announcements" && unreadAnnouncementsCount > 0 && (
+                <span className="ml-auto px-2 py-0.5 text-[11px] font-bold rounded-full bg-blue-500 text-white shadow-xs">
+                  {unreadAnnouncementsCount}
                 </span>
               )}
             </NavLink>

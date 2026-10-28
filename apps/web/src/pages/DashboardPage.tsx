@@ -13,6 +13,7 @@ import { useDashboardSummary } from "../api/queries";
 import { StatCard } from "../components/dashboard/StatCard";
 import { AttendanceChart } from "../components/dashboard/AttendanceChart";
 import { RecentActivity } from "../components/dashboard/RecentActivity";
+import { AnnouncementDashboardBlock } from "../components/dashboard/AnnouncementDashboardBlock";
 import { StatCardSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { ErrorState } from "../components/ui/ErrorState";
 import { Button } from "../components/ui/Button";
@@ -106,6 +107,9 @@ export const DashboardPage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Live Announcement & Alert Block */}
+      <AnnouncementDashboardBlock />
 
       {/* 6 Key Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">

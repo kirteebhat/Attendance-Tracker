@@ -1608,6 +1608,251 @@ export function useBulkDecideLeaveRequests() {
   });
 }
 
+// ============================================================================
+// ANNOUNCEMENTS MODULE QUERIES & MUTATIONS
+// ============================================================================
+
+export interface AnnouncementItem {
+  _id: string;
+  title: string;
+  body: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  pinned: boolean;
+  startsAt: string;
+  expiresAt?: string | null;
+  audience: {
+    scope: "all" | "department" | "role";
+    departments?: string[];
+    roles?: string[];
+  };
+  source: "manual" | "auto";
+  templateKey?: string;
+  isAuto?: boolean;
+  isRead?: boolean;
+  readCount?: number;
+  readBy?: Array<{ user: string; readAt: string }>;
+  createdBy?: {
+    _id: string;
+    employeeId?: string;
+    email?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AnnouncementTemplateItem {
+  _id: string;
+  key: string;
+  name: string;
+  titleTemplate: string;
+  bodyTemplate: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  audience: {
+    scope: "all" | "department" | "role";
+    departments?: string[];
+    roles?: string[];
+  };
+  isEnabled: boolean;
+  variables: string[];
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AnnouncementListResponse {
+  success: boolean;
+  count: number;
+  data: AnnouncementItem[];
+}
+
+export interface AdminAnnouncementListResponse {
+  success: boolean;
+  data: AnnouncementItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export function useAnnouncements(options?: { limit?: number }) {
+  const limit = options?.limit || 50;
+  return useQuery<AnnouncementListResponse>({
+    queryKey: ["announcements", limit],
+    queryFn: () => api.get(`/api/announcements?limit=${limit}`),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useAdminAnnouncements(params?: {
+  status?: string;
+  source?: string;
+  scope?: string;
+  department?: string;
+  priority?: string;
+  pinned?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const queryParams = new URLSearchParams();
+  if (params?.status) queryParams.set("status", params.status);
+  if (params?.source) queryParams.set("source", params.source);
+  if (params?.scope) queryParams.set("scope", params.scope);
+  if (params?.department) queryParams.set("department", params.department);
+  if (params?.priority) queryParams.set("priority", params.priority);
+  if (typeof params?.pinned === "boolean") queryParams.set("pinned", String(params.pinned));
+  if (params?.search) queryParams.set("search", params.search);
+  if (params?.page) queryParams.set("page", String(params.page));
+  if (params?.limit) queryParams.set("limit", String(params.limit));
+
+  const qs = queryParams.toString();
+  const url = qs ? `/api/announcements/admin?${qs}` : "/api/announcements/admin";
+
+  return useQuery<AdminAnnouncementListResponse>({
+    queryKey: ["admin-announcements", params],
+    queryFn: () => api.get(url),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useUnreadAnnouncementsCount() {
+  return useQuery<{ success: boolean; unreadCount: number }>({
+    queryKey: ["announcements-unread-count"],
+    queryFn: () => api.get("/api/announcements/unread-count"),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useMarkAnnouncementRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<{ success: boolean; message: string }>(`/api/announcements/${id}/read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements-unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+    },
+  });
+}
+
+export function useCreateAnnouncement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      title: string;
+      body: string;
+      priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+      pinned?: boolean;
+      startsAt?: string;
+      expiresAt?: string | null;
+      audience?: {
+        scope: "all" | "department" | "role";
+        departments?: string[];
+        roles?: string[];
+      };
+    }) => api.post<{ success: boolean; message: string; data: AnnouncementItem }>("/api/announcements", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements-unread-count"] });
+    },
+  });
+}
+
+export function useUpdateAnnouncement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<{
+        title: string;
+        body: string;
+        priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+        pinned: boolean;
+        startsAt: string;
+        expiresAt: string | null;
+        audience: {
+          scope: "all" | "department" | "role";
+          departments?: string[];
+          roles?: string[];
+        };
+      }>;
+    }) => api.put<{ success: boolean; message: string; data: AnnouncementItem }>(`/api/announcements/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+    },
+  });
+}
+
+export function useDeleteAnnouncement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ success: boolean; message: string }>(`/api/announcements/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements-unread-count"] });
+    },
+  });
+}
+
+export function useAnnouncementTemplates() {
+  return useQuery<{ success: boolean; data: AnnouncementTemplateItem[] }>({
+    queryKey: ["announcement-templates"],
+    queryFn: () => api.get("/api/announcements/templates"),
+    staleTime: 1000 * 60,
+  });
+}
+
+export function useUpdateAnnouncementTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      key,
+      payload,
+    }: {
+      key: string;
+      payload: Partial<{
+        titleTemplate: string;
+        bodyTemplate: string;
+        priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+        audience: {
+          scope: "all" | "department" | "role";
+          departments?: string[];
+          roles?: string[];
+        };
+        isEnabled: boolean;
+      }>;
+    }) =>
+      api.put<{ success: boolean; message: string; data: AnnouncementTemplateItem }>(
+        `/api/announcements/templates/${key}`,
+        payload
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcement-templates"] });
+    },
+  });
+}
+
+export function useTriggerAutoAnnouncements() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ success: boolean; message: string; count: number }>("/api/announcements/trigger-auto"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements-unread-count"] });
+    },
+  });
+}
+
+
 
 
 

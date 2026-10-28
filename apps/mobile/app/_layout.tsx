@@ -70,6 +70,13 @@ export default function RootLayout() {
                 headerShadowVisible: false,
               }}
             />
+            <Stack.Screen
+              name="announcements"
+              options={{
+                title: "Announcements & Alerts",
+                headerShadowVisible: false,
+              }}
+            />
           </Stack>
         </ToastProvider>
       </AuthProvider>

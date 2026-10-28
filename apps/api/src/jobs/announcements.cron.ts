@@ -57,3 +57,4 @@ export function stopAnnouncementsCronJob(): void {
     logger.info("[Announcements Cron] Scheduled announcements job stopped.");
   }
 }
+

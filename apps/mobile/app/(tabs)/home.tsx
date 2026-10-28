@@ -17,11 +17,14 @@ import {
   StatusBadge,
   Skeleton,
   Icon,
+  AnnouncementBanner,
 } from "../../src/components";
 import { colors, spacing, typography, radii } from "../../src/theme";
 import {
   attendanceApi,
   wfhApi,
+  announcementsApi,
+  MobileAnnouncementItem,
   TodayAttendanceResponse,
   AttendanceHistoryResponse,
   WfhEligibilityResponse,
@@ -39,14 +42,18 @@ export default function HomeScreen() {
   const [todayData, setTodayData] = useState<TodayAttendanceResponse | null>(null);
   const [historyData, setHistoryData] = useState<AttendanceHistoryResponse | null>(null);
   const [wfhEligibility, setWfhEligibility] = useState<WfhEligibilityResponse | null>(null);
+  const [topAnnouncement, setTopAnnouncement] = useState<MobileAnnouncementItem | null>(null);
+  const [unreadAnnouncementsCount, setUnreadAnnouncementsCount] = useState<number>(0);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const fetchHomeData = useCallback(async () => {
     try {
-      const [todayRes, historyRes, wfhRes] = await Promise.allSettled([
+      const [todayRes, historyRes, wfhRes, announceRes, countRes] = await Promise.allSettled([
         attendanceApi.getTodayAttendance(),
         attendanceApi.getMyAttendance({ limit: 5 }),
         wfhApi.getEligibility(),
+        announcementsApi.getAnnouncements(1),
+        announcementsApi.getUnreadCount(),
       ]);
 
       if (todayRes.status === "fulfilled") {
@@ -57,6 +64,12 @@ export default function HomeScreen() {
       }
       if (wfhRes.status === "fulfilled") {
         setWfhEligibility(wfhRes.value);
+      }
+      if (announceRes.status === "fulfilled" && announceRes.value.success) {
+        setTopAnnouncement(announceRes.value.data?.[0] || null);
+      }
+      if (countRes.status === "fulfilled" && countRes.value.success) {
+        setUnreadAnnouncementsCount(countRes.value.unreadCount || 0);
       }
     } catch (err) {
       console.error("Failed to load home dashboard data", err);
@@ -82,6 +95,14 @@ export default function HomeScreen() {
       fetchHomeData();
     });
 
+    const unsubscribeAnnouncePub = subscribeToSocketEvent("announcement.published", () => {
+      fetchHomeData();
+    });
+
+    const unsubscribeAnnouncePin = subscribeToSocketEvent("announcement.pinned", () => {
+      fetchHomeData();
+    });
+
     const unsubscribeResync = subscribeToResync(() => {
       fetchHomeData();
     });
@@ -90,6 +111,8 @@ export default function HomeScreen() {
       unsubscribeAttendance();
       unsubscribeWfhDecided();
       unsubscribeWfhCreated();
+      unsubscribeAnnouncePub();
+      unsubscribeAnnouncePin();
       unsubscribeResync();
     };
   }, [fetchHomeData]);
@@ -170,6 +193,15 @@ export default function HomeScreen() {
         />
       }
     >
+      {/* 0. Top Live Announcement Banner */}
+      {topAnnouncement && (
+        <AnnouncementBanner
+          announcement={topAnnouncement}
+          unreadCount={unreadAnnouncementsCount}
+          onDismiss={() => setTopAnnouncement(null)}
+        />
+      )}
+
       {/* 1. Header Profile & Status Strip */}
       <Card variant="surface" style={styles.profileCard}>
         <View style={styles.profileHeader}>
@@ -200,6 +232,22 @@ export default function HomeScreen() {
               {user?.employeeId} • {user?.department || "Operations"}
             </Text>
           </View>
+
+          {/* Announcement Feed Shortcut Bell */}
+          <TouchableOpacity
+            style={styles.bellButton}
+            onPress={() => router.push("/announcements" as any)}
+            accessibilityLabel="View Announcements"
+          >
+            <Icon name="megaphone-outline" size={20} color={colors.accent.cyan} />
+            {unreadAnnouncementsCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadAnnouncementsCount > 9 ? "9+" : unreadAnnouncementsCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       </Card>
 
@@ -447,6 +495,35 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     flex: 1,
+  },
+  bellButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(6, 182, 212, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: spacing.sm,
+    position: "relative",
+  },
+  bellBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: colors.accent.cyan,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: colors.background.surface,
+  },
+  bellBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: colors.background.base,
   },
   badgeRow: {
     flexDirection: "row",

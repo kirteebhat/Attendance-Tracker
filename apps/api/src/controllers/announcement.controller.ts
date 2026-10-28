@@ -14,6 +14,16 @@ export class AnnouncementController {
    * GET /api/announcements
    * Employee endpoint: retrieves active announcements targeted to the authenticated user.
    */
+  public getPublicAnnouncements = asyncHandler(async (req: Request, res: Response) => {
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+    const announcements = await announcementService.getPublicAnnouncements(limit);
+    res.status(200).json({
+      success: true,
+      count: announcements.length,
+      data: announcements,
+    });
+  });
+
   public getAnnouncements = asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) {
       throw new AppError(401, ApiErrorCode.ERR_UNAUTHORIZED, "Authentication required");
@@ -261,3 +271,4 @@ export class AnnouncementController {
 }
 
 export const announcementController = new AnnouncementController();
+

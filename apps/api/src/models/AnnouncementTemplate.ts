@@ -75,3 +75,4 @@ export const AnnouncementTemplate = model<IAnnouncementTemplate>(
   "AnnouncementTemplate",
   AnnouncementTemplateSchema
 );
+

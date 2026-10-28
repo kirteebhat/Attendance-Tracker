@@ -7,3 +7,4 @@ export * from "./Toast";
 export * from "./OfflineBanner";
 export * from "./SafeAreaWrapper";
 export * from "./Icon";
+export * from "./AnnouncementBanner";

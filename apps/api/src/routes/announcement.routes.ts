@@ -9,7 +9,10 @@ const router = Router();
 // Strictly guard entire announcements subsystem behind 'announcements' feature flag
 router.use(requireFeatureFlag("announcements"));
 
-// All announcement routes require authenticated user
+// Public/Kiosk announcements for lobby displays & tickers (scope: "all")
+router.get("/public", announcementController.getPublicAnnouncements);
+
+// All subsequent announcement routes require authenticated user
 router.use(authenticate);
 
 // =========================================================================
@@ -85,3 +88,4 @@ router.post(
 
 export const announcementRouter = router;
 export default router;
+
