@@ -91,8 +91,42 @@ export const AnnouncementDashboardBlock: React.FC = () => {
     (item) => !dismissedIds.includes(item._id)
   );
 
+  if (allAnnouncements.length === 0) {
+    return (
+      <div
+        id="dashboard-announcements-empty"
+        className="p-3.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-800 bg-white/60 dark:bg-slate-900/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
+      >
+        <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400">
+          <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-cyan-400">
+            <Megaphone className="w-4 h-4" />
+          </div>
+          <span>No active broadcasts at the moment. Publish company notices or configure automated calendar alerts.</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            to="/announcements"
+            className="px-3 py-1.5 font-bold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-xs"
+          >
+            + Post Announcement
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (visibleAnnouncements.length === 0) {
-    return null; // Don't take up vertical space if nothing is active/unread
+    return (
+      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+          <span>All recent announcements dismissed from your dashboard view.</span>
+        </div>
+        <Link to="/announcements" className="text-blue-600 dark:text-cyan-400 font-semibold hover:underline">
+          View All ({allAnnouncements.length}) →
+        </Link>
+      </div>
+    );
   }
 
   // Priority metadata helper
@@ -246,3 +280,4 @@ export const AnnouncementDashboardBlock: React.FC = () => {
     </div>
   );
 };
+

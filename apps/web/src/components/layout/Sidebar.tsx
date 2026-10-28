@@ -38,6 +38,7 @@ const navigation: NavItem[] = [
   { name: "Leave Requests", href: "/leave", icon: CalendarCheck },
   { name: "WFH Approvals", href: "/wfh", icon: Home },
   { name: "Working Calendar", href: "/calendar", icon: Calendar },
+  { name: "Announcements", href: "/announcements", icon: Megaphone },
   { name: "Reports & Analytics", href: "/reports", icon: BarChart3 },
   { name: "Employee Directory", href: "/employees", icon: Users },
   { name: "Policy & Shifts", href: "/policies", icon: Settings2 },
@@ -45,7 +46,6 @@ const navigation: NavItem[] = [
   { name: "Security & Sessions", href: "/security", icon: Lock },
   { name: "Audit Trail", href: "/audit-logs", icon: ShieldCheck },
   // Optional Extension Modules
-  { name: "Announcements", href: "/announcements", icon: Megaphone, flagKey: "announcements" },
   { name: "Enquiries & Helpdesk", href: "/enquiries", icon: Users, flagKey: "enquiries" },
   { name: "3D Floor View", href: "/three-d", icon: Tv, flagKey: "threeD" },
 ];
