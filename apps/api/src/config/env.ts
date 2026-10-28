@@ -52,7 +52,7 @@ const EnvSchema = z.object({
   // Extension Feature Flags (defaults from environment, overridable in DB by Admin)
   FEATURE_FLAG_LEAVE: z
     .preprocess((val) => val === "true" || val === true, z.boolean())
-    .default(false),
+    .default(true),
   FEATURE_FLAG_ANNOUNCEMENTS: z
     .preprocess((val) => val === "true" || val === true, z.boolean())
     .default(false),

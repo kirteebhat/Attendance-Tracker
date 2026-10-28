@@ -29,16 +29,16 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: "Executive Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Attendance Ledger", href: "/attendance", icon: CalendarCheck },
-  { name: "Reports & Analytics", href: "/reports", icon: BarChart3 },
+  { name: "Leave Requests", href: "/leave", icon: CalendarCheck },
   { name: "WFH Approvals", href: "/wfh", icon: Home },
+  { name: "Working Calendar", href: "/calendar", icon: Calendar },
+  { name: "Reports & Analytics", href: "/reports", icon: BarChart3 },
   { name: "Employee Directory", href: "/employees", icon: Users },
   { name: "Policy & Shifts", href: "/policies", icon: Settings2 },
-  { name: "Working Calendar", href: "/calendar", icon: Calendar },
   { name: "Office QR Displays", href: "/displays", icon: Tv },
   { name: "Security & Sessions", href: "/security", icon: Lock },
   { name: "Audit Trail", href: "/audit-logs", icon: ShieldCheck },
-  // Extension Modules (hidden in UI when flag is off)
-  { name: "Leave Requests", href: "/leave", icon: CalendarCheck, flagKey: "leave" },
+  // Optional Extension Modules
   { name: "Announcements", href: "/announcements", icon: LayoutDashboard, flagKey: "announcements" },
   { name: "Enquiries & Helpdesk", href: "/enquiries", icon: Users, flagKey: "enquiries" },
   { name: "3D Floor View", href: "/three-d", icon: Tv, flagKey: "threeD" },
@@ -49,10 +49,7 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
   const { data: flagData } = useFeatureFlags();
   const flags = flagData?.data;
 
-  const isLeaveEnabled = Boolean(flags?.leave);
-  const { data: pendingLeaveData } = useLeaveRequests(
-    isLeaveEnabled ? { status: "PENDING", limit: 1 } : undefined
-  );
+  const { data: pendingLeaveData } = useLeaveRequests({ status: "PENDING", limit: 1 });
   const pendingLeaveCount = pendingLeaveData?.pagination?.total || 0;
 
   const visibleNav = navigation.filter((item) => {
