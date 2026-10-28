@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Badge } from "../ui/Badge";
-import { useFeatureFlags, FeatureFlagsMap } from "../../api/queries";
+import { useFeatureFlags, FeatureFlagsMap, useLeaveRequests } from "../../api/queries";
 
 interface NavItem {
   name: string;
@@ -48,6 +48,12 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
   const { user, logout } = useAuth();
   const { data: flagData } = useFeatureFlags();
   const flags = flagData?.data;
+
+  const isLeaveEnabled = Boolean(flags?.leave);
+  const { data: pendingLeaveData } = useLeaveRequests(
+    isLeaveEnabled ? { status: "PENDING", limit: 1 } : undefined
+  );
+  const pendingLeaveCount = pendingLeaveData?.pagination?.total || 0;
 
   const visibleNav = navigation.filter((item) => {
     if (item.flagKey && (!flags || !flags[item.flagKey])) {
@@ -98,7 +104,12 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
               }
             >
               <Icon className="w-4 h-4 shrink-0" />
-              <span>{item.name}</span>
+              <span className="truncate">{item.name}</span>
+              {item.href === "/leave" && pendingLeaveCount > 0 && (
+                <span className="ml-auto px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500 text-slate-950 shadow-xs">
+                  {pendingLeaveCount}
+                </span>
+              )}
             </NavLink>
           );
         })}

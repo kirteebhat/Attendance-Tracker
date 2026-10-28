@@ -134,6 +134,60 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
     });
 
+    // Real-Time Leave Module Handlers
+    client.on(
+      SocketEvent.LEAVE_REQUESTED,
+      (data: {
+        employeeName?: string;
+        employeeId?: string;
+        typeName?: string;
+        workingDays?: number;
+      }) => {
+        queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+        toast({
+          type: "info",
+          title: "New Leave Application",
+          description: `${data.employeeName || data.employeeId || "An employee"} applied for ${
+            data.typeName || "leave"
+          } (${data.workingDays || 1} day${(data.workingDays || 1) > 1 ? "s" : ""}).`,
+        });
+      }
+    );
+
+    client.on(
+      SocketEvent.LEAVE_DECIDED,
+      (data: {
+        employeeName?: string;
+        employeeId?: string;
+        status?: string;
+      }) => {
+        queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+        queryClient.invalidateQueries({ queryKey: ["employee-leave-balances"] });
+        queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+        queryClient.invalidateQueries({ queryKey: ["attendance"] });
+        queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+
+        toast({
+          type: data.status === "APPROVED" ? "success" : "info",
+          title: `Leave ${data.status === "APPROVED" ? "Approved" : data.status === "CANCELLED" ? "Cancelled" : "Rejected"}`,
+          description: `Leave for ${data.employeeName || data.employeeId || "Employee"} was marked ${data.status?.toLowerCase()}.`,
+        });
+      }
+    );
+
+    client.on(
+      SocketEvent.LEAVE_BALANCE_UPDATED,
+      () => {
+        queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+        queryClient.invalidateQueries({ queryKey: ["employee-leave-balances"] });
+        queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+      }
+    );
+
     // Real-Time Staff Security & Session Eviction Handlers
     const handleSessionRevocation = (data: {
       userId?: string;

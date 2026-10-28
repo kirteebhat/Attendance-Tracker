@@ -19,6 +19,7 @@ import { DisplaysPage } from "./pages/DisplaysPage";
 import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { SecurityPage } from "./pages/SecurityPage";
 import { CalendarPage } from "./pages/CalendarPage";
+import { LeavePage } from "./pages/LeavePage";
 import { DesignSystemPage } from "./pages/DesignSystemPage";
 import { UnauthorizedPage } from "./pages/UnauthorizedPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -57,6 +58,9 @@ export const App: React.FC = () => {
                       <Route path="/employees" element={<EmployeesPage />} />
                       <Route path="/policies" element={<PoliciesPage />} />
                       <Route path="/calendar" element={<CalendarPage />} />
+                      <Route path="/leave" element={<LeavePage />} />
+                      <Route path="/leave-requests" element={<Navigate to="/leave" replace />} />
+                      <Route path="/leave/settings" element={<Navigate to="/leave?tab=settings" replace />} />
                       <Route path="/displays" element={<DisplaysPage />} />
                       <Route path="/audit-logs" element={<AuditLogsPage />} />
                       <Route path="/security" element={<SecurityPage />} />

@@ -1223,6 +1223,392 @@ export function useDeleteCalendarEvent() {
   });
 }
 
+// ============================================================================
+// LEAVE SUBSYSTEM QUERIES & MUTATIONS
+// ============================================================================
+
+export interface LeaveTypeItem {
+  _id: string;
+  name: string;
+  code: string;
+  paid: boolean;
+  annualQuota: number;
+  carryForwardRule: {
+    allowed: boolean;
+    maxDays: number;
+    expiryMonths?: number;
+  };
+  halfDayAllowed: boolean;
+  description?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LeaveBalanceSummary {
+  id: string;
+  type: {
+    id: string;
+    name: string;
+    code: string;
+    paid: boolean;
+  };
+  allotted: number;
+  used: number;
+  pending: number;
+  carriedOver: number;
+  available: number;
+}
+
+export interface EmployeeBalanceGroup {
+  employee: {
+    id: string;
+    employeeId: string;
+    name: string;
+    department?: string;
+    designation?: string;
+  };
+  year: number;
+  balances: LeaveBalanceSummary[];
+}
+
+export interface LeaveRequestPopulated {
+  _id: string;
+  employee: {
+    _id: string;
+    employeeId: string;
+    name: string;
+    email: string;
+    department: string;
+    designation: string;
+    workType?: string;
+  } | string;
+  type: {
+    _id: string;
+    name: string;
+    code: string;
+    paid: boolean;
+    annualQuota?: number;
+  } | string;
+  startDate: string;
+  endDate: string;
+  isHalfDay: boolean;
+  halfDayType?: "FIRST_HALF" | "SECOND_HALF";
+  workingDays: number;
+  reason: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  decidedBy?: {
+    _id: string;
+    email?: string;
+    employeeId?: string;
+  } | null;
+  decidedAt?: string;
+  decisionNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeaveRequestListResponse {
+  success: boolean;
+  data: LeaveRequestPopulated[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface BulkDecisionResponse {
+  success: boolean;
+  message: string;
+  data: {
+    total: number;
+    successful: Array<{
+      requestId: string;
+      employeeId: string;
+      status: string;
+    }>;
+    failed: Array<{
+      requestId: string;
+      reason: string;
+      code: string;
+    }>;
+  };
+}
+
+// 1. Leave Types Queries
+export function useLeaveTypes(includeInactive = false) {
+  return useQuery<{ success: boolean; count: number; data: LeaveTypeItem[] }>({
+    queryKey: ["leave-types", includeInactive],
+    queryFn: () =>
+      api.get<{ success: boolean; count: number; data: LeaveTypeItem[] }>(
+        `/api/leave/types${includeInactive ? "?includeInactive=true" : ""}`
+      ),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useCreateLeaveType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      name: string;
+      code: string;
+      paid?: boolean;
+      annualQuota: number;
+      carryForwardRule?: { allowed: boolean; maxDays: number; expiryMonths?: number };
+      halfDayAllowed?: boolean;
+      description?: string;
+    }) => api.post<{ success: boolean; data: LeaveTypeItem }>("/api/leave/types", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-types"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+    },
+  });
+}
+
+export function useUpdateLeaveType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<LeaveTypeItem> }) =>
+      api.patch<{ success: boolean; data: LeaveTypeItem }>(`/api/leave/types/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-types"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+    },
+  });
+}
+
+export function useDeleteLeaveType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete<{ success: boolean; message: string }>(`/api/leave/types/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-types"] });
+    },
+  });
+}
+
+// 2. Leave Balances Queries
+export function useMyLeaveBalances(year?: number) {
+  return useQuery<{
+    success: boolean;
+    data: {
+      employee: { id: string; employeeId: string; name: string };
+      year: number;
+      balances: LeaveBalanceSummary[];
+    };
+  }>({
+    queryKey: ["my-leave-balances", year],
+    queryFn: () =>
+      api.get(`/api/leave/balances/my${year ? `?year=${year}` : ""}`),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useEmployeeLeaveBalances(employeeId: string, year?: number) {
+  return useQuery<{
+    success: boolean;
+    data: {
+      employee: { id: string; employeeId: string; name: string };
+      year: number;
+      balances: LeaveBalanceSummary[];
+    };
+  }>({
+    queryKey: ["employee-leave-balances", employeeId, year],
+    queryFn: () =>
+      api.get(`/api/leave/balances/employee/${employeeId}${year ? `?year=${year}` : ""}`),
+    enabled: Boolean(employeeId),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useAllLeaveBalances(params?: {
+  year?: number;
+  department?: string;
+  employeeId?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.year) searchParams.set("year", String(params.year));
+  if (params?.department) searchParams.set("department", params.department);
+  if (params?.employeeId) searchParams.set("employeeId", params.employeeId);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  const queryString = searchParams.toString();
+
+  return useQuery<{
+    success: boolean;
+    data: EmployeeBalanceGroup[];
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+  }>({
+    queryKey: ["all-leave-balances", params],
+    queryFn: () =>
+      api.get(`/api/leave/balances${queryString ? `?${queryString}` : ""}`),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useAdjustLeaveBalance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      employeeId: string;
+      typeId: string;
+      year?: number;
+      allotted?: number;
+      carriedOver?: number;
+      reason: string;
+    }) => api.post<{ success: boolean; data: unknown }>("/api/leave/balances/adjust", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["employee-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+    },
+  });
+}
+
+export function useCarryForwardLeave() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { fromYear: number; toYear: number; employeeId?: string }) =>
+      api.post<{ success: boolean; data: unknown }>("/api/leave/balances/carry-forward", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+    },
+  });
+}
+
+// 3. Leave Requests Queries
+export function useLeaveRequests(filters?: {
+  status?: string;
+  type?: string;
+  department?: string;
+  employeeId?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const searchParams = new URLSearchParams();
+  if (filters?.status && filters.status !== "ALL") searchParams.set("status", filters.status);
+  if (filters?.type) searchParams.set("type", filters.type);
+  if (filters?.department) searchParams.set("department", filters.department);
+  if (filters?.employeeId) searchParams.set("employeeId", filters.employeeId);
+  if (filters?.startDate) searchParams.set("startDate", filters.startDate);
+  if (filters?.endDate) searchParams.set("endDate", filters.endDate);
+  if (filters?.search) searchParams.set("search", filters.search);
+  if (filters?.page) searchParams.set("page", String(filters.page));
+  if (filters?.limit) searchParams.set("limit", String(filters.limit));
+  const queryString = searchParams.toString();
+
+  return useQuery<LeaveRequestListResponse>({
+    queryKey: ["leave-requests", filters],
+    queryFn: () =>
+      api.get<LeaveRequestListResponse>(`/api/leave/requests${queryString ? `?${queryString}` : ""}`),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useMyLeaveRequests(params?: { status?: string; page?: number; limit?: number }) {
+  const searchParams = new URLSearchParams();
+  if (params?.status && params.status !== "ALL") searchParams.set("status", params.status);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  const queryString = searchParams.toString();
+
+  return useQuery<LeaveRequestListResponse>({
+    queryKey: ["my-leave-requests", params],
+    queryFn: () =>
+      api.get<LeaveRequestListResponse>(`/api/leave/requests/my${queryString ? `?${queryString}` : ""}`),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useApplyLeave() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      type: string;
+      startDate: string;
+      endDate: string;
+      isHalfDay?: boolean;
+      halfDayType?: "FIRST_HALF" | "SECOND_HALF";
+      reason: string;
+    }) => api.post<{ success: boolean; data: LeaveRequestPopulated }>("/api/leave/requests", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+    },
+  });
+}
+
+export function useCancelLeave() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      api.post<{ success: boolean; data: LeaveRequestPopulated }>(`/api/leave/requests/${id}/cancel`, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+    },
+  });
+}
+
+export function useDecideLeaveRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      status,
+      decisionNote,
+    }: {
+      id: string;
+      status: "APPROVED" | "REJECTED";
+      decisionNote?: string;
+    }) =>
+      api.patch<{ success: boolean; data: LeaveRequestPopulated }>(`/api/leave/requests/${id}/decision`, {
+        status,
+        decisionNote,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["employee-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+    },
+  });
+}
+
+export function useBulkDecideLeaveRequests() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      requestIds: string[];
+      status: "APPROVED" | "REJECTED";
+      decisionNote?: string;
+    }) => api.post<BulkDecisionResponse>("/api/leave/requests/bulk-decision", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+    },
+  });
+}
+
+
 
 
 
