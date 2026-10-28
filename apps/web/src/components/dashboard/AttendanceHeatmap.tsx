@@ -242,3 +242,4 @@ export const AttendanceHeatmap: React.FC<AttendanceHeatmapProps> = ({
     </Card>
   );
 };
+

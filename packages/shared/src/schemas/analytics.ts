@@ -90,3 +90,4 @@ export interface LiveAttendanceAnalyticsResponse {
   statusSplit: AttendanceStatusSplit;
   departmentBreakdown: DepartmentAttendanceBreakdown[];
 }
+

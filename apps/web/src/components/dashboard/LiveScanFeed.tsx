@@ -237,3 +237,4 @@ export const LiveScanFeed: React.FC<LiveScanFeedProps> = ({ scans = [], isLive =
     </Card>
   );
 };
+

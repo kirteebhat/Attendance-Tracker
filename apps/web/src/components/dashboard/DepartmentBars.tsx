@@ -264,3 +264,4 @@ export const DepartmentBars: React.FC<DepartmentBarsProps> = ({ departments = []
     </Card>
   );
 };
+

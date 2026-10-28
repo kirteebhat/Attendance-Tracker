@@ -29,3 +29,4 @@ router.get(
 
 export const analyticsRouter = router;
 export default router;
+

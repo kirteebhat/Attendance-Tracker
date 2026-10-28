@@ -260,3 +260,4 @@ export const TodayTimelineChart: React.FC<TodayTimelineChartProps> = ({
     </Card>
   );
 };
+
