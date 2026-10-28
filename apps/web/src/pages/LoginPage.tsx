@@ -24,7 +24,6 @@ import { Input } from "../components/ui/Input";
 import { Card } from "../components/ui/Card";
 import { OtpInput } from "../components/auth/OtpInput";
 import { LivePulseIndicator } from "../components/ui/LivePulseIndicator";
-import { LazyLogin3D } from "../components/3d/LazyLogin3D";
 
 const COUNTRY_CODES = [
   { code: "+91", label: "India (+91)", flag: "🇮🇳" },
@@ -318,12 +317,7 @@ export const LoginPage: React.FC = () => {
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[720px] h-[520px] bg-gradient-to-tr from-blue-600/25 via-indigo-600/20 to-cyan-500/25 rounded-full blur-3xl opacity-75" />
       </div>
 
-      <div className="relative w-full max-w-md space-y-4">
-        {/* Interactive 3D VorldX Floating Crystal / Static 2D Fallback */}
-        <div className="flex justify-center -mb-2">
-          <LazyLogin3D size={150} />
-        </div>
-
+      <div className="relative w-full max-w-md space-y-5">
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex w-13 h-13 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 items-center justify-center text-white shadow-xl shadow-blue-500/25 mb-1 ring-4 ring-white/10">

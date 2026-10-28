@@ -39,3 +39,4 @@ export const LazyLogin3D: React.FC<LazyLogin3DProps> = ({
     </Suspense>
   );
 };
+

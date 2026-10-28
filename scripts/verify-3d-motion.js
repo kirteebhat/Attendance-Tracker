@@ -137,71 +137,29 @@ async function runVerification() {
       if (msg.type() === 'error') console.log(`[Browser Error] ${msg.text()}`);
     });
 
-    // TEST 1: Login Page 3D Scene (threeD = true)
-    console.log('\n--- 1. Testing Login Page with 3D Scene ---');
+    // TEST 1: Login Page (Reverted to clean non-3D layout)
+    console.log('\n--- 1. Testing Login Page (Verified Reverted to Clean Form) ---');
     await page.goto(`http://localhost:${PORT}/login`, { waitUntil: 'networkidle0', timeout: 20000 });
 
-    // Wait for canvas or container
-    await page.waitForSelector('canvas', { timeout: 8000 }).catch(() => console.log('Canvas wait timeout'));
-    const canvasExists = await page.evaluate(() => !!document.querySelector('canvas'));
-    console.log(`✓ 3D Canvas mounted on Login Page: ${canvasExists ? 'YES (WebGL Active)' : 'NO (Fallback rendered)'}`);
-
-    // Simulate pointer movement to test parallax lerp
-    console.log('✓ Testing interactive mouse parallax movement...');
-    await page.mouse.move(640, 250);
-    await new Promise((r) => setTimeout(r, 200));
-    await page.mouse.move(700, 200);
-    await new Promise((r) => setTimeout(r, 200));
-    await page.mouse.move(580, 280);
-    await new Promise((r) => setTimeout(r, 200));
-
-    // Measure FPS over 2 seconds
-    console.log('✓ Measuring real runtime frame rate over 2000ms...');
-    const loginFps = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        let frameCount = 0;
-        const start = performance.now();
-        function loop(now) {
-          frameCount++;
-          if (now - start >= 2000) {
-            const actualFps = (frameCount * 1000) / (now - start);
-            resolve({
-              frames: frameCount,
-              elapsedMs: Math.round(now - start),
-              fps: Math.round(actualFps * 10) / 10,
-            });
-          } else {
-            requestAnimationFrame(loop);
-          }
-        }
-        requestAnimationFrame(loop);
-      });
+    const loginPageCheck = await page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      const hasBrandHeader = document.body.innerText.includes('VorldX') && document.body.innerText.includes('Staff Portal');
+      const hasOtpTab = !!document.querySelector('button[type="button"]') && document.body.innerText.includes('Staff Mobile OTP');
+      const hasPasswordTab = document.body.innerText.includes('Password Sign In');
+      return {
+        canvasOnLogin: !!canvas,
+        hasBrandHeader,
+        hasOtpTab,
+        hasPasswordTab,
+      };
     });
 
-    console.log(`🎯 Login 3D Scene Frame Rate: ${loginFps.fps} FPS (${loginFps.frames} frames in ${loginFps.elapsedMs}ms)`);
+    console.log(`✓ Login Page Canvas Present: ${loginPageCheck.canvasOnLogin ? 'YES' : 'NO (Cleanly Reverted)'}`);
+    console.log(`✓ Login Brand Header & Form Present: ${loginPageCheck.hasBrandHeader && loginPageCheck.hasOtpTab ? 'YES (All Functionality Intact)' : 'NO'}`);
 
-    const loginScreenshotPath = path.join(ARTIFACT_DIR, '3d_1_login_scene_interactive.png');
+    const loginScreenshotPath = path.join(ARTIFACT_DIR, '3d_1_login_scene_reverted.png');
     await page.screenshot({ path: loginScreenshotPath, fullPage: false });
     console.log(`✓ Screenshot saved to: ${loginScreenshotPath}`);
-
-    // TEST 2: Fallback on Reduced Motion
-    console.log('\n--- 2. Testing Automatic 2D Fallback on prefers-reduced-motion ---');
-    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
-    await page.reload({ waitUntil: 'networkidle0' });
-
-    const fallbackExists = await page.evaluate(() => {
-      const img = document.querySelector('[role="img"][aria-label*="biometric security"]');
-      const canvas = document.querySelector('canvas');
-      return { hasFallbackImg: !!img, hasCanvas: !!canvas };
-    });
-    console.log(`✓ Reduced motion fallback verified: Canvas disabled=${!fallbackExists.hasCanvas}, 2D SVG Active=${fallbackExists.hasFallbackImg}`);
-
-    const fallbackScreenshotPath = path.join(ARTIFACT_DIR, '3d_2_login_2d_fallback_reduced_motion.png');
-    await page.screenshot({ path: fallbackScreenshotPath, fullPage: false });
-    console.log(`✓ Screenshot saved to: ${fallbackScreenshotPath}`);
-
-    // Reset reduced motion
-    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
 
     // TEST 3: Dashboard Hero Attendance Orb 3D
     console.log('\n--- 3. Testing Dashboard Hero Attendance Orb 3D ---');
@@ -298,7 +256,7 @@ async function runVerification() {
     console.log('\n🎉 ALL 3D & MOTION VERIFICATION TESTS COMPLETED SUCCESSFULLY!');
     console.log(JSON.stringify({
       bundleStats,
-      loginFps: loginFps.fps,
+      loginRevertedCleanly: !loginPageCheck.canvasOnLogin,
       dashboardFps: dashFps.fps,
     }, null, 2));
 

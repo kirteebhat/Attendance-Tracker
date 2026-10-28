@@ -23,3 +23,4 @@ presenceRouter.get("/api/presence/hr", authenticate, (_req, res) => {
     data: presence,
   });
 });
+
