@@ -13,7 +13,6 @@ import { useDashboardSummary } from "../api/queries";
 import { useLiveAttendanceAnalytics } from "../hooks/useLiveAttendanceAnalytics";
 import { StatCard } from "../components/dashboard/StatCard";
 import { TodayTimelineChart } from "../components/dashboard/TodayTimelineChart";
-import { AttendanceHeatmap } from "../components/dashboard/AttendanceHeatmap";
 import { LiveScanFeed } from "../components/dashboard/LiveScanFeed";
 import { DepartmentBars } from "../components/dashboard/DepartmentBars";
 import { AttendanceChart } from "../components/dashboard/AttendanceChart";
@@ -251,15 +250,15 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* SECTION 2: 30-Day Heatmap & Department Breakdown */}
+      {/* SECTION 2: Historical Compliance Trends & Department Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <AttendanceHeatmap
-            cells={liveAnalytics?.heatmap30Days.cells || []}
-            maxCount={liveAnalytics?.heatmap30Days.maxCount || 0}
-            totalCheckIns={liveAnalytics?.heatmap30Days.totalCheckIns || 0}
-            peakCell={liveAnalytics?.heatmap30Days.peakCell}
-          />
+          {summaryData && (
+            <AttendanceChart
+              last7Days={summaryData.trends.last7Days}
+              last30Days={summaryData.trends.last30Days}
+            />
+          )}
         </div>
         <div>
           <DepartmentBars
@@ -268,18 +267,10 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* SECTION 3: Historical Compliance Trends & Audit Activity */}
-      {summaryData && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <AttendanceChart
-              last7Days={summaryData.trends.last7Days}
-              last30Days={summaryData.trends.last30Days}
-            />
-          </div>
-          <div>
-            <RecentActivity activities={summaryData.recentActivity} />
-          </div>
+      {/* SECTION 3: Recent Activity Audit Feed */}
+      {summaryData && summaryData.recentActivity.length > 0 && (
+        <div className="grid grid-cols-1 gap-6">
+          <RecentActivity activities={summaryData.recentActivity} />
         </div>
       )}
     </div>

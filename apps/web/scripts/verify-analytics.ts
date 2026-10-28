@@ -359,27 +359,15 @@ async function runLiveAnalyticsVerification() {
     console.log("✓ Saved Screenshot 2:", screenshot2Path);
   }
 
-  // Capture Screenshot 3: Hover on 30-Day Heatmap cell to display tooltip
-  console.log("12. Testing hover tooltip on 30-Day Heatmap tile...");
-  const heatmapTiles = await page.$$(".grid-cols-24 .cursor-pointer");
-  if (heatmapTiles.length > 30) {
-    // Hover on a tile with activity
-    await heatmapTiles[33].hover();
-    await new Promise((r) => setTimeout(r, 400));
-    const screenshot3Path = path.join(artifactDir, "analytics_3_heatmap_hover.png");
-    await page.screenshot({ path: screenshot3Path, fullPage: false });
-    console.log("✓ Saved Screenshot 3:", screenshot3Path);
-  }
-
-  // Capture Screenshot 4: Hover on Department Performance Bar
-  console.log("13. Testing hover tooltip on Department Performance Bars...");
+  // Capture Screenshot 3: Hover on Department Performance Bar
+  console.log("12. Testing hover tooltip on Department Performance Bars...");
   const deptProgressBars = await page.$$("div[role='progressbar']");
   if (deptProgressBars.length > 0) {
     await deptProgressBars[0].hover();
     await new Promise((r) => setTimeout(r, 400));
-    const screenshot4Path = path.join(artifactDir, "analytics_4_department_breakdown_tooltip.png");
-    await page.screenshot({ path: screenshot4Path, fullPage: false });
-    console.log("✓ Saved Screenshot 4:", screenshot4Path);
+    const screenshot3Path = path.join(artifactDir, "analytics_4_department_breakdown_tooltip.png");
+    await page.screenshot({ path: screenshot3Path, fullPage: false });
+    console.log("✓ Saved Screenshot 3 (Dept Tooltip):", screenshot3Path);
   }
 
   // 14. Test Live Socket Punch Instant Update Without Page Refresh
@@ -440,3 +428,4 @@ runLiveAnalyticsVerification().catch((err) => {
   console.error("Verification failed:", err);
   process.exit(1);
 });
+
