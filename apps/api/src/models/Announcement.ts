@@ -25,10 +25,13 @@ export interface IAnnouncement extends Document {
   expiresAt?: Date | null;
   source: AnnouncementSource;
   templateKey?: string;
+  idempotencyKey?: string;
+  metadata?: Record<string, unknown>;
   readBy: IAnnouncementReadReceipt[];
-  createdBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
+  isAuto: boolean;
 }
 
 const AnnouncementSchema = new Schema<IAnnouncement>(
@@ -87,6 +90,15 @@ const AnnouncementSchema = new Schema<IAnnouncement>(
     templateKey: {
       type: String,
       trim: true,
+      index: true,
+    },
+    idempotencyKey: {
+      type: String,
+      trim: true,
+    },
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {},
     },
     readBy: [
       {
@@ -110,13 +122,21 @@ const AnnouncementSchema = new Schema<IAnnouncement>(
   {
     timestamps: true,
     versionKey: false,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Pinned & Urgent announcements float to the top
+// Virtual for clean isAuto boolean identification
+AnnouncementSchema.virtual("isAuto").get(function (this: IAnnouncement) {
+  return this.source === "auto";
+});
+
+// Compound Indexes for fast retrieval
 AnnouncementSchema.index({ pinned: -1, priority: -1, startsAt: -1 });
 AnnouncementSchema.index({ "audience.scope": 1, startsAt: -1 });
 AnnouncementSchema.index({ "readBy.user": 1 });
+// Unique sparse index to prevent duplicate auto-announcements
+AnnouncementSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 
 export const Announcement = model<IAnnouncement>("Announcement", AnnouncementSchema);
-

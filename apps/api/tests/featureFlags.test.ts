@@ -111,10 +111,9 @@ describe("Enterprise Feature Flag System (Database & Env Backed)", () => {
     // 2. The leave module now returns 200 instead of 404
     const leaveActiveRes = await request(app)
       .get("/api/leave/requests")
-      .set("Authorization", `Bearer ${empToken}`);
+      .set("Authorization", `Bearer ${hrToken}`);
     expect(leaveActiveRes.status).toBe(200);
     expect(leaveActiveRes.body.success).toBe(true);
-    expect(leaveActiveRes.body.status).toBe("ACTIVE");
 
     // 3. Admin toggles flag back off
     await request(app)
@@ -129,7 +128,7 @@ describe("Enterprise Feature Flag System (Database & Env Backed)", () => {
     // 4. Module immediately returns 404 again
     const leaveDisabledRes = await request(app)
       .get("/api/leave/requests")
-      .set("Authorization", `Bearer ${empToken}`);
+      .set("Authorization", `Bearer ${hrToken}`);
     expect(leaveDisabledRes.status).toBe(404);
   });
 

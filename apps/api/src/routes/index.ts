@@ -12,6 +12,7 @@ import { reportRouter } from "./report.routes";
 import { auditRouter } from "./audit.routes";
 import { calendarRouter } from "./calendar.routes";
 import { leaveRouter } from "./leave.routes";
+import { announcementRouter } from "./announcement.routes";
 import featureFlagRoutes from "./featureFlag.routes";
 import extensionRoutes from "./extension.routes";
 import { AppError } from "../utils/AppError";
@@ -45,6 +46,10 @@ router.use("/leave", leaveRouter);
 router.use("/api/leaves", leaveRouter);
 router.use("/leaves", leaveRouter);
 router.use("/api/admin/leave", leaveRouter);
+
+// Announcements & Broadcasts Subsystem (protected by 'announcements' feature flag)
+router.use("/api/announcements", announcementRouter);
+router.use("/announcements", announcementRouter);
 
 // Office QR Display & Terminal endpoints (supports both /api/displays and /api/terminals)
 router.use("/api/displays", qrRouter);

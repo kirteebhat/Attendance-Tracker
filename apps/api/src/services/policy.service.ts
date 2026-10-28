@@ -166,6 +166,13 @@ export class PolicyService {
       updatedBy: actor.employeeId || actor.userId,
     });
 
+    // Auto-announcement event hook
+    import("./announcement.service.js")
+      .then(({ announcementService }) => {
+        announcementService.onPolicyUpdatedHook({ name: policy.name, version: nextVersion }).catch(() => {});
+      })
+      .catch(() => {});
+
     return policy;
   }
 

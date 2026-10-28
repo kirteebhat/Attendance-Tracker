@@ -30,6 +30,9 @@ export const AnnouncementSchema = z.object({
   expiresAt: z.string().datetime().or(z.date()).optional().nullable(),
   source: AnnouncementSourceSchema.default("manual"),
   templateKey: z.string().optional(),
+  idempotencyKey: z.string().optional(),
+  isAuto: z.boolean().optional(),
+  metadata: z.record(z.unknown()).optional(),
   readBy: z.array(AnnouncementReadReceiptSchema).default([]),
   createdBy: z.string().optional(),
   createdAt: z.date().optional(),
@@ -43,10 +46,50 @@ export const CreateAnnouncementInputSchema = z.object({
   audience: AnnouncementAudienceSchema.optional(),
   priority: AnnouncementPrioritySchema.default("MEDIUM"),
   pinned: z.boolean().default(false),
-  startsAt: z.string().datetime().optional(),
-  expiresAt: z.string().datetime().optional().nullable(),
+  startsAt: z.string().datetime().or(z.date()).optional(),
+  expiresAt: z.string().datetime().or(z.date()).optional().nullable(),
   source: AnnouncementSourceSchema.default("manual"),
   templateKey: z.string().optional(),
+  idempotencyKey: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 export type CreateAnnouncementInput = z.infer<typeof CreateAnnouncementInputSchema>;
 
+export const UpdateAnnouncementInputSchema = z.object({
+  title: z.string().min(2).max(150).optional(),
+  body: z.string().min(5).max(5000).optional(),
+  audience: AnnouncementAudienceSchema.optional(),
+  priority: AnnouncementPrioritySchema.optional(),
+  pinned: z.boolean().optional(),
+  startsAt: z.string().datetime().or(z.date()).optional(),
+  expiresAt: z.string().datetime().or(z.date()).optional().nullable(),
+});
+export type UpdateAnnouncementInput = z.infer<typeof UpdateAnnouncementInputSchema>;
+
+/**
+ * Announcement Template Schema for auto-generated broadcasts
+ */
+export const AnnouncementTemplateSchema = z.object({
+  _id: z.string().optional(),
+  key: z.string().min(2).max(50),
+  name: z.string().min(2).max(100),
+  titleTemplate: z.string().min(2).max(200),
+  bodyTemplate: z.string().min(2).max(5000),
+  priority: AnnouncementPrioritySchema.default("MEDIUM"),
+  audience: AnnouncementAudienceSchema.default({ scope: "all", departments: [], roles: [] }),
+  isEnabled: z.boolean().default(true),
+  variables: z.array(z.string()).default([]),
+  description: z.string().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+export type AnnouncementTemplate = z.infer<typeof AnnouncementTemplateSchema>;
+
+export const UpdateAnnouncementTemplateInputSchema = z.object({
+  titleTemplate: z.string().min(2).max(200).optional(),
+  bodyTemplate: z.string().min(2).max(5000).optional(),
+  priority: AnnouncementPrioritySchema.optional(),
+  audience: AnnouncementAudienceSchema.optional(),
+  isEnabled: z.boolean().optional(),
+});
+export type UpdateAnnouncementTemplateInput = z.infer<typeof UpdateAnnouncementTemplateInputSchema>;

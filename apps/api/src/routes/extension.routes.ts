@@ -2,19 +2,12 @@ import { Router, Request, Response } from "express";
 import { requireFeatureFlag } from "../middleware/featureFlag";
 import { authenticate } from "../middleware/auth";
 
+import { announcementRouter } from "./announcement.routes";
+
 const router = Router();
 
 // 2. Announcements & Auto-Generated Broadcasts Module
-router.use("/announcements", requireFeatureFlag("announcements"));
-router.get("/announcements", authenticate, (_req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    module: "announcements",
-    status: "ACTIVE",
-    data: [],
-    message: "Announcements module is enabled.",
-  });
-});
+router.use("/announcements", announcementRouter);
 
 // 3. Enquiry Requests & Dispute Resolution Module
 router.use("/enquiries", requireFeatureFlag("enquiries"));

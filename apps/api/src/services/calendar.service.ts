@@ -396,6 +396,13 @@ export class CalendarService {
       timestamp: new Date().toISOString(),
     });
 
+    // Auto-announcement event hook
+    import("./announcement.service.js")
+      .then(({ announcementService }) => {
+        announcementService.onCalendarEventHook(event).catch(() => {});
+      })
+      .catch(() => {});
+
     return event;
   }
 

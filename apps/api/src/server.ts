@@ -5,6 +5,7 @@ import { env } from "./config/env";
 import { connectDatabase, disconnectDatabase } from "./config/database";
 import { logger } from "./utils/logger";
 import { startAbsenceCronJob, stopAbsenceCronJob } from "./jobs/absence.cron";
+import { startAnnouncementsCronJob, stopAnnouncementsCronJob } from "./jobs/announcements.cron";
 import { initSocketServer, closeSocketServer } from "./sockets/socketServer";
 import { featureFlagService } from "./services/featureFlag.service";
 
@@ -35,6 +36,11 @@ export async function startServer(): Promise<{ httpServer: HttpServer; io: Socke
     logger.error("Failed to start absence cron job:", err);
   });
 
+  // Start automated announcements evaluation cron job
+  startAnnouncementsCronJob().catch((err) => {
+    logger.error("Failed to start announcements cron job:", err);
+  });
+
   setupGracefulShutdown();
 
   return { httpServer, io };
@@ -61,6 +67,7 @@ function setupGracefulShutdown(): void {
 
     // 3. Stop absence cron job
     stopAbsenceCronJob();
+    stopAnnouncementsCronJob();
 
     // 4. Disconnect MongoDB
     try {
