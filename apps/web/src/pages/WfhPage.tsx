@@ -324,7 +324,6 @@ export const WfhPage: React.FC = () => {
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, department: e.target.value, page: 1 }))
             }
-            aria-label="Filter WFH requests by department"
             options={DEPARTMENT_OPTIONS}
             className="text-xs w-44"
           />
@@ -461,7 +460,7 @@ export const WfhPage: React.FC = () => {
                             type="button"
                             onClick={(e) => handleToggleSelectRow(req._id, e)}
                             className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                            aria-label={`Select request from ${typeof req.employee === "object" ? req.employee?.name : req.employeeId}`}
+                            aria-label={`Select request from ${req.employee?.name || req.employeeId}`}
                           >
                             {isSelected ? (
                               <CheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
