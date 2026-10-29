@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: colors.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   title: {
     ...typography.lg,
     fontWeight: "800",
-    color: colors.text.primary,
+    color: colors.text,
     flex: 1,
   },
   versionBadge: {
@@ -169,12 +169,12 @@ const styles = StyleSheet.create({
   versionBadgeText: {
     ...typography.xs,
     fontWeight: "700",
-    color: colors.text.primary,
+    color: colors.text,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   subtitle: {
     ...typography.sm,
-    color: colors.text.secondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   notesBox: {
@@ -183,13 +183,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     maxHeight: 140,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: colors.border,
     marginBottom: spacing.lg,
   },
   notesHeader: {
     ...typography.xs,
     fontWeight: "700",
-    color: colors.text.muted,
+    color: colors.muted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: spacing.xs,
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   },
   notesText: {
     ...typography.sm,
-    color: colors.text.secondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   actions: {
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   },
   laterButtonText: {
     ...typography.sm,
-    color: colors.text.muted,
+    color: colors.muted,
     fontWeight: "600",
   },
 });

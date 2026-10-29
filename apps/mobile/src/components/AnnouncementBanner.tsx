@@ -162,10 +162,10 @@ export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
             style={styles.closeButton}
             accessibilityLabel="Dismiss announcement banner"
           >
-            <Icon name="close" size={16} color={colors.text.muted} />
+            <Icon name="close" size={16} color={colors.muted} />
           </TouchableOpacity>
 
-          <Icon name="chevron-forward" size={16} color={colors.text.secondary} />
+          <Icon name="chevron-forward" size={16} color={colors.textSecondary} />
         </View>
       </View>
     </TouchableOpacity>
@@ -266,12 +266,12 @@ const styles = StyleSheet.create({
   title: {
     ...typography.sm,
     fontWeight: "700",
-    color: colors.text.primary,
+    color: colors.text,
     marginBottom: 2,
   },
   body: {
     ...typography.xs,
-    color: colors.text.secondary,
+    color: colors.textSecondary,
     lineHeight: 16,
   },
   rightActions: {

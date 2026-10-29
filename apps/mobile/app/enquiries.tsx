@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   ScrollView,
   TextInput,
   Modal,
@@ -13,10 +11,42 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-} from "react-native";
-import { Stack } from "expo-router";
-import { Icon } from "../src/components/Icon";
-import { colors, spacing, typography, radii } from "../src/theme";
+} from 'react-native';
+import { Stack } from 'expo-router';
+import {
+  ArrowLeft,
+  Clock,
+  Calendar,
+  Home,
+  CreditCard,
+  Wrench,
+  HelpCircle,
+  Send,
+  Paperclip,
+  X,
+  Plus,
+  RotateCcw,
+  User,
+  Image as ImageIcon,
+  MessageSquare,
+  ChevronRight,
+  AlertCircle,
+  CheckCircle2,
+  type LucideIcon,
+} from 'lucide-react-native';
+import {
+  Screen,
+  ScreenHeader,
+  Card,
+  Badge,
+  Button,
+  Text,
+  PressableScale,
+  Skeleton,
+} from '../src/components';
+import { useToast } from '../src/components/Toast';
+import { colors, fonts, radii, spacing, type Tone } from '../src/theme/tokens';
+import { useResponsive } from '../src/lib/responsive';
 import {
   enquiryApi,
   MobileEnquiryItem,
@@ -24,43 +54,119 @@ import {
   EnquiryAttachmentItem,
   subscribeToSocketEvent,
   emitMobileSocketEvent,
-} from "../src/services";
-import { useToast } from "../src/components/Toast";
+} from '../src/services';
 
-type CategoryType = "ATTENDANCE" | "LEAVE" | "WFH" | "PAYROLL" | "TECHNICAL" | "OTHER";
-type PriorityType = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+type CategoryType = 'ATTENDANCE' | 'LEAVE' | 'WFH' | 'PAYROLL' | 'TECHNICAL' | 'OTHER';
+type PriorityType = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+type StatusFilterType = 'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 
-const CATEGORIES: { key: CategoryType; label: string; icon: string }[] = [
-  { key: "ATTENDANCE", label: "Attendance", icon: "time-outline" },
-  { key: "LEAVE", label: "Leave", icon: "calendar-outline" },
-  { key: "WFH", label: "WFH", icon: "home-outline" },
-  { key: "PAYROLL", label: "Payroll", icon: "card-outline" },
-  { key: "TECHNICAL", label: "Technical", icon: "construct-outline" },
-  { key: "OTHER", label: "Other", icon: "help-circle-outline" },
+interface CategoryOption {
+  key: CategoryType;
+  label: string;
+  sub: string;
+  icon: LucideIcon;
+}
+
+const CATEGORIES: CategoryOption[] = [
+  { key: 'ATTENDANCE', label: 'Attendance', sub: 'Punch dispute, late check-in', icon: Clock },
+  { key: 'LEAVE', label: 'Leave', sub: 'Emergency leave, balances', icon: Calendar },
+  { key: 'WFH', label: 'WFH', sub: 'Remote quota, setup check', icon: Home },
+  { key: 'PAYROLL', label: 'Payroll', sub: 'Salary slips, deductions', icon: CreditCard },
+  { key: 'TECHNICAL', label: 'Technical', sub: 'App error, device pairing', icon: Wrench },
+  { key: 'OTHER', label: 'General', sub: 'Company policy, workplace', icon: HelpCircle },
 ];
 
-const PRIORITIES: { key: PriorityType; label: string; color: string }[] = [
-  { key: "LOW", label: "Low", color: colors.text.muted },
-  { key: "MEDIUM", label: "Medium", color: colors.accent.cyan },
-  { key: "HIGH", label: "High", color: colors.status.warning },
-  { key: "URGENT", label: "Urgent", color: colors.status.danger },
+const PRIORITIES: { key: PriorityType; label: string; tone: Tone; color: string }[] = [
+  { key: 'LOW', label: 'Low', tone: 'neutral', color: colors.muted },
+  { key: 'MEDIUM', label: 'Medium', tone: 'info', color: colors.info },
+  { key: 'HIGH', label: 'High', tone: 'warning', color: colors.warning },
+  { key: 'URGENT', label: 'Urgent', tone: 'danger', color: colors.danger },
 ];
+
+interface SocketMessagePayload {
+  enquiryId?: string;
+  messageId?: string;
+  senderId?: string;
+  senderRole?: 'EMPLOYEE' | 'HR' | 'ADMIN';
+  message?: string;
+  attachments?: EnquiryAttachmentItem[];
+  createdAt?: string;
+}
+
+interface SocketStatusPayload {
+  enquiryId?: string;
+  status?: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+  reopenDeadline?: string | null;
+}
+
+interface SocketAssignedPayload {
+  enquiryId?: string;
+  assigneeId?: string;
+  assigneeName?: string;
+}
+
+interface SocketTypingPayload {
+  enquiryId?: string;
+  role?: string;
+  isTyping?: boolean;
+}
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
+    return (err as { message: string }).message;
+  }
+  return fallback;
+}
+
+function formatEnquiryDate(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    const now = new Date();
+    const isToday =
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday =
+      date.getDate() === yesterday.getDate() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getFullYear() === yesterday.getFullYear();
+
+    if (isYesterday) {
+      return 'Yesterday';
+    }
+
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return 'Recent';
+  }
+}
 
 export default function EnquiriesScreen() {
   const { showToast } = useToast();
+  const { isWide } = useResponsive();
 
-  const [activeTab, setActiveTab] = useState<"list" | "create">("list");
+  const [activeTab, setActiveTab] = useState<'list' | 'create'>('list');
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [enquiries, setEnquiries] = useState<MobileEnquiryItem[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Form State
-  const [selectedCategory, setSelectedCategory] = useState<CategoryType>("ATTENDANCE");
-  const [selectedPriority, setSelectedPriority] = useState<PriorityType>("MEDIUM");
-  const [subject, setSubject] = useState<string>("");
-  const [message, setMessage] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType>('ATTENDANCE');
+  const [selectedPriority, setSelectedPriority] = useState<PriorityType>('MEDIUM');
+  const [subject, setSubject] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
   const [selectedAttachment, setSelectedAttachment] = useState<EnquiryAttachmentItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -68,15 +174,16 @@ export default function EnquiriesScreen() {
   const [selectedEnquiry, setSelectedEnquiry] = useState<MobileEnquiryItem | null>(null);
   const [messages, setMessages] = useState<EnquiryMessageItem[]>([]);
   const [threadLoading, setThreadLoading] = useState<boolean>(false);
-  const [replyText, setReplyText] = useState<string>("");
+  const [replyText, setReplyText] = useState<string>('');
   const [replyAttachment, setReplyAttachment] = useState<EnquiryAttachmentItem | null>(null);
   const [isSendingReply, setIsSendingReply] = useState<boolean>(false);
   const [isHrTyping, setIsHrTyping] = useState<boolean>(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const flatListRef = useRef<FlatList>(null);
 
   // Reopen Modal
   const [showReopenModal, setShowReopenModal] = useState<boolean>(false);
-  const [reopenReason, setReopenReason] = useState<string>("");
+  const [reopenReason, setReopenReason] = useState<string>('');
   const [isReopening, setIsReopening] = useState<boolean>(false);
 
   // Image Lightbox
@@ -86,14 +193,14 @@ export default function EnquiriesScreen() {
   const loadEnquiries = useCallback(async () => {
     try {
       setFetchError(null);
-      const params = statusFilter === "ALL" ? undefined : { status: statusFilter };
+      const params = statusFilter === 'ALL' ? undefined : { status: statusFilter };
       const res = await enquiryApi.getMyEnquiries(params);
       if (res.success) {
         setEnquiries(res.data || []);
       }
-    } catch (err: any) {
-      console.error("Failed to load enquiries:", err);
-      setFetchError(err.message || "Failed to load enquiries.");
+    } catch (err: unknown) {
+      console.error('Failed to load enquiries:', err);
+      setFetchError(getErrorMessage(err, 'Failed to load enquiries.'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -113,15 +220,15 @@ export default function EnquiriesScreen() {
 
     try {
       // Join socket room
-      emitMobileSocketEvent("enquiry.join", ticket._id);
+      emitMobileSocketEvent('enquiry.join', ticket._id);
 
       const res = await enquiryApi.getEnquiryById(ticket._id);
       if (res.success) {
         setSelectedEnquiry(res.data);
         setMessages(res.messages || []);
       }
-    } catch (err: any) {
-      showToast(err.message || "Failed to open enquiry thread.", "error");
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Failed to open enquiry thread.'), 'error');
     } finally {
       setThreadLoading(false);
     }
@@ -129,95 +236,90 @@ export default function EnquiriesScreen() {
 
   const closeThread = () => {
     if (selectedEnquiry) {
-      emitMobileSocketEvent("enquiry.leave", selectedEnquiry._id);
+      emitMobileSocketEvent('enquiry.leave', selectedEnquiry._id);
     }
     setSelectedEnquiry(null);
     setMessages([]);
-    setReplyText("");
+    setReplyText('');
     setReplyAttachment(null);
     setIsHrTyping(false);
   };
 
   // Socket Subscriptions
   useEffect(() => {
-    const unsubCreated = subscribeToSocketEvent("enquiry.created", () => {
+    const unsubCreated = subscribeToSocketEvent('enquiry.created', () => {
       loadEnquiries();
     });
 
-    const unsubMsg = subscribeToSocketEvent(
-      "enquiry.message_received",
-      (data: any) => {
-        loadEnquiries();
-        if (selectedEnquiry && data?.enquiryId === selectedEnquiry._id) {
-          setMessages((prev) => {
-            if (prev.some((m) => m._id === data.messageId)) return prev;
-            const newMsg: EnquiryMessageItem = {
-              _id: data.messageId || String(Date.now()),
-              enquiry: data.enquiryId,
-              sender: data.senderId,
-              senderRole: data.senderRole,
-              message: data.message,
-              attachments: data.attachments || [],
-              readByRecipient: true,
-              createdAt: data.createdAt || new Date().toISOString(),
-            };
-            return [...prev, newMsg];
-          });
-        }
+    const unsubMsg = subscribeToSocketEvent('enquiry.message_received', (payload: unknown) => {
+      const data = payload as SocketMessagePayload | undefined;
+      loadEnquiries();
+      if (selectedEnquiry && data?.enquiryId === selectedEnquiry._id) {
+        setMessages((prev) => {
+          if (prev.some((m) => m._id === data.messageId)) return prev;
+          const newMsg: EnquiryMessageItem = {
+            _id: data.messageId || String(Date.now()),
+            enquiry: data.enquiryId || selectedEnquiry._id,
+            sender: data.senderId || 'HR',
+            senderRole: data.senderRole || 'HR',
+            message: data.message || '',
+            attachments: data.attachments || [],
+            readByRecipient: true,
+            createdAt: data.createdAt || new Date().toISOString(),
+          };
+          return [...prev, newMsg];
+        });
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 150);
       }
-    );
+    });
 
-    const unsubStatus = subscribeToSocketEvent(
-      "enquiry.status_updated",
-      (data: any) => {
-        loadEnquiries();
-        if (selectedEnquiry && data?.enquiryId === selectedEnquiry._id) {
-          setSelectedEnquiry((prev) =>
-            prev ? { ...prev, status: data.status, reopenDeadline: data.reopenDeadline } : null
-          );
-        }
+    const unsubStatus = subscribeToSocketEvent('enquiry.status_updated', (payload: unknown) => {
+      const data = payload as SocketStatusPayload | undefined;
+      loadEnquiries();
+      if (selectedEnquiry && data?.enquiryId === selectedEnquiry._id) {
+        setSelectedEnquiry((prev) =>
+          prev ? { ...prev, status: data.status || prev.status, reopenDeadline: data.reopenDeadline } : null
+        );
       }
-    );
+    });
 
-    const unsubAssigned = subscribeToSocketEvent(
-      "enquiry.assigned",
-      (data: any) => {
-        loadEnquiries();
-        if (selectedEnquiry && data?.enquiryId === selectedEnquiry._id) {
-          setSelectedEnquiry((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  assignee: {
-                    _id: data.assigneeId,
-                    name: data.assigneeName,
-                    email: data.assigneeName || "HR Support",
-                  },
-                }
-              : null
-          );
-        }
+    const unsubAssigned = subscribeToSocketEvent('enquiry.assigned', (payload: unknown) => {
+      const data = payload as SocketAssignedPayload | undefined;
+      loadEnquiries();
+      if (selectedEnquiry && data?.enquiryId === selectedEnquiry._id) {
+        setSelectedEnquiry((prev) =>
+          prev
+            ? {
+                ...prev,
+                assignee: {
+                  _id: data.assigneeId || '',
+                  name: data.assigneeName,
+                  email: data.assigneeName || 'HR Support',
+                },
+              }
+            : null
+        );
       }
-    );
+    });
 
-    const unsubTyping = subscribeToSocketEvent(
-      "enquiry.typing",
-      (data: any) => {
-        if (
-          selectedEnquiry &&
-          data?.enquiryId === selectedEnquiry._id &&
-          data?.role !== "EMPLOYEE"
-        ) {
-          setIsHrTyping(Boolean(data.isTyping));
-          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-          if (data.isTyping) {
-            typingTimeoutRef.current = setTimeout(() => {
-              setIsHrTyping(false);
-            }, 4000);
-          }
+    const unsubTyping = subscribeToSocketEvent('enquiry.typing', (payload: unknown) => {
+      const data = payload as SocketTypingPayload | undefined;
+      if (
+        selectedEnquiry &&
+        data?.enquiryId === selectedEnquiry._id &&
+        data?.role !== 'EMPLOYEE'
+      ) {
+        setIsHrTyping(Boolean(data.isTyping));
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        if (data.isTyping) {
+          typingTimeoutRef.current = setTimeout(() => {
+            setIsHrTyping(false);
+          }, 4000);
         }
       }
-    );
+    });
 
     return () => {
       unsubCreated();
@@ -232,11 +334,11 @@ export default function EnquiriesScreen() {
   // Handle Create Ticket Submit
   const handleCreateSubmit = async () => {
     if (!subject.trim()) {
-      showToast("Please enter an enquiry subject.", "warning");
+      showToast('Please enter an enquiry subject.', 'warning');
       return;
     }
     if (!message.trim()) {
-      showToast("Please explain your enquiry message.", "warning");
+      showToast('Please describe your enquiry in detail.', 'warning');
       return;
     }
 
@@ -252,15 +354,15 @@ export default function EnquiriesScreen() {
 
       const res = await enquiryApi.createEnquiry(payload);
       if (res.success) {
-        showToast(`Ticket ${res.data.ticketNumber} submitted!`, "success");
-        setSubject("");
-        setMessage("");
+        showToast(`Ticket ${res.data.ticketNumber} submitted!`, 'success');
+        setSubject('');
+        setMessage('');
         setSelectedAttachment(null);
-        setActiveTab("list");
+        setActiveTab('list');
         loadEnquiries();
       }
-    } catch (err: any) {
-      showToast(err.message || "Failed to submit enquiry ticket.", "error");
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Failed to submit enquiry ticket.'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -279,15 +381,18 @@ export default function EnquiriesScreen() {
 
       const res = await enquiryApi.sendMessage(selectedEnquiry._id, payload);
       if (res.success) {
-        setReplyText("");
+        setReplyText('');
         setReplyAttachment(null);
-        emitMobileSocketEvent("enquiry.typing", {
+        emitMobileSocketEvent('enquiry.typing', {
           enquiryId: selectedEnquiry._id,
           isTyping: false,
         });
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 150);
       }
-    } catch (err: any) {
-      showToast(err.message || "Failed to send message.", "error");
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Failed to send message.'), 'error');
     } finally {
       setIsSendingReply(false);
     }
@@ -296,7 +401,7 @@ export default function EnquiriesScreen() {
   // Handle Reopen Ticket
   const handleReopen = async () => {
     if (!selectedEnquiry || !reopenReason.trim()) {
-      showToast("Please provide a reason to reopen this ticket.", "warning");
+      showToast('Please provide a reason to reopen this ticket.', 'warning');
       return;
     }
 
@@ -304,859 +409,981 @@ export default function EnquiriesScreen() {
     try {
       const res = await enquiryApi.reopenEnquiry(selectedEnquiry._id, reopenReason.trim());
       if (res.success) {
-        showToast("Ticket successfully reopened!", "success");
+        showToast('Ticket successfully reopened!', 'success');
         setShowReopenModal(false);
-        setReopenReason("");
+        setReopenReason('');
         setSelectedEnquiry(res.data);
         openThread(res.data);
       }
-    } catch (err: any) {
-      showToast(err.message || "Failed to reopen enquiry.", "error");
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Failed to reopen enquiry.'), 'error');
     } finally {
       setIsReopening(false);
     }
   };
 
-  // Mock Attachment Picker (creates sample PNG attachment for preview/submission)
+  // Mock Attachment Picker
   const pickMockAttachment = (isReply = false) => {
     const timestamp = Date.now().toString().slice(-4);
     const mockAtt: EnquiryAttachmentItem = {
       name: `screenshot_${timestamp}.png`,
-      mimeType: "image/png",
-      sizeBytes: 184320, // ~180 KB
-      url: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&auto=format&fit=crop&q=80",
+      mimeType: 'image/png',
+      sizeBytes: 184320,
+      url: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&auto=format&fit=crop&q=80',
     };
 
     if (isReply) {
       setReplyAttachment(mockAtt);
-      showToast("Image attached to reply.", "info");
+      showToast('Image attached to reply.', 'info');
     } else {
       setSelectedAttachment(mockAtt);
-      showToast("Image screenshot attached.", "info");
+      showToast('Screenshot attached successfully.', 'info');
     }
   };
 
-  // Status Badge Colors
-  const getStatusColor = (status: string) => {
+  const getStatusTone = (status: string): Tone => {
     switch (status) {
-      case "OPEN":
-        return colors.accent.cyan;
-      case "IN_PROGRESS":
-        return colors.status.warning;
-      case "RESOLVED":
-        return colors.status.success;
-      case "CLOSED":
-        return colors.text.muted;
+      case 'OPEN':
+        return 'info';
+      case 'IN_PROGRESS':
+        return 'warning';
+      case 'RESOLVED':
+        return 'success';
+      case 'CLOSED':
       default:
-        return colors.text.muted;
+        return 'neutral';
     }
   };
+
+  const getCategoryIcon = (catKey: string): LucideIcon => {
+    const found = CATEGORIES.find((c) => c.key === catKey);
+    return found ? found.icon : HelpCircle;
+  };
+
+  // Status Filter Counts
+  const counts = useMemo(() => {
+    return {
+      all: enquiries.length,
+      open: enquiries.filter((e) => e.status === 'OPEN').length,
+      inProgress: enquiries.filter((e) => e.status === 'IN_PROGRESS').length,
+      resolved: enquiries.filter((e) => e.status === 'RESOLVED').length,
+      closed: enquiries.filter((e) => e.status === 'CLOSED').length,
+    };
+  }, [enquiries]);
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: "Contact HR & Enquiries",
-          headerStyle: { backgroundColor: colors.background.surface },
-          headerTintColor: colors.text.primary,
-        }}
-      />
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <Screen
+        edges={['left', 'right', 'bottom']}
+        refreshControl={
+          activeTab === 'list' ? (
+            <RefreshControl
+              colors={[colors.indigoSoft]}
+              onRefresh={() => {
+                setRefreshing(true);
+                loadEnquiries();
+              }}
+              refreshing={refreshing}
+              tintColor={colors.indigoSoft}
+            />
+          ) : undefined
+        }
+      >
+        {/* Screen Header */}
+        <ScreenHeader
+          title="Helpdesk & Enquiries"
+          subtitle="HR support, dispute resolution & queries"
+          right={
+            <Badge
+              label={activeTab === 'list' ? `${enquiries.length} TICKETS` : 'NEW'}
+              tone={activeTab === 'list' ? 'indigo' : 'info'}
+              size="sm"
+            />
+          }
+        />
 
-      {/* 1. Sub-Header Navigation Tabs */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === "list" && styles.tabButtonActive]}
-          onPress={() => setActiveTab("list")}
-        >
-          <Icon
-            name="chatbubbles-outline"
-            size={18}
-            color={activeTab === "list" ? colors.accent.cyan : colors.text.muted}
-          />
-          <Text style={[styles.tabText, activeTab === "list" && styles.tabTextActive]}>
-            My Enquiries ({enquiries.length})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === "create" && styles.tabButtonActive]}
-          onPress={() => setActiveTab("create")}
-        >
-          <Icon
-            name="create-outline"
-            size={18}
-            color={activeTab === "create" ? colors.accent.cyan : colors.text.muted}
-          />
-          <Text style={[styles.tabText, activeTab === "create" && styles.tabTextActive]}>
-            New Ticket
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ================================================================= */}
-      {/* TAB 1: LIST OF ENQUIRIES */}
-      {/* ================================================================= */}
-      {activeTab === "list" && (
-        <View style={styles.tabContent}>
-          {/* Status Filter Chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterScroll}
-            contentContainerStyle={styles.filterScrollContent}
-          >
-            {["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].map((st) => (
-              <TouchableOpacity
-                key={st}
+        <View style={[styles.container, isWide && styles.containerWide]}>
+          {/* Main Tab Switcher (Segmented Glass Navigation) */}
+          <View style={styles.segmentWrapper}>
+            <View style={styles.segmentedControl}>
+              <PressableScale
+                onPress={() => setActiveTab('list')}
                 style={[
-                  styles.filterChip,
-                  statusFilter === st && styles.filterChipActive,
+                  styles.segmentButton,
+                  activeTab === 'list' && styles.segmentButtonActive,
                 ]}
-                onPress={() => setStatusFilter(st)}
               >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    statusFilter === st && styles.filterChipTextActive,
-                  ]}
-                >
-                  {st.replace("_", " ")}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* List States */}
-          {loading ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color={colors.accent.cyan} />
-              <Text style={styles.mutedText}>Loading your enquiries...</Text>
-            </View>
-          ) : fetchError ? (
-            <View style={styles.centerContainer}>
-              <Icon name="alert-circle-outline" size={44} color={colors.status.danger} />
-              <Text style={styles.errorText}>{fetchError}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={loadEnquiries}>
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : enquiries.length === 0 ? (
-            <View style={styles.centerContainer}>
-              <Icon name="file-tray-outline" size={48} color={colors.text.muted} />
-              <Text style={styles.emptyTitle}>No Enquiries Found</Text>
-              <Text style={styles.mutedText}>
-                {statusFilter === "ALL"
-                  ? "You haven't opened any support or HR enquiries yet."
-                  : `No enquiries matching '${statusFilter}'.`}
-              </Text>
-              <TouchableOpacity
-                style={styles.ctaButton}
-                onPress={() => setActiveTab("create")}
-              >
-                <Icon name="add-circle-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.ctaButtonText}>Open Support Ticket</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <FlatList
-              data={enquiries}
-              keyExtractor={(item) => item._id}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={() => {
-                    setRefreshing(true);
-                    loadEnquiries();
-                  }}
-                  tintColor={colors.accent.cyan}
+                <MessageSquare
+                  size={15}
+                  color={activeTab === 'list' ? colors.white : colors.muted}
+                  strokeWidth={2}
                 />
-              }
-              contentContainerStyle={styles.listContent}
-              renderItem={({ item }) => {
-                const isUnread =
-                  item.firstResponseAt &&
-                  item.status !== "CLOSED" &&
-                  new Date(item.lastMessageAt).getTime() >
-                    new Date(item.createdAt).getTime();
+                <Text
+                  variant="caption"
+                  weight={activeTab === 'list' ? 'bold' : 'medium'}
+                  color={activeTab === 'list' ? colors.white : colors.muted}
+                >
+                  My Tickets ({enquiries.length})
+                </Text>
+              </PressableScale>
 
-                return (
-                  <TouchableOpacity
-                    style={styles.ticketCard}
-                    onPress={() => openThread(item)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.ticketHeader}>
-                      <View style={styles.ticketHeaderLeft}>
-                        <Text style={styles.ticketNumber}>{item.ticketNumber}</Text>
-                        <View style={styles.categoryPill}>
-                          <Text style={styles.categoryPillText}>{item.category}</Text>
-                        </View>
+              <PressableScale
+                onPress={() => setActiveTab('create')}
+                style={[
+                  styles.segmentButton,
+                  activeTab === 'create' && styles.segmentButtonActive,
+                ]}
+              >
+                <Plus
+                  size={15}
+                  color={activeTab === 'create' ? colors.white : colors.muted}
+                  strokeWidth={2.2}
+                />
+                <Text
+                  variant="caption"
+                  weight={activeTab === 'create' ? 'bold' : 'medium'}
+                  color={activeTab === 'create' ? colors.white : colors.muted}
+                >
+                  New Ticket
+                </Text>
+              </PressableScale>
+            </View>
+          </View>
+
+          {/* ================================================================= */}
+          {/* TAB 1: LIST OF ENQUIRIES */}
+          {/* ================================================================= */}
+          {activeTab === 'list' && (
+            <View style={styles.tabContent}>
+              {/* Status Filter Horizontal Pills */}
+              <View style={styles.filterBar}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.filterScroll}
+                >
+                  {(
+                    [
+                      { key: 'ALL', label: `All (${counts.all})` },
+                      { key: 'OPEN', label: `Open (${counts.open})` },
+                      { key: 'IN_PROGRESS', label: `In Progress (${counts.inProgress})` },
+                      { key: 'RESOLVED', label: `Resolved (${counts.resolved})` },
+                      { key: 'CLOSED', label: `Closed (${counts.closed})` },
+                    ] as const
+                  ).map((f) => {
+                    const isActive = statusFilter === f.key;
+                    return (
+                      <PressableScale
+                        key={f.key}
+                        onPress={() => setStatusFilter(f.key)}
+                        style={[styles.filterPill, isActive && styles.filterPillActive]}
+                      >
+                        <Text
+                          variant="caption"
+                          color={isActive ? colors.text : colors.muted}
+                          weight={isActive ? 'bold' : 'medium'}
+                        >
+                          {f.label}
+                        </Text>
+                      </PressableScale>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* State: Loading */}
+              {loading && !refreshing ? (
+                <View style={styles.skeletonContainer}>
+                  {[1, 2, 3].map((key) => (
+                    <Card key={key} variant="glass" padding={spacing.lg} style={styles.cardSpacing}>
+                      <View style={styles.rowBetween}>
+                        <Skeleton width="30%" height={14} borderRadius={radii.xs} />
+                        <Skeleton width="22%" height={18} borderRadius={radii.full} />
                       </View>
-                      <View
+                      <View style={styles.skeletonSpacer} />
+                      <Skeleton width="85%" height={18} borderRadius={radii.xs} />
+                      <View style={styles.skeletonSpacer} />
+                      <View style={styles.rowBetween}>
+                        <Skeleton width="40%" height={12} borderRadius={radii.xs} />
+                        <Skeleton width="20%" height={12} borderRadius={radii.xs} />
+                      </View>
+                    </Card>
+                  ))}
+                </View>
+              ) : fetchError ? (
+                <Card variant="glass" padding={spacing.xl} style={styles.emptyCard}>
+                  <AlertCircle size={38} color={colors.danger} strokeWidth={1.8} />
+                  <Text variant="subheading" color={colors.text} style={styles.emptyTitle}>
+                    Failed to Load Enquiries
+                  </Text>
+                  <Text variant="caption" color={colors.muted} style={styles.emptyDesc}>
+                    {fetchError}
+                  </Text>
+                  <Button
+                    label="Retry"
+                    size="sm"
+                    variant="secondary"
+                    onPress={loadEnquiries}
+                    style={styles.retryBtn}
+                  />
+                </Card>
+              ) : enquiries.length === 0 ? (
+                <Card variant="glass" padding={spacing.xl} style={styles.emptyCard}>
+                  <View style={styles.emptyIconCircle}>
+                    <HelpCircle size={32} color={colors.indigoSoft} strokeWidth={1.8} />
+                  </View>
+                  <Text variant="subheading" color={colors.text} style={styles.emptyTitle}>
+                    No Enquiries Found
+                  </Text>
+                  <Text variant="caption" color={colors.muted} style={styles.emptyDesc}>
+                    {statusFilter === 'ALL'
+                      ? 'You have not opened any dispute or HR support tickets yet.'
+                      : `There are currently no tickets matching '${statusFilter.replace('_', ' ')}'.`}
+                  </Text>
+                  <Button
+                    label="Open Support Ticket"
+                    size="sm"
+                    variant="primary"
+                    icon={<Plus size={16} color={colors.white} strokeWidth={2.4} />}
+                    onPress={() => setActiveTab('create')}
+                    style={styles.emptyActionBtn}
+                  />
+                </Card>
+              ) : (
+                <View style={styles.ticketsList}>
+                  {enquiries.map((item) => {
+                    const CatIcon = getCategoryIcon(item.category);
+                    const statusTone = getStatusTone(item.status);
+                    const isUnread =
+                      item.firstResponseAt &&
+                      item.status !== 'CLOSED' &&
+                      new Date(item.lastMessageAt).getTime() >
+                        new Date(item.createdAt).getTime();
+
+                    return (
+                      <Card
+                        key={item._id}
+                        variant="glass"
+                        padding={spacing.lg}
+                        style={styles.ticketCard}
+                        onPress={() => openThread(item)}
+                      >
+                        {/* Header: Ticket Number, Category Pill, Status Badge */}
+                        <View style={styles.ticketCardHeader}>
+                          <View style={styles.ticketMetaLeft}>
+                            <Text variant="mono" style={styles.ticketNumber}>
+                              #{item.ticketNumber}
+                            </Text>
+                            <View style={styles.categoryBadge}>
+                              <CatIcon size={12} color={colors.indigoSoft} strokeWidth={2} />
+                              <Text variant="caption" color={colors.textSecondary} weight="semibold">
+                                {item.category}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <Badge
+                            label={item.status.replace('_', ' ')}
+                            tone={statusTone}
+                            size="sm"
+                            dot
+                          />
+                        </View>
+
+                        {/* Subject */}
+                        <Text
+                          variant="body"
+                          weight="semibold"
+                          color={colors.text}
+                          numberOfLines={2}
+                          style={styles.ticketSubject}
+                        >
+                          {item.subject}
+                        </Text>
+
+                        {/* Footer: Assignee & Date */}
+                        <View style={styles.ticketFooter}>
+                          <View style={styles.assigneeRow}>
+                            <View style={styles.assigneeAvatar}>
+                              <User size={11} color={colors.muted} strokeWidth={2} />
+                            </View>
+                            <Text variant="small" color={colors.muted}>
+                              {item.assignee?.name || 'HR Support'}
+                            </Text>
+                          </View>
+
+                          <View style={styles.footerDateRow}>
+                            {isUnread && <View style={styles.unreadPulseDot} />}
+                            <Text variant="small" color={colors.muted}>
+                              {formatEnquiryDate(item.lastMessageAt)}
+                            </Text>
+                            <ChevronRight size={14} color={colors.muted} strokeWidth={2} />
+                          </View>
+                        </View>
+                      </Card>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ================================================================= */}
+          {/* TAB 2: CREATE NEW TICKET FORM */}
+          {/* ================================================================= */}
+          {activeTab === 'create' && (
+            <View style={styles.formContent}>
+              {/* Category Section */}
+              <View style={styles.formSection}>
+                <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.sectionHeading}>
+                  SELECT CATEGORY
+                </Text>
+
+                <View style={styles.categoriesGrid}>
+                  {CATEGORIES.map((cat) => {
+                    const isSelected = selectedCategory === cat.key;
+                    const IconComp = cat.icon;
+                    return (
+                      <PressableScale
+                        key={cat.key}
+                        onPress={() => setSelectedCategory(cat.key)}
                         style={[
-                          styles.statusBadge,
-                          { backgroundColor: `${getStatusColor(item.status)}20` },
+                          styles.categoryCard,
+                          isSelected && styles.categoryCardSelected,
                         ]}
                       >
                         <View
                           style={[
-                            styles.statusDot,
-                            { backgroundColor: getStatusColor(item.status) },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.statusBadgeText,
-                            { color: getStatusColor(item.status) },
+                            styles.categoryIconCircle,
+                            isSelected && styles.categoryIconCircleSelected,
                           ]}
                         >
-                          {item.status.replace("_", " ")}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={styles.ticketSubject} numberOfLines={2}>
-                      {item.subject}
-                    </Text>
-
-                    <View style={styles.ticketFooter}>
-                      <View style={styles.footerLeft}>
-                        <Icon name="person-outline" size={14} color={colors.text.muted} />
-                        <Text style={styles.footerAssignee}>
-                          {item.assignee?.name || "Support Team"}
-                        </Text>
-                      </View>
-                      <View style={styles.footerRight}>
-                        {isUnread && <View style={styles.unreadDot} />}
-                        <Text style={styles.footerDate}>
-                          {new Date(item.lastMessageAt).toLocaleDateString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          )}
-        </View>
-      )}
-
-      {/* ================================================================= */}
-      {/* TAB 2: CREATE NEW TICKET FORM */}
-      {/* ================================================================= */}
-      {activeTab === "create" && (
-        <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContent}>
-          <Text style={styles.formSectionHeader}>Select Category</Text>
-          <View style={styles.categoryGrid}>
-            {CATEGORIES.map((cat) => {
-              const isSelected = selectedCategory === cat.key;
-              return (
-                <TouchableOpacity
-                  key={cat.key}
-                  style={[styles.categoryCard, isSelected && styles.categoryCardActive]}
-                  onPress={() => setSelectedCategory(cat.key)}
-                >
-                  <Icon
-                    name={cat.icon}
-                    size={20}
-                    color={isSelected ? colors.accent.cyan : colors.text.muted}
-                  />
-                  <Text
-                    style={[styles.categoryCardText, isSelected && styles.categoryCardTextActive]}
-                  >
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={styles.formSectionHeader}>Priority</Text>
-          <View style={styles.priorityRow}>
-            {PRIORITIES.map((p) => {
-              const isSelected = selectedPriority === p.key;
-              return (
-                <TouchableOpacity
-                  key={p.key}
-                  style={[
-                    styles.priorityChip,
-                    isSelected && { borderColor: p.color, backgroundColor: `${p.color}15` },
-                  ]}
-                  onPress={() => setSelectedPriority(p.key)}
-                >
-                  <Text
-                    style={[
-                      styles.priorityChipText,
-                      isSelected && { color: p.color, fontWeight: "700" },
-                    ]}
-                  >
-                    {p.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={styles.formSectionHeader}>Subject</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="e.g. Missing punch correction on Monday"
-            placeholderTextColor={colors.text.muted}
-            value={subject}
-            onChangeText={setSubject}
-            maxLength={150}
-          />
-
-          <Text style={styles.formSectionHeader}>Message</Text>
-          <TextInput
-            style={[styles.textInput, styles.textArea]}
-            placeholder="Describe your issue or request in detail..."
-            placeholderTextColor={colors.text.muted}
-            value={message}
-            onChangeText={setMessage}
-            multiline
-            numberOfLines={4}
-            maxLength={3000}
-          />
-
-          {/* Attachment Section */}
-          <Text style={styles.formSectionHeader}>Attachment (Optional image, max 5MB)</Text>
-          {selectedAttachment ? (
-            <View style={styles.attachmentPreviewBox}>
-              <Icon name="image-outline" size={24} color={colors.accent.cyan} />
-              <View style={styles.attachmentInfo}>
-                <Text style={styles.attachmentName} numberOfLines={1}>
-                  {selectedAttachment.name}
-                </Text>
-                <Text style={styles.attachmentSize}>
-                  {(selectedAttachment.sizeBytes / 1024).toFixed(1)} KB (Image)
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setSelectedAttachment(null)}
-                style={styles.removeAttBtn}
-              >
-                <Icon name="close-circle" size={22} color={colors.status.danger} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.attachmentButton}
-              onPress={() => pickMockAttachment(false)}
-            >
-              <Icon name="attach-outline" size={20} color={colors.accent.cyan} />
-              <Text style={styles.attachmentButtonText}>Upload Image / Screenshot</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Submit Button */}
-          <TouchableOpacity
-            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-            onPress={handleCreateSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Icon name="paper-plane-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>Submit Enquiry Ticket</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-      )}
-
-      {/* ================================================================= */}
-      {/* THREAD MODAL: CHAT CONVERSATION */}
-      {/* ================================================================= */}
-      <Modal
-        visible={selectedEnquiry !== null}
-        animationType="slide"
-        onRequestClose={closeThread}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalContainer}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          {/* Thread Header */}
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={closeThread} style={styles.closeBtn}>
-              <Icon name="arrow-back" size={22} color={colors.text.primary} />
-            </TouchableOpacity>
-            <View style={styles.modalTitleBlock}>
-              <Text style={styles.modalTicketNum}>{selectedEnquiry?.ticketNumber}</Text>
-              <Text style={styles.modalSubject} numberOfLines={1}>
-                {selectedEnquiry?.subject}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.modalStatusPill,
-                { backgroundColor: `${getStatusColor(selectedEnquiry?.status || "OPEN")}25` },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.modalStatusText,
-                  { color: getStatusColor(selectedEnquiry?.status || "OPEN") },
-                ]}
-              >
-                {selectedEnquiry?.status.replace("_", " ")}
-              </Text>
-            </View>
-          </View>
-
-          {/* Thread Body */}
-          {threadLoading ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color={colors.accent.cyan} />
-              <Text style={styles.mutedText}>Loading conversation...</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={messages}
-              keyExtractor={(m) => m._id}
-              contentContainerStyle={styles.messagesList}
-              renderItem={({ item }) => {
-                const isEmployee = item.senderRole === "EMPLOYEE";
-                return (
-                  <View
-                    style={[
-                      styles.messageBubbleContainer,
-                      isEmployee ? styles.msgRight : styles.msgLeft,
-                    ]}
-                  >
-                    {!isEmployee && (
-                      <Text style={styles.senderRoleLabel}>HR Support</Text>
-                    )}
-                    <View
-                      style={[
-                        styles.bubble,
-                        isEmployee ? styles.bubbleEmployee : styles.bubbleHr,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.messageText,
-                          isEmployee ? styles.msgTextEmp : styles.msgTextHr,
-                        ]}
-                      >
-                        {item.message}
-                      </Text>
-
-                      {/* Attachment Thumbnails */}
-                      {item.attachments && item.attachments.length > 0 && (
-                        <View style={styles.msgAttachmentGrid}>
-                          {item.attachments.map((att, idx) => (
-                            <TouchableOpacity
-                              key={idx}
-                              style={styles.thumbBox}
-                              onPress={() => att.url && setLightboxImage(att.url)}
-                            >
-                              <Icon
-                                name="image"
-                                size={18}
-                                color={isEmployee ? "#FFFFFF" : colors.accent.cyan}
-                              />
-                              <Text
-                                style={[
-                                  styles.thumbText,
-                                  isEmployee ? { color: "#FFFFFF" } : { color: colors.text.primary },
-                                ]}
-                                numberOfLines={1}
-                              >
-                                {att.name}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
+                          <IconComp
+                            size={18}
+                            color={isSelected ? colors.white : colors.indigoSoft}
+                            strokeWidth={2}
+                          />
                         </View>
-                      )}
+                        <Text
+                          variant="body"
+                          weight={isSelected ? 'bold' : 'medium'}
+                          color={isSelected ? colors.white : colors.text}
+                          numberOfLines={1}
+                        >
+                          {cat.label}
+                        </Text>
+                        <Text
+                          variant="small"
+                          color={isSelected ? colors.lavender : colors.muted}
+                          numberOfLines={1}
+                        >
+                          {cat.sub}
+                        </Text>
+                      </PressableScale>
+                    );
+                  })}
+                </View>
+              </View>
 
-                      <Text
+              {/* Priority Section */}
+              <View style={styles.formSection}>
+                <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.sectionHeading}>
+                  PRIORITY LEVEL
+                </Text>
+                <View style={styles.priorityRow}>
+                  {PRIORITIES.map((p) => {
+                    const isSelected = selectedPriority === p.key;
+                    return (
+                      <PressableScale
+                        key={p.key}
+                        onPress={() => setSelectedPriority(p.key)}
                         style={[
-                          styles.messageTime,
-                          isEmployee ? styles.msgTimeEmp : styles.msgTimeHr,
+                          styles.priorityPill,
+                          isSelected && {
+                            backgroundColor: `${p.color}22`,
+                            borderColor: p.color,
+                          },
                         ]}
                       >
-                        {new Date(item.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              }}
-              ListFooterComponent={
-                isHrTyping ? (
-                  <View style={styles.typingIndicatorBox}>
-                    <ActivityIndicator size="small" color={colors.accent.cyan} />
-                    <Text style={styles.typingText}>HR Support is typing...</Text>
-                  </View>
-                ) : null
-              }
-            />
-          )}
+                        <Text
+                          variant="caption"
+                          weight={isSelected ? 'bold' : 'medium'}
+                          color={isSelected ? p.color : colors.muted}
+                        >
+                          {p.label}
+                        </Text>
+                      </PressableScale>
+                    );
+                  })}
+                </View>
+              </View>
 
-          {/* Banner if Closed or Resolved */}
-          {selectedEnquiry &&
-            (selectedEnquiry.status === "RESOLVED" || selectedEnquiry.status === "CLOSED") && (
-              <View style={styles.resolvedBanner}>
-                <View style={styles.resolvedInfo}>
-                  <Icon name="checkmark-circle" size={18} color={colors.status.success} />
-                  <Text style={styles.resolvedText}>
-                    This enquiry was marked as {selectedEnquiry.status}.
+              {/* Subject Input */}
+              <View style={styles.formSection}>
+                <View style={styles.labelRow}>
+                  <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.sectionHeading}>
+                    SUBJECT SUMMARY
+                  </Text>
+                  <Text variant="small" color={colors.muted}>
+                    {subject.length}/150
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.reopenButton}
-                  onPress={() => setShowReopenModal(true)}
-                >
-                  <Text style={styles.reopenButtonText}>Reopen Ticket</Text>
-                </TouchableOpacity>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="e.g. Punch timestamp correction for Oct 28"
+                  placeholderTextColor={colors.muted}
+                  value={subject}
+                  onChangeText={setSubject}
+                  maxLength={150}
+                />
               </View>
-            )}
 
-          {/* Quick Reply Bar (Only active if OPEN or IN_PROGRESS) */}
-          {selectedEnquiry &&
-            selectedEnquiry.status !== "CLOSED" &&
-            selectedEnquiry.status !== "RESOLVED" && (
-              <View style={styles.replyBar}>
-                {replyAttachment && (
-                  <View style={styles.replyAttPill}>
-                    <Icon name="attach" size={14} color={colors.accent.cyan} />
-                    <Text style={styles.replyAttText} numberOfLines={1}>
-                      {replyAttachment.name}
+              {/* Message Input */}
+              <View style={styles.formSection}>
+                <View style={styles.labelRow}>
+                  <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.sectionHeading}>
+                    DETAILED DESCRIPTION
+                  </Text>
+                  <Text variant="small" color={colors.muted}>
+                    {message.length}/3000
+                  </Text>
+                </View>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  placeholder="Explain what happened in detail (punch time, system errors, device used)..."
+                  placeholderTextColor={colors.muted}
+                  value={message}
+                  onChangeText={setMessage}
+                  multiline
+                  numberOfLines={4}
+                  maxLength={3000}
+                />
+              </View>
+
+              {/* Optional Attachment */}
+              <View style={styles.formSection}>
+                <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.sectionHeading}>
+                  ATTACHMENT (OPTIONAL)
+                </Text>
+
+                {selectedAttachment ? (
+                  <View style={styles.attachmentCard}>
+                    <View style={styles.attachmentIconBox}>
+                      <ImageIcon size={20} color={colors.indigoSoft} strokeWidth={2} />
+                    </View>
+                    <View style={styles.attachmentMeta}>
+                      <Text variant="body" weight="semibold" color={colors.text} numberOfLines={1}>
+                        {selectedAttachment.name}
+                      </Text>
+                      <Text variant="small" color={colors.muted}>
+                        {(selectedAttachment.sizeBytes / 1024).toFixed(1)} KB • PNG Screenshot
+                      </Text>
+                    </View>
+                    <PressableScale
+                      onPress={() => setSelectedAttachment(null)}
+                      style={styles.removeAttButton}
+                    >
+                      <X size={16} color={colors.danger} strokeWidth={2.4} />
+                    </PressableScale>
+                  </View>
+                ) : (
+                  <PressableScale
+                    onPress={() => pickMockAttachment(false)}
+                    style={styles.attachDashedButton}
+                  >
+                    <Paperclip size={18} color={colors.indigoSoft} strokeWidth={2} />
+                    <Text variant="caption" weight="semibold" color={colors.indigoSoft}>
+                      Attach Screenshot or Document
                     </Text>
-                    <TouchableOpacity onPress={() => setReplyAttachment(null)}>
-                      <Icon name="close" size={14} color={colors.status.danger} />
-                    </TouchableOpacity>
+                  </PressableScale>
+                )}
+              </View>
+
+              {/* Submit Button */}
+              <Button
+                label="Submit Enquiry Ticket"
+                size="lg"
+                variant="primary"
+                loading={isSubmitting}
+                icon={<Send size={18} color={colors.white} strokeWidth={2.2} />}
+                onPress={handleCreateSubmit}
+                style={styles.submitTicketBtn}
+              />
+            </View>
+          )}
+        </View>
+
+        {/* ================================================================= */}
+        {/* CHAT THREAD MODAL (REAL-TIME HR CONVERSATION) */}
+        {/* ================================================================= */}
+        <Modal
+          visible={selectedEnquiry !== null}
+          animationType="slide"
+          onRequestClose={closeThread}
+          transparent={false}
+        >
+          <Screen scroll={false} edges={['left', 'right', 'bottom']}>
+            <KeyboardAvoidingView
+              style={styles.modalBody}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
+              {/* Modal Top Navigation Bar */}
+              <View style={styles.modalHeader}>
+                <PressableScale onPress={closeThread} style={styles.modalBackBtn}>
+                  <ArrowLeft size={20} color={colors.text} strokeWidth={2} />
+                </PressableScale>
+
+                <View style={styles.modalTitleBlock}>
+                  <View style={styles.modalTopMetaRow}>
+                    <Text variant="mono" style={styles.modalTicketNumber}>
+                      #{selectedEnquiry?.ticketNumber}
+                    </Text>
+                    <Badge
+                      label={selectedEnquiry?.status.replace('_', ' ') || 'OPEN'}
+                      tone={getStatusTone(selectedEnquiry?.status || 'OPEN')}
+                      size="sm"
+                      dot
+                    />
+                  </View>
+                  <Text variant="subheading" color={colors.text} numberOfLines={1}>
+                    {selectedEnquiry?.subject}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Thread Content */}
+              {threadLoading ? (
+                <View style={styles.centerContainer}>
+                  <ActivityIndicator size="large" color={colors.indigo} />
+                  <Text variant="caption" color={colors.muted} style={styles.loadingText}>
+                    Connecting to HR live thread...
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  ref={flatListRef}
+                  data={messages}
+                  keyExtractor={(m) => m._id}
+                  contentContainerStyle={styles.messagesList}
+                  showsVerticalScrollIndicator={false}
+                  onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+                  renderItem={({ item }) => {
+                    const isEmployee = item.senderRole === 'EMPLOYEE';
+                    return (
+                      <View
+                        style={[
+                          styles.messageRow,
+                          isEmployee ? styles.msgRowRight : styles.msgRowLeft,
+                        ]}
+                      >
+                        {!isEmployee && (
+                          <View style={styles.senderPill}>
+                            <User size={10} color={colors.indigoSoft} strokeWidth={2} />
+                            <Text variant="small" weight="bold" color={colors.indigoSoft}>
+                              HR Support
+                            </Text>
+                          </View>
+                        )}
+
+                        <View
+                          style={[
+                            styles.messageBubble,
+                            isEmployee ? styles.bubbleEmployee : styles.bubbleHr,
+                          ]}
+                        >
+                          <Text
+                            variant="body"
+                            color={isEmployee ? colors.white : colors.text}
+                            style={styles.messageText}
+                          >
+                            {item.message}
+                          </Text>
+
+                          {/* Message Attachments */}
+                          {item.attachments && item.attachments.length > 0 && (
+                            <View style={styles.msgAttachments}>
+                              {item.attachments.map((att: EnquiryAttachmentItem, idx: number) => (
+                                <PressableScale
+                                  key={idx}
+                                  onPress={() => att.url && setLightboxImage(att.url)}
+                                  style={styles.msgAttachmentThumbnail}
+                                >
+                                  <ImageIcon
+                                    size={14}
+                                    color={isEmployee ? colors.white : colors.indigoSoft}
+                                    strokeWidth={2}
+                                  />
+                                  <Text
+                                    variant="small"
+                                    weight="medium"
+                                    color={isEmployee ? colors.white : colors.textSecondary}
+                                    numberOfLines={1}
+                                  >
+                                    {att.name}
+                                  </Text>
+                                </PressableScale>
+                              ))}
+                            </View>
+                          )}
+
+                          <Text
+                            variant="small"
+                            color={isEmployee ? 'rgba(255, 255, 255, 0.65)' : colors.muted}
+                            style={styles.messageTime}
+                          >
+                            {new Date(item.createdAt).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  }}
+                  ListFooterComponent={
+                    isHrTyping ? (
+                      <View style={styles.typingIndicator}>
+                        <ActivityIndicator size="small" color={colors.indigoSoft} />
+                        <Text variant="small" color={colors.indigoSoft} style={styles.typingText}>
+                          HR Support is typing...
+                        </Text>
+                      </View>
+                    ) : null
+                  }
+                />
+              )}
+
+              {/* Resolved / Closed Banner */}
+              {selectedEnquiry &&
+                (selectedEnquiry.status === 'RESOLVED' || selectedEnquiry.status === 'CLOSED') && (
+                  <View style={styles.resolvedBanner}>
+                    <View style={styles.resolvedInfo}>
+                      <CheckCircle2 size={18} color={colors.success} strokeWidth={2} />
+                      <Text variant="caption" color={colors.textSecondary} style={styles.resolvedText}>
+                        This enquiry is marked as {selectedEnquiry.status}.
+                      </Text>
+                    </View>
+                    <PressableScale
+                      onPress={() => setShowReopenModal(true)}
+                      style={styles.reopenButton}
+                    >
+                      <RotateCcw size={13} color={colors.white} strokeWidth={2.4} />
+                      <Text variant="caption" weight="bold" color={colors.white}>
+                        Reopen Ticket
+                      </Text>
+                    </PressableScale>
                   </View>
                 )}
 
-                <View style={styles.replyInputRow}>
-                  <TouchableOpacity
-                    style={styles.attachIconBtn}
-                    onPress={() => pickMockAttachment(true)}
-                  >
-                    <Icon name="attach" size={22} color={colors.accent.cyan} />
-                  </TouchableOpacity>
-
-                  <TextInput
-                    style={styles.replyInput}
-                    placeholder="Type your reply to HR..."
-                    placeholderTextColor={colors.text.muted}
-                    value={replyText}
-                    onChangeText={(txt) => {
-                      setReplyText(txt);
-                      emitMobileSocketEvent("enquiry.typing", {
-                        enquiryId: selectedEnquiry._id,
-                        isTyping: txt.length > 0,
-                      });
-                    }}
-                    multiline
-                  />
-
-                  <TouchableOpacity
-                    style={[
-                      styles.sendBtn,
-                      (!replyText.trim() || isSendingReply) && styles.sendBtnDisabled,
-                    ]}
-                    onPress={handleSendReply}
-                    disabled={!replyText.trim() || isSendingReply}
-                  >
-                    {isSendingReply ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Icon name="send" size={18} color="#FFFFFF" />
+              {/* Reply Input Bar (Visible when OPEN or IN_PROGRESS) */}
+              {selectedEnquiry &&
+                selectedEnquiry.status !== 'CLOSED' &&
+                selectedEnquiry.status !== 'RESOLVED' && (
+                  <View style={styles.replyBar}>
+                    {replyAttachment && (
+                      <View style={styles.replyAttachmentPill}>
+                        <ImageIcon size={14} color={colors.indigoSoft} strokeWidth={2} />
+                        <Text variant="small" color={colors.text} numberOfLines={1} style={styles.replyAttText}>
+                          {replyAttachment.name}
+                        </Text>
+                        <PressableScale onPress={() => setReplyAttachment(null)}>
+                          <X size={14} color={colors.danger} strokeWidth={2.4} />
+                        </PressableScale>
+                      </View>
                     )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-        </KeyboardAvoidingView>
-      </Modal>
 
-      {/* ================================================================= */}
-      {/* REOPEN MODAL */}
-      {/* ================================================================= */}
-      <Modal
-        visible={showReopenModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowReopenModal(false)}
-      >
-        <View style={styles.dialogOverlay}>
-          <View style={styles.dialogCard}>
-            <Text style={styles.dialogTitle}>Reopen Ticket</Text>
-            <Text style={styles.dialogSubtitle}>
-              Please provide the reason why this issue requires further assistance:
-            </Text>
-            <TextInput
-              style={[styles.textInput, styles.textArea, { minHeight: 80 }]}
-              placeholder="e.g. Punch record still appears absent..."
-              placeholderTextColor={colors.text.muted}
-              value={reopenReason}
-              onChangeText={setReopenReason}
-              multiline
-            />
-            <View style={styles.dialogButtons}>
-              <TouchableOpacity
-                style={styles.dialogCancel}
-                onPress={() => setShowReopenModal(false)}
-              >
-                <Text style={styles.dialogCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.dialogConfirm, isReopening && styles.submitButtonDisabled]}
-                onPress={handleReopen}
-                disabled={isReopening}
-              >
-                {isReopening ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.dialogConfirmText}>Confirm Reopen</Text>
+                    <View style={styles.replyControls}>
+                      <PressableScale
+                        onPress={() => pickMockAttachment(true)}
+                        style={styles.replyAttachBtn}
+                      >
+                        <Paperclip size={20} color={colors.indigoSoft} strokeWidth={2} />
+                      </PressableScale>
+
+                      <TextInput
+                        style={styles.replyInput}
+                        placeholder="Type your message to HR..."
+                        placeholderTextColor={colors.muted}
+                        value={replyText}
+                        onChangeText={(txt) => {
+                          setReplyText(txt);
+                          emitMobileSocketEvent('enquiry.typing', {
+                            enquiryId: selectedEnquiry._id,
+                            isTyping: txt.length > 0,
+                          });
+                        }}
+                        multiline
+                      />
+
+                      <PressableScale
+                        onPress={handleSendReply}
+                        disabled={!replyText.trim() || isSendingReply}
+                        style={[
+                          styles.replySendBtn,
+                          (!replyText.trim() || isSendingReply) && styles.replySendBtnDisabled,
+                        ]}
+                      >
+                        {isSendingReply ? (
+                          <ActivityIndicator size="small" color={colors.white} />
+                        ) : (
+                          <Send size={16} color={colors.white} strokeWidth={2.4} />
+                        )}
+                      </PressableScale>
+                    </View>
+                  </View>
                 )}
-              </TouchableOpacity>
+            </KeyboardAvoidingView>
+          </Screen>
+        </Modal>
+
+        {/* ================================================================= */}
+        {/* REOPEN MODAL */}
+        {/* ================================================================= */}
+        <Modal
+          visible={showReopenModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowReopenModal(false)}
+        >
+          <View style={styles.dialogOverlay}>
+            <View style={styles.dialogCard}>
+              <View style={styles.dialogHeader}>
+                <RotateCcw size={20} color={colors.warning} strokeWidth={2} />
+                <Text variant="subheading" color={colors.text}>
+                  Reopen Ticket
+                </Text>
+              </View>
+              <Text variant="caption" color={colors.muted} style={styles.dialogDesc}>
+                Please describe why this issue requires further review or assistance from HR:
+              </Text>
+
+              <TextInput
+                style={[styles.textInput, styles.textArea, { minHeight: 90 }]}
+                placeholder="e.g. My attendance records are still not adjusted on Monday..."
+                placeholderTextColor={colors.muted}
+                value={reopenReason}
+                onChangeText={setReopenReason}
+                multiline
+              />
+
+              <View style={styles.dialogActions}>
+                <Button
+                  label="Cancel"
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => setShowReopenModal(false)}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  label="Confirm Reopen"
+                  size="sm"
+                  variant="primary"
+                  loading={isReopening}
+                  onPress={handleReopen}
+                  style={{ flex: 1.4 }}
+                />
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      {/* ================================================================= */}
-      {/* IMAGE LIGHTBOX MODAL */}
-      {/* ================================================================= */}
-      <Modal visible={lightboxImage !== null} transparent animationType="fade">
-        <View style={styles.lightboxOverlay}>
-          <TouchableOpacity
-            style={styles.lightboxClose}
-            onPress={() => setLightboxImage(null)}
-          >
-            <Icon name="close" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
-          {lightboxImage && (
-            <Image
-              source={{ uri: lightboxImage }}
-              style={styles.lightboxImg}
-              resizeMode="contain"
-            />
-          )}
-        </View>
-      </Modal>
-    </View>
+        {/* ================================================================= */}
+        {/* IMAGE LIGHTBOX MODAL */}
+        {/* ================================================================= */}
+        <Modal visible={lightboxImage !== null} transparent animationType="fade">
+          <View style={styles.lightboxOverlay}>
+            <PressableScale
+              onPress={() => setLightboxImage(null)}
+              style={styles.lightboxCloseBtn}
+            >
+              <X size={24} color={colors.white} strokeWidth={2.4} />
+            </PressableScale>
+            {lightboxImage && (
+              <Image
+                source={{ uri: lightboxImage }}
+                style={styles.lightboxImage}
+                resizeMode="contain"
+              />
+            )}
+          </View>
+        </Modal>
+      </Screen>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.base,
   },
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: colors.background.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.subtle,
+  containerWide: {
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
   },
-  tabButton: {
+  segmentWrapper: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(20, 23, 39, 0.72)',
+    borderRadius: radii.full,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  segmentButton: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: radii.full,
   },
-  tabButtonActive: {
-    borderBottomColor: colors.accent.cyan,
-  },
-  tabText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.muted,
-    fontWeight: "600",
-  },
-  tabTextActive: {
-    color: colors.accent.cyan,
+  segmentButtonActive: {
+    backgroundColor: colors.indigo,
   },
   tabContent: {
     flex: 1,
   },
+  filterBar: {
+    paddingBottom: spacing.sm,
+  },
   filterScroll: {
-    maxHeight: 50,
-    backgroundColor: colors.background.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.subtle,
-  },
-  filterScrollContent: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
     gap: spacing.sm,
   },
-  filterChip: {
+  filterPill: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: 6,
     borderRadius: radii.full,
-    backgroundColor: colors.background.elevated,
+    backgroundColor: 'rgba(20, 23, 39, 0.72)',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  filterChipActive: {
-    backgroundColor: colors.accent.cyan,
+  filterPillActive: {
+    borderColor: colors.indigoSoft,
+    backgroundColor: 'rgba(89, 101, 242, 0.18)',
   },
-  filterChipText: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.secondary,
-    fontWeight: "600",
+  skeletonContainer: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
-  filterChipTextActive: {
-    color: "#FFFFFF",
+  skeletonSpacer: {
+    height: spacing.sm,
   },
-  centerContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-    gap: spacing.sm,
+  cardSpacing: {
+    marginBottom: spacing.xs,
   },
-  mutedText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text.muted,
-    textAlign: "center",
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  emptyCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+  },
+  emptyIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(89, 101, 242, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
   emptyTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: "700",
-    color: colors.text.primary,
     marginTop: spacing.xs,
+    marginBottom: spacing.xxs,
   },
-  ctaButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.accent.cyan,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
+  emptyDesc: {
+    textAlign: 'center',
+    maxWidth: 280,
+    marginBottom: spacing.lg,
+  },
+  emptyActionBtn: {
+    minWidth: 180,
+  },
+  retryBtn: {
     marginTop: spacing.md,
+    minWidth: 120,
   },
-  ctaButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: typography.sizes.sm,
-  },
-  errorText: {
-    color: colors.status.danger,
-    fontSize: typography.sizes.sm,
-    textAlign: "center",
-  },
-  retryButton: {
+  ticketsList: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.background.elevated,
-    borderRadius: radii.md,
-    marginTop: spacing.sm,
-  },
-  retryButtonText: {
-    color: colors.text.primary,
-    fontWeight: "600",
-  },
-  listContent: {
-    padding: spacing.md,
-    gap: spacing.sm,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.md,
   },
   ticketCard: {
-    backgroundColor: colors.background.surface,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
-  ticketHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  ticketCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  ticketHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
+  ticketMetaLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   ticketNumber: {
-    fontSize: typography.sizes.xs,
-    fontWeight: "700",
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-    color: colors.accent.cyan,
+    color: colors.indigoSoft,
+    fontSize: 12,
   },
-  categoryPill: {
-    backgroundColor: colors.background.elevated,
-    paddingHorizontal: spacing.xs,
+  categoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(30, 34, 56, 0.65)',
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radii.sm,
-  },
-  categoryPillText: {
-    fontSize: 10,
-    color: colors.text.secondary,
-    fontWeight: "600",
-  },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radii.full,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   ticketSubject: {
-    fontSize: typography.sizes.sm,
-    fontWeight: "600",
-    color: colors.text.primary,
-    marginTop: spacing.xs,
+    marginTop: spacing.xxs,
   },
   ticketFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: spacing.xs,
     paddingTop: spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
+    borderTopColor: colors.border,
   },
-  footerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  footerAssignee: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.muted,
-  },
-  footerRight: {
-    flexDirection: "row",
-    alignItems: "center",
+  assigneeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.status.danger,
+  assigneeAvatar: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(30, 34, 56, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  footerDate: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.muted,
+  footerDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  unreadPulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: colors.danger,
   },
 
   // Form Styles
@@ -1164,409 +1391,368 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   formContent: {
-    padding: spacing.md,
-    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.giant,
+    gap: spacing.lg,
   },
-  formSectionHeader: {
-    fontSize: typography.sizes.xs,
-    fontWeight: "700",
-    color: colors.text.secondary,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginTop: spacing.sm,
+  formSection: {
+    gap: spacing.xs,
   },
-  categoryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  sectionHeading: {
+    letterSpacing: 0.8,
+    marginBottom: spacing.xxs,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   categoryCard: {
-    width: "31%",
-    backgroundColor: colors.background.surface,
+    width: '48%',
+    backgroundColor: 'rgba(20, 23, 39, 0.72)',
+    borderRadius: radii.lg,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    alignItems: "center",
+    borderColor: colors.border,
     gap: 4,
   },
-  categoryCardActive: {
-    borderColor: colors.accent.cyan,
-    backgroundColor: `${colors.accent.cyan}15`,
+  categoryCardSelected: {
+    borderColor: colors.indigo,
+    backgroundColor: 'rgba(89, 101, 242, 0.18)',
   },
-  categoryCardText: {
-    fontSize: 11,
-    color: colors.text.muted,
-    fontWeight: "600",
+  categoryIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(30, 34, 56, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xxs,
   },
-  categoryCardTextActive: {
-    color: colors.accent.cyan,
+  categoryIconCircleSelected: {
+    backgroundColor: colors.indigo,
   },
   priorityRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: spacing.sm,
   },
-  priorityChip: {
+  priorityPill: {
     flex: 1,
-    paddingVertical: spacing.xs,
-    alignItems: "center",
+    paddingVertical: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: radii.md,
+    backgroundColor: 'rgba(20, 23, 39, 0.72)',
     borderWidth: 1,
-    borderColor: colors.border.subtle,
-    backgroundColor: colors.background.surface,
-  },
-  priorityChipText: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.muted,
+    borderColor: colors.border,
   },
   textInput: {
-    backgroundColor: colors.background.surface,
+    backgroundColor: 'rgba(20, 23, 39, 0.72)',
     borderWidth: 1,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    color: colors.text.primary,
-    fontSize: typography.sizes.sm,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 14,
   },
   textArea: {
-    minHeight: 100,
-    textAlignVertical: "top",
+    minHeight: 110,
+    textAlignVertical: 'top',
   },
-  attachmentButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: colors.accent.cyan,
-    borderRadius: radii.md,
+  attachDashedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(140, 149, 255, 0.4)',
+    borderRadius: radii.lg,
     paddingVertical: spacing.md,
-    backgroundColor: `${colors.accent.cyan}10`,
+    backgroundColor: 'rgba(89, 101, 242, 0.06)',
   },
-  attachmentButtonText: {
-    color: colors.accent.cyan,
-    fontWeight: "600",
-    fontSize: typography.sizes.xs,
-  },
-  attachmentPreviewBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.background.surface,
+  attachmentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(20, 23, 39, 0.85)',
     borderWidth: 1,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.md,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
     padding: spacing.sm,
     gap: spacing.sm,
   },
-  attachmentInfo: {
+  attachmentIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(89, 101, 242, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachmentMeta: {
     flex: 1,
   },
-  attachmentName: {
-    fontSize: typography.sizes.xs,
-    fontWeight: "600",
-    color: colors.text.primary,
+  removeAttButton: {
+    padding: spacing.xs,
   },
-  attachmentSize: {
-    fontSize: 10,
-    color: colors.text.muted,
-  },
-  removeAttBtn: {
-    padding: 2,
-  },
-  submitButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.accent.cyan,
-    paddingVertical: spacing.md,
-    borderRadius: radii.md,
+  submitTicketBtn: {
     marginTop: spacing.md,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: typography.sizes.sm,
   },
 
   // Modal / Thread Styles
-  modalContainer: {
+  modalBody: {
     flex: 1,
-    backgroundColor: colors.background.base,
+    backgroundColor: colors.bg,
   },
   modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.background.surface,
-    paddingHorizontal: spacing.md,
-    paddingTop: Platform.OS === "ios" ? spacing.xl : spacing.md,
-    paddingBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.subtle,
-    gap: spacing.sm,
+    borderBottomColor: colors.border,
+    backgroundColor: 'rgba(13, 16, 27, 0.95)',
+    gap: spacing.md,
   },
-  closeBtn: {
-    padding: 4,
+  modalBackBtn: {
+    padding: spacing.xs,
+    marginLeft: -spacing.xs,
   },
   modalTitleBlock: {
     flex: 1,
+    gap: 2,
   },
-  modalTicketNum: {
-    fontSize: 11,
-    fontWeight: "700",
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-    color: colors.accent.cyan,
+  modalTopMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  modalSubject: {
-    fontSize: typography.sizes.sm,
-    fontWeight: "700",
-    color: colors.text.primary,
+  modalTicketNumber: {
+    fontSize: 12,
+    color: colors.indigoSoft,
   },
-  modalStatusPill: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radii.full,
-  },
-  modalStatusText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  messagesList: {
-    padding: spacing.md,
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
     gap: spacing.md,
   },
-  messageBubbleContainer: {
-    maxWidth: "80%",
+  loadingText: {
+    textAlign: 'center',
   },
-  msgRight: {
-    alignSelf: "flex-end",
+  messagesList: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
   },
-  msgLeft: {
-    alignSelf: "flex-start",
+  messageRow: {
+    maxWidth: '82%',
   },
-  senderRoleLabel: {
-    fontSize: 10,
-    color: colors.text.muted,
-    marginBottom: 2,
-    marginLeft: 4,
-    fontWeight: "600",
+  msgRowRight: {
+    alignSelf: 'flex-end',
   },
-  bubble: {
-    padding: spacing.sm,
-    borderRadius: radii.lg,
+  msgRowLeft: {
+    alignSelf: 'flex-start',
+  },
+  senderPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+    marginLeft: 6,
+  },
+  messageBubble: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radii.xl,
+    gap: 4,
   },
   bubbleEmployee: {
-    backgroundColor: colors.accent.cyan,
+    backgroundColor: colors.indigo,
     borderBottomRightRadius: radii.xs,
   },
   bubbleHr: {
-    backgroundColor: colors.background.surface,
+    backgroundColor: 'rgba(22, 25, 43, 0.92)',
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: colors.border,
     borderBottomLeftRadius: radii.xs,
   },
   messageText: {
-    fontSize: typography.sizes.sm,
-    lineHeight: 18,
+    lineHeight: 20,
   },
-  msgTextEmp: {
-    color: "#FFFFFF",
-  },
-  msgTextHr: {
-    color: colors.text.primary,
-  },
-  msgAttachmentGrid: {
-    marginTop: spacing.xs,
-    gap: spacing.xs,
-  },
-  thumbBox: {
-    flexDirection: "row",
-    alignItems: "center",
+  msgAttachments: {
+    marginTop: 6,
     gap: 4,
-    backgroundColor: "rgba(0,0,0,0.15)",
+  },
+  msgAttachmentThumbnail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: radii.sm,
   },
-  thumbText: {
-    fontSize: 10,
-    fontWeight: "600",
-  },
   messageTime: {
-    fontSize: 9,
-    alignSelf: "flex-end",
-    marginTop: 4,
+    alignSelf: 'flex-end',
+    marginTop: 2,
+    fontSize: 10,
   },
-  msgTimeEmp: {
-    color: "rgba(255,255,255,0.7)",
-  },
-  msgTimeHr: {
-    color: colors.text.muted,
-  },
-  typingIndicatorBox: {
-    flexDirection: "row",
-    alignItems: "center",
+  typingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.xs,
-    padding: spacing.sm,
-    alignSelf: "flex-start",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    alignSelf: 'flex-start',
   },
   typingText: {
-    fontSize: 11,
-    color: colors.text.muted,
-    fontStyle: "italic",
+    fontStyle: 'italic',
   },
   resolvedBanner: {
-    backgroundColor: colors.background.surface,
+    backgroundColor: 'rgba(13, 16, 27, 0.95)',
     borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
-    padding: spacing.md,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   resolvedInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     flex: 1,
   },
   resolvedText: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.secondary,
+    flex: 1,
   },
   reopenButton: {
-    backgroundColor: colors.accent.cyan,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.indigo,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: radii.md,
-  },
-  reopenButtonText: {
-    color: "#FFFFFF",
-    fontSize: typography.sizes.xs,
-    fontWeight: "700",
+    borderRadius: radii.full,
   },
   replyBar: {
-    backgroundColor: colors.background.surface,
+    backgroundColor: 'rgba(13, 16, 27, 0.98)',
     borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
-    padding: spacing.sm,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  replyAttPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.background.elevated,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+  replyAttachmentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(30, 34, 56, 0.9)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
     borderRadius: radii.full,
-    alignSelf: "flex-start",
-    marginBottom: 6,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   replyAttText: {
-    fontSize: 10,
-    color: colors.text.primary,
     maxWidth: 160,
   },
-  replyInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
+  replyControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  attachIconBtn: {
-    padding: 6,
+  replyAttachBtn: {
+    padding: spacing.xs,
   },
   replyInput: {
     flex: 1,
-    backgroundColor: colors.background.elevated,
+    backgroundColor: 'rgba(20, 23, 39, 0.8)',
     borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: Platform.OS === "ios" ? spacing.sm : 6,
-    color: colors.text.primary,
-    fontSize: typography.sizes.sm,
-    maxHeight: 90,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: Platform.OS === 'ios' ? spacing.sm : 6,
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    maxHeight: 85,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  sendBtn: {
-    backgroundColor: colors.accent.cyan,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+  replySendBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.indigo,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sendBtnDisabled: {
+  replySendBtnDisabled: {
     opacity: 0.4,
   },
 
   // Dialog Styles
   dialogOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.lg,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
   },
   dialogCard: {
-    width: "100%",
-    backgroundColor: colors.background.surface,
-    borderRadius: radii.xl,
-    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#0D101B',
+    borderRadius: radii.xxl,
+    borderWidth: 1,
+    borderColor: colors.borderActive,
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  dialogHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
   },
-  dialogTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: "700",
-    color: colors.text.primary,
+  dialogDesc: {
+    lineHeight: 18,
   },
-  dialogSubtitle: {
-    fontSize: typography.sizes.xs,
-    color: colors.text.muted,
-  },
-  dialogButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+  dialogActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  dialogCancel: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  dialogCancelText: {
-    color: colors.text.muted,
-    fontWeight: "600",
-  },
-  dialogConfirm: {
-    backgroundColor: colors.accent.cyan,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-  },
-  dialogConfirmText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
+    marginTop: spacing.xs,
   },
 
   // Lightbox Styles
   lightboxOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.9)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0, 0, 0, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  lightboxClose: {
-    position: "absolute",
-    top: 50,
-    right: 20,
+  lightboxCloseBtn: {
+    position: 'absolute',
+    top: 54,
+    right: 22,
     zIndex: 10,
-    padding: 8,
+    padding: spacing.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: radii.full,
   },
-  lightboxImg: {
-    width: "90%",
-    height: "70%",
+  lightboxImage: {
+    width: '92%',
+    height: '75%',
   },
 });

@@ -58,6 +58,9 @@ export async function getMobileSocket(): Promise<Socket | null> {
       "enquiry.assigned",
       "enquiry.typing",
       "app_release.published",
+      "leave.requested",
+      "leave.decided",
+      "leave.balance_updated",
     ];
 
     handledEvents.forEach((eventName) => {

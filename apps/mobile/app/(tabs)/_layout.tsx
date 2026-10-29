@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Tabs, Redirect } from 'expo-router';
 import {
+  CalendarCheck,
   CalendarDays,
   House,
   LayoutDashboard,
@@ -114,6 +115,17 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
+        name="leave"
+        options={{
+          title: 'Leave',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={String(color)} focused={focused} icon={CalendarCheck} />
+          ),
+          tabBarAccessibilityLabel: 'tab-leave',
+        }}
+      />
+
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
@@ -149,22 +161,25 @@ const styles = StyleSheet.create({
   sideItem: {
     borderRadius: radii.md,
     marginVertical: 4,
-    marginHorizontal: 0,
-    height: 62,
-  },
-  label: {
-    fontFamily: fonts.medium,
-    fontSize: 10,
-    lineHeight: 13,
+    height: 48,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 14,
   },
   iconWrap: {
-    width: 38,
-    height: 28,
-    borderRadius: 9,
+    width: 32,
+    height: 32,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconWrapActive: {
-    backgroundColor: 'rgba(89, 101, 242, 0.14)',
+    backgroundColor: 'rgba(89, 101, 242, 0.16)',
+  },
+  label: {
+    fontFamily: fonts.medium,
+    fontSize: 10,
+    marginTop: 2,
+    letterSpacing: -0.1,
   },
 });

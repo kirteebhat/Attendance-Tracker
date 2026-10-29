@@ -13,9 +13,19 @@ export interface ScreenHeaderProps {
   right?: ReactNode;
   onBack?: () => void;
   backLabel?: string;
+  titleNumberOfLines?: number;
+  subtitleNumberOfLines?: number;
 }
 
-export function ScreenHeader({ title, subtitle, right, onBack, backLabel = 'Back' }: ScreenHeaderProps) {
+export function ScreenHeader({
+  title,
+  subtitle,
+  right,
+  onBack,
+  backLabel = 'Back',
+  titleNumberOfLines = 2,
+  subtitleNumberOfLines,
+}: ScreenHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -40,11 +50,16 @@ export function ScreenHeader({ title, subtitle, right, onBack, backLabel = 'Back
         <ArrowLeft size={19} color={colors.text} strokeWidth={1.9} />
       </PressableScale>
       <View style={styles.copy}>
-        <Text variant="subheading" numberOfLines={1}>
+        <Text variant="subheading" numberOfLines={titleNumberOfLines}>
           {title}
         </Text>
         {subtitle ? (
-          <Text variant="small" color={colors.muted} numberOfLines={1}>
+          <Text
+            variant="small"
+            color={colors.textSecondary}
+            numberOfLines={subtitleNumberOfLines}
+            style={styles.subtitle}
+          >
             {subtitle}
           </Text>
         ) : null}
@@ -75,10 +90,15 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-    gap: 1,
+    justifyContent: 'center',
+    gap: 2,
+  },
+  subtitle: {
+    lineHeight: 16,
   },
   right: {
     alignItems: 'flex-end',
+    justifyContent: 'center',
   },
 });
 

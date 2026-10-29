@@ -683,3 +683,173 @@ export const enquiryApi = {
 
 
 
+
+// ============================================================================
+// LEAVE SUBSYSTEM TYPES & API
+// ============================================================================
+
+export interface LeaveTypeItem {
+  _id: string;
+  name: string;
+  code: string;
+  paid: boolean;
+  annualQuota: number;
+  halfDayAllowed: boolean;
+  description?: string;
+  isActive: boolean;
+}
+
+export interface LeaveBalanceItem {
+  id?: string;
+  _id?: string;
+  employee?: string | { _id?: string; id?: string; employeeId?: string; name?: string };
+  type: LeaveTypeItem | { _id?: string; id?: string; name: string; code: string; paid?: boolean };
+  year?: number;
+  allotted: number;
+  used: number;
+  pending: number;
+  carriedOver: number;
+  available?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LeaveRequestItem {
+  _id: string;
+  employee: string | { _id: string; employeeId?: string; name?: string; department?: string };
+  type: LeaveTypeItem | { _id: string; name: string; code: string; paid?: boolean } | string;
+  startDate: string;
+  endDate: string;
+  isHalfDay: boolean;
+  halfDayType?: "FIRST_HALF" | "SECOND_HALF";
+  workingDays: number;
+  reason: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  decidedBy?: string | { _id: string; name?: string; email?: string };
+  decidedAt?: string;
+  decisionNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateLeaveRequestPayload {
+  type: string;
+  startDate: string;
+  endDate: string;
+  isHalfDay?: boolean;
+  halfDayType?: "FIRST_HALF" | "SECOND_HALF";
+  reason: string;
+}
+
+export const leaveApi = {
+  async getLeaveTypes(): Promise<{ success: boolean; data: LeaveTypeItem[] }> {
+    return apiRequest<{ success: boolean; data: LeaveTypeItem[] }>("/api/leaves/types");
+  },
+
+  async getMyBalances(year?: number): Promise<{
+    success: boolean;
+    data: {
+      employee?: { id: string; employeeId: string; name: string };
+      year?: number;
+      balances: LeaveBalanceItem[];
+    } | LeaveBalanceItem[];
+  }> {
+    const qs = year ? `?year=${year}` : "";
+    return apiRequest(`/api/leaves/balances/my${qs}`);
+  },
+
+  async getMyRequests(params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    success: boolean;
+    data?: LeaveRequestItem[];
+    requests?: LeaveRequestItem[];
+    pagination?: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+    total?: number;
+    page?: number;
+    totalPages?: number;
+  }> {
+    const query = new URLSearchParams();
+    if (params?.status && params.status !== "ALL") query.set("status", params.status);
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+
+    const qs = query.toString();
+    return apiRequest(`/api/leaves/requests/my${qs ? `?${qs}` : ""}`);
+  },
+
+  async applyLeave(payload: CreateLeaveRequestPayload): Promise<{
+    success: boolean;
+    message: string;
+    data: LeaveRequestItem;
+  }> {
+    return apiRequest<{ success: boolean; message: string; data: LeaveRequestItem }>(
+      "/api/leaves/requests",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
+  },
+
+  async cancelLeave(
+    id: string,
+    reason?: string
+  ): Promise<{ success: boolean; message: string; data: LeaveRequestItem }> {
+    return apiRequest<{ success: boolean; message: string; data: LeaveRequestItem }>(
+      `/api/leaves/requests/${id}/cancel`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }
+    );
+  },
+
+  async getAllRequests(params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    success: boolean;
+    data?: LeaveRequestItem[];
+    requests?: LeaveRequestItem[];
+    pagination?: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+    total?: number;
+    page?: number;
+    totalPages?: number;
+  }> {
+    const query = new URLSearchParams();
+    if (params?.status && params.status !== "ALL") query.set("status", params.status);
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+
+    const qs = query.toString();
+    return apiRequest(`/api/leaves/requests${qs ? `?${qs}` : ""}`);
+  },
+
+  async decideRequest(
+    id: string,
+    status: "APPROVED" | "REJECTED",
+    decisionNote?: string
+  ): Promise<{ success: boolean; message: string; data: LeaveRequestItem }> {
+    return apiRequest<{ success: boolean; message: string; data: LeaveRequestItem }>(
+      `/api/leaves/requests/${id}/decision`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ status, decisionNote }),
+      }
+    );
+  },
+};
