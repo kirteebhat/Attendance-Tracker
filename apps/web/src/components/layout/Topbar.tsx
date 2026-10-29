@@ -12,8 +12,6 @@ import {
   Palette,
   Bell,
   Calendar,
-  PanelLeftClose,
-  PanelLeftOpen,
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
   Shield,
@@ -69,7 +67,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   const location = useLocation();
   const { user, logout } = useAuth();
   const { isConnected, isReconnecting } = useSocket();
-  const { theme, resolvedTheme, toggleTheme } = useTheme();
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);

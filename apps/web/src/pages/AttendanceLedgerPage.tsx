@@ -55,6 +55,8 @@ export const AttendanceLedgerPage: React.FC = () => {
   const { socket } = useSocket();
 
   const prefilledEmployeeId = searchParams.get("employeeId") || "";
+  const prefilledStatus = searchParams.get("status") as AttendanceStatus | undefined;
+  const prefilledDateKey = searchParams.get("dateKey") || new Date().toISOString().slice(0, 10);
 
   // 1. Ledger Filter State
   const [filters, setFilters] = useState<AttendanceFilters>({
@@ -62,15 +64,33 @@ export const AttendanceLedgerPage: React.FC = () => {
     limit: 10,
     search: prefilledEmployeeId,
     department: "",
-    status: undefined,
+    status: prefilledStatus || undefined,
     workType: "",
-    dateKey: new Date().toISOString().slice(0, 10),
+    dateKey: prefilledDateKey,
     sortBy: "dateKey",
     sortOrder: "desc",
   });
 
   const [searchInput, setSearchInput] = useState(prefilledEmployeeId);
   const [recentlyUpdatedRowId, setRecentlyUpdatedRowId] = useState<string | null>(null);
+
+  // Synchronize URL search params with filter state if query changes
+  useEffect(() => {
+    const statusParam = searchParams.get("status") as AttendanceStatus | null;
+    const dateKeyParam = searchParams.get("dateKey");
+    const empIdParam = searchParams.get("employeeId");
+
+    setFilters((prev) => ({
+      ...prev,
+      page: 1,
+      status: statusParam || undefined,
+      dateKey: dateKeyParam || prev.dateKey,
+      search: empIdParam !== null ? empIdParam : prev.search,
+    }));
+    if (empIdParam !== null) {
+      setSearchInput(empIdParam);
+    }
+  }, [searchParams]);
 
   // 2. Correction Dialog State
   const [correctingRecord, setCorrectingRecord] = useState<AttendanceRecordItem | null>(null);

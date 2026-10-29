@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Grid, Flame, Info, Calendar } from "lucide-react";
+import { Flame, Calendar } from "lucide-react";
 import { HeatmapCell } from "@vorldx/shared";
 import { Tooltip } from "../ui/Tooltip";
 import { Card } from "../ui/Card";

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Radio, Pause, Play, Filter, ArrowDownRight, ArrowUpRight, Clock, AlertTriangle } from "lucide-react";
+import { Radio, Pause, Play, ArrowDownRight, ArrowUpRight, Clock, AlertTriangle } from "lucide-react";
 import { LiveScanFeedItem, AttendanceStatus } from "@vorldx/shared";
 import { Card } from "../ui/Card";
 import { Badge } from "../ui/Badge";

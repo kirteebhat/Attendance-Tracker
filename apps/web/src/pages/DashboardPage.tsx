@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Users,
   UserCheck,
@@ -54,6 +54,35 @@ export const DashboardPage: React.FC = () => {
 
   const isInitialLoading = (isSummaryLoading && !summaryData) || (isAnalyticsLoading && !liveAnalytics);
 
+  // Compute authentic trend comparisons from summaryData.trends.last7Days if at least 2 days exist
+  const { presentTrend, lateTrend, wfhTrend } = useMemo(() => {
+    const last7Days = summaryData?.trends?.last7Days || [];
+    if (last7Days.length < 2) {
+      return { presentTrend: undefined, lateTrend: undefined, wfhTrend: undefined };
+    }
+
+    const todayItem = last7Days[last7Days.length - 1];
+    const yesterdayItem = last7Days[last7Days.length - 2];
+
+    return {
+      presentTrend: {
+        value: todayItem.presentCount - yesterdayItem.presentCount,
+        isPositiveGood: true,
+        label: "vs yesterday",
+      },
+      lateTrend: {
+        value: todayItem.lateCount - yesterdayItem.lateCount,
+        isPositiveGood: false, // fewer late arrivals is better
+        label: "vs yesterday",
+      },
+      wfhTrend: {
+        value: todayItem.wfhCount - yesterdayItem.wfhCount,
+        isPositiveGood: true,
+        label: "vs yesterday",
+      },
+    };
+  }, [summaryData?.trends?.last7Days]);
+
   if (isInitialLoading) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -76,19 +105,19 @@ export const DashboardPage: React.FC = () => {
         {/* Analytics Charts Skeletons */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <Skeleton className="h-80 w-full rounded-xl" />
+            <Skeleton className="h-80 w-full rounded-2xl" />
           </div>
           <div>
-            <Skeleton className="h-80 w-full rounded-xl" />
+            <Skeleton className="h-80 w-full rounded-2xl" />
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <Skeleton className="h-80 w-full rounded-xl" />
+            <Skeleton className="h-80 w-full rounded-2xl" />
           </div>
           <div>
-            <Skeleton className="h-80 w-full rounded-xl" />
+            <Skeleton className="h-80 w-full rounded-2xl" />
           </div>
         </div>
       </div>
@@ -169,7 +198,7 @@ export const DashboardPage: React.FC = () => {
             <div className="text-xs">
               <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-semibold">Attendance</span>{" "}
               <strong className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">
-                <AnimatedCounter value={attendanceRate} suffix="%" />
+                <AnimatedCounter value={attendanceRate} suffix="%" firstLoadOnly />
               </strong>
             </div>
           </div>
@@ -190,57 +219,67 @@ export const DashboardPage: React.FC = () => {
       {/* Live Announcement & Alert Block */}
       <AnnouncementDashboardBlock />
 
-      {/* 6 Key Animated Metric Cards */}
+      {/* 6 Key Animated Metric Cards with Click-Through and Authentic Trends */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard
           label="Active Staff"
-          value={<AnimatedCounter value={statusSplit.totalActive} />}
+          value={<AnimatedCounter value={statusSplit.totalActive} firstLoadOnly />}
           subtext="Total workforce"
           icon={Users}
           variant="blue"
+          to="/employees"
         />
         <StatCard
           label="Present Today"
-          value={<AnimatedCounter value={statusSplit.present} />}
+          value={<AnimatedCounter value={statusSplit.present} firstLoadOnly />}
           subtext={`${statusSplit.percentages.present}% checked in`}
           icon={UserCheck}
           variant="emerald"
+          to={`/attendance?status=PRESENT&dateKey=${dateKey}`}
+          trend={presentTrend}
         />
         <StatCard
           label="Late Arrivals"
-          value={<AnimatedCounter value={statusSplit.late} />}
+          value={<AnimatedCounter value={statusSplit.late} firstLoadOnly />}
           subtext={`${statusSplit.percentages.late}% beyond grace`}
           icon={ClockAlert}
           variant="amber"
+          to={`/attendance?status=LATE&dateKey=${dateKey}`}
+          trend={lateTrend}
         />
         <StatCard
           label="Approved WFH"
-          value={<AnimatedCounter value={statusSplit.wfh} />}
+          value={<AnimatedCounter value={statusSplit.wfh} firstLoadOnly />}
           subtext="Remote work days"
           icon={Home}
           variant="indigo"
+          to={`/attendance?status=WFH_APPROVED&dateKey=${dateKey}`}
+          trend={wfhTrend}
         />
         <StatCard
           label="On Leave"
-          value={<AnimatedCounter value={statusSplit.leave} />}
+          value={<AnimatedCounter value={statusSplit.leave} firstLoadOnly />}
           subtext="Approved time-off"
           icon={CalendarDays}
           variant="purple"
+          to="/leave"
         />
         <StatCard
           label="Awaiting Scan"
-          value={<AnimatedCounter value={statusSplit.notYetCheckedIn} />}
+          value={<AnimatedCounter value={statusSplit.notYetCheckedIn} firstLoadOnly />}
           subtext="Not checked in yet"
           icon={UserMinus}
           variant="rose"
+          to={`/attendance?status=ABSENT&dateKey=${dateKey}`}
         />
       </div>
 
-      {/* SECTION 1: Hourly Distribution Timeline & Live Scan Feed */}
+      {/* SECTION 1: Hourly Distribution Timeline (or 30D Heatmap) & Live Scan Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <TodayTimelineChart
             hourlyData={liveAnalytics?.hourlyToday || []}
+            heatmapData={liveAnalytics?.heatmap30Days}
             timezone={liveAnalytics?.timezone}
           />
         </div>
@@ -255,16 +294,16 @@ export const DashboardPage: React.FC = () => {
       {/* SECTION 2: Historical Compliance Trends & Department Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          {summaryData && summaryData.trends && (
-            <AttendanceChart
-              last7Days={summaryData.trends.last7Days || []}
-              last30Days={summaryData.trends.last30Days || []}
-            />
-          )}
+          <AttendanceChart
+            last7Days={summaryData?.trends?.last7Days || []}
+            last30Days={summaryData?.trends?.last30Days || []}
+            isLoading={isSummaryLoading}
+          />
         </div>
         <div>
           <DepartmentBars
             departments={liveAnalytics?.departmentBreakdown || []}
+            isLoading={isAnalyticsLoading}
           />
         </div>
       </div>

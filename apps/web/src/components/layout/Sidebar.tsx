@@ -18,7 +18,6 @@ import {
   Package,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Badge } from "../ui/Badge";
