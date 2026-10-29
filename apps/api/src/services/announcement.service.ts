@@ -847,7 +847,7 @@ export class AnnouncementService {
 
   private async createNotificationsForAnnouncement(announcement: IAnnouncement): Promise<void> {
     try {
-      let targetUserQuery: any = { status: "ACTIVE" };
+      const targetUserQuery: any = { status: "ACTIVE" };
 
       if (announcement.audience.scope === "role" && announcement.audience.roles.length > 0) {
         targetUserQuery.role = { $in: announcement.audience.roles };

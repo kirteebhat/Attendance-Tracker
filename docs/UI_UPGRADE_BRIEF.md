@@ -59,3 +59,4 @@ Per Section 5 of the Master Engineering Brief, the following remain **strictly o
 - **Dynamic Lazy-Loading**: All heavy dependencies (`three`, `@react-three/fiber`, chart visualizers) must be code-split using dynamic `import()` and `React.lazy()` behind their respective feature flags (`threeD`, etc.).
 - **Tab Inactivity Pause**: WebGL animation loops must hook into `document.visibilityState` / `visibilitychange` to set `frameloop="never"` when tabs are inactive.
 - **Low-End Hardware Fallbacks**: Automatically fall back to 2D SVG vector indicators on devices with $\le 2$ CPU cores, $< 4\text{ GB}$ RAM, or WebGL context creation failure.
+

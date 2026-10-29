@@ -454,7 +454,9 @@ describe("Mongoose Models & Schema Constraints", () => {
       const hrId = new Types.ObjectId();
 
       const enquiry = await Enquiry.create({
+        ticketNumber: "ENQ-99999",
         employee: empId,
+        employeeUser: empId,
         category: "PAYROLL",
         subject: "Discrepancy in February tax deduction",
         status: "OPEN",

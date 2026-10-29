@@ -103,6 +103,24 @@
   }
 }
 
+@layer components {
+  .table-container {
+    @apply w-full overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm;
+  }
+  .table-base {
+    @apply w-full text-left border-collapse text-sm;
+  }
+  .table-header {
+    @apply bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 py-3.5 px-4;
+  }
+  .table-row-hover {
+    @apply border-b border-slate-100 dark:border-slate-800/60 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40;
+  }
+  .table-cell {
+    @apply py-3.5 px-4 text-slate-700 dark:text-slate-200 text-sm align-middle;
+  }
+}
+
 /* Strict prefers-reduced-motion override everywhere */
 @media (prefers-reduced-motion: reduce) {
   *,

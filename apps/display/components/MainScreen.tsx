@@ -33,6 +33,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
   const [terminalState, setTerminalState] = useState<TerminalState>("INITIALIZING");
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [showUnpairConfirm, setShowUnpairConfirm] = useState<boolean>(false);
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const [remainingSeconds, setRemainingSeconds] = useState<number>(30);
   const [isRotating, setIsRotating] = useState<boolean>(false);
@@ -291,10 +292,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
   }, [requestNewChallenge]);
 
   const handleManualUnpair = () => {
-    if (confirm("Are you sure you want to unpair this display monitor?")) {
-      clearStoredCredentials();
-      onUnpair();
-    }
+    setShowUnpairConfirm(true);
+  };
+
+  const confirmUnpair = () => {
+    setShowUnpairConfirm(false);
+    clearStoredCredentials();
+    onUnpair();
   };
 
   return (
@@ -565,6 +569,59 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
             <p className="text-xs text-slate-400">
               Safely reloading kiosk to apply update v{pendingUpdate?.version || "latest"}...
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ACCESSIBLE UNPAIR CONFIRMATION DIALOG */}
+      {showUnpairConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="region"
+          aria-label="Confirmation overlay"
+        >
+          <div
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowUnpairConfirm(false)}
+            aria-hidden="true"
+          />
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="unpair-dialog-title"
+            aria-describedby="unpair-dialog-desc"
+            className="relative w-full max-w-md rounded-2xl bg-brand-900 border border-slate-700/80 p-6 shadow-2xl z-10 text-slate-100"
+          >
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl p-3 bg-rose-500/15 border border-rose-500/30 text-rose-400 shrink-0">
+                <AlertTriangle className="w-6 h-6" aria-hidden="true" />
+              </div>
+              <div>
+                <h3 id="unpair-dialog-title" className="text-lg font-bold text-white tracking-tight">
+                  Unpair Display Terminal?
+                </h3>
+                <p id="unpair-dialog-desc" className="mt-2 text-sm text-slate-300 leading-relaxed">
+                  This will disconnect the kiosk monitor from the active challenge feed. To reconnect, the display will need to be re-paired with an admin registration code.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowUnpairConfirm(false)}
+                className="px-4 py-2 text-sm font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+              >
+                Keep Paired
+              </button>
+              <button
+                type="button"
+                onClick={confirmUnpair}
+                className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-500 active:bg-rose-700 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 shadow-sm"
+              >
+                Unpair Monitor
+              </button>
+            </div>
           </div>
         </div>
       )}

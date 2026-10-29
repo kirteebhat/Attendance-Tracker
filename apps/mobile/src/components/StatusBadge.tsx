@@ -8,6 +8,8 @@ export type BadgeStatus =
   | "PRESENT"
   | "LATE"
   | "WFH"
+  | "LEAVE"
+  | "HOLIDAY"
   | "ABSENT"
   | "DEMO"
   | "PENDING"
@@ -52,6 +54,18 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, style }
       bgColor = colors.status.wfhBg;
       textColor = colors.status.wfh;
       dotColor = colors.status.wfh;
+      break;
+    case "LEAVE":
+    case "ON_LEAVE":
+      bgColor = colors.status.leaveBg;
+      textColor = colors.status.leave;
+      dotColor = colors.status.leave;
+      break;
+    case "HOLIDAY":
+    case "PUBLIC_HOLIDAY":
+      bgColor = colors.status.holidayBg;
+      textColor = colors.status.holiday;
+      dotColor = colors.status.holiday;
       break;
     case "DEMO":
       bgColor = colors.status.demoBg;

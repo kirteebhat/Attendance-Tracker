@@ -61,26 +61,26 @@ export const Modal: React.FC<ModalProps> = ({
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
         className={clsx(
-          "relative w-full bg-white rounded-2xl shadow-2xl border border-slate-200 z-10 overflow-hidden animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col",
+          "relative w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-10 overflow-hidden animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col transition-colors",
           maxWidthMap[maxWidth]
         )}
       >
         {/* Header */}
         {(title || description) && (
-          <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-4 shrink-0 bg-slate-50/70">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4 shrink-0 bg-slate-50/70 dark:bg-slate-800/60">
             <div>
               {title && (
-                <h3 id="modal-title" className="text-lg font-bold text-slate-900">
+                <h3 id="modal-title" className="text-lg font-bold text-slate-900 dark:text-slate-100">
                   {title}
                 </h3>
               )}
               {description && (
-                <p className="text-xs text-slate-500 mt-0.5">{description}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               aria-label="Close dialog"
             >
               <X className="w-5 h-5" />
@@ -89,7 +89,7 @@ export const Modal: React.FC<ModalProps> = ({
         )}
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto">{children}</div>
+        <div className="p-6 overflow-y-auto text-slate-900 dark:text-slate-100">{children}</div>
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { tokenStorage } from "./storage";
 let socketInstance: Socket | null = null;
 type SocketEventCallback = (payload: unknown) => void;
 const eventSubscribers = new Map<string, Set<SocketEventCallback>>();
-let resyncSubscribers = new Set<() => void>();
+const resyncSubscribers = new Set<() => void>();
 
 /**
  * Connects or returns existing Socket.io client instance authenticated with the user's JWT.

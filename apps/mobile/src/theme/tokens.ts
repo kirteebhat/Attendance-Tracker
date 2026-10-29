@@ -47,6 +47,16 @@ export const colors = {
     absentBg: "rgba(239, 68, 68, 0.15)",
     wfh: "#6366F1", // Indigo
     wfhBg: "rgba(99, 102, 241, 0.15)",
+    leave: "#06B6D4", // Cyan
+    leaveBg: "rgba(6, 182, 212, 0.15)",
+    holiday: "#8B5CF6", // Purple
+    holidayBg: "rgba(139, 92, 246, 0.15)",
+    pending: "#F59E0B", // Amber
+    pendingBg: "rgba(245, 158, 11, 0.15)",
+    approved: "#10B981", // Emerald
+    approvedBg: "rgba(16, 185, 129, 0.15)",
+    rejected: "#EF4444", // Rose
+    rejectedBg: "rgba(239, 68, 68, 0.15)",
     demo: "#8B5CF6", // Violet demo badge
     demoBg: "rgba(139, 92, 246, 0.15)",
     warning: "#F59E0B",

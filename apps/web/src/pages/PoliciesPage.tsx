@@ -18,6 +18,7 @@ import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { Skeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useToast } from "../components/ui/Toast";
@@ -116,6 +117,7 @@ export const PoliciesPage: React.FC = () => {
 
   // Holiday Modal State
   const [showAddHolidayModal, setShowAddHolidayModal] = useState(false);
+  const [holidayToDelete, setHolidayToDelete] = useState<HolidayItem | null>(null);
   const [holidayForm, setHolidayForm] = useState({
     name: "",
     dateKey: "",
@@ -381,15 +383,20 @@ export const PoliciesPage: React.FC = () => {
     }
   };
 
-  const handleDeleteHoliday = async (holiday: HolidayItem) => {
-    if (!window.confirm(`Delete holiday '${holiday.name}' (${holiday.dateKey})?`)) return;
+  const handleDeleteHoliday = (holiday: HolidayItem) => {
+    setHolidayToDelete(holiday);
+  };
+
+  const confirmDeleteHoliday = async () => {
+    if (!holidayToDelete) return;
     try {
-      await deleteHolidayMutation.mutateAsync(holiday._id);
+      await deleteHolidayMutation.mutateAsync(holidayToDelete._id);
       toast({
         title: "Holiday Deleted",
-        description: `${holiday.name} was removed from the calendar.`,
+        description: `${holidayToDelete.name} was removed from the calendar.`,
         type: "info",
       });
+      setHolidayToDelete(null);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to delete holiday";
       toast({ title: "Delete Failed", description: message, type: "error" });
@@ -1168,6 +1175,23 @@ export const PoliciesPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Accessible Confirmation Dialog for Holiday Deletion */}
+      <ConfirmDialog
+        isOpen={!!holidayToDelete}
+        onClose={() => setHolidayToDelete(null)}
+        onConfirm={confirmDeleteHoliday}
+        title="Delete Holiday"
+        message={
+          holidayToDelete
+            ? `Are you sure you want to remove '${holidayToDelete.name}' (${holidayToDelete.dateKey}) from the holiday schedule?`
+            : ""
+        }
+        confirmText="Delete Holiday"
+        cancelText="Keep Holiday"
+        variant="danger"
+        isLoading={deleteHolidayMutation.isPending}
+      />
     </div>
   );
 };
