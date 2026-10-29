@@ -115,15 +115,15 @@ export const DashboardPage: React.FC = () => {
 
   const dateKey = liveAnalytics?.dateKey || summaryData?.dateKey || "Today";
   const statusSplit = liveAnalytics?.statusSplit || {
-    present: summaryData?.summary.presentToday || 0,
-    late: summaryData?.summary.lateToday || 0,
+    present: summaryData?.summary?.presentToday || 0,
+    late: summaryData?.summary?.lateToday || 0,
     absent: 0,
     leave: 0,
-    wfh: summaryData?.summary.wfhToday || 0,
-    notYetCheckedIn: summaryData?.summary.notYetCheckedInToday || 0,
-    totalActive: summaryData?.summary.totalActiveEmployees || 0,
+    wfh: summaryData?.summary?.wfhToday || 0,
+    notYetCheckedIn: summaryData?.summary?.notYetCheckedInToday || 0,
+    totalActive: summaryData?.summary?.totalActiveEmployees || 0,
     percentages: {
-      present: summaryData?.summary.attendanceRate || 0,
+      present: summaryData?.summary?.attendanceRate || 0,
       late: 0,
       absent: 0,
       leave: 0,
@@ -135,7 +135,7 @@ export const DashboardPage: React.FC = () => {
   const attendanceRate =
     statusSplit.totalActive > 0
       ? Math.round(((statusSplit.present + statusSplit.wfh) / statusSplit.totalActive) * 100)
-      : summaryData?.summary.attendanceRate || 0;
+      : summaryData?.summary?.attendanceRate || 0;
 
   return (
     <div className="space-y-6">
@@ -255,10 +255,10 @@ export const DashboardPage: React.FC = () => {
       {/* SECTION 2: Historical Compliance Trends & Department Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          {summaryData && (
+          {summaryData && summaryData.trends && (
             <AttendanceChart
-              last7Days={summaryData.trends.last7Days}
-              last30Days={summaryData.trends.last30Days}
+              last7Days={summaryData.trends.last7Days || []}
+              last30Days={summaryData.trends.last30Days || []}
             />
           )}
         </div>
@@ -270,7 +270,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* SECTION 3: Recent Activity Audit Feed */}
-      {summaryData && summaryData.recentActivity.length > 0 && (
+      {summaryData?.recentActivity && summaryData.recentActivity.length > 0 && (
         <div className="grid grid-cols-1 gap-6">
           <RecentActivity activities={summaryData.recentActivity} />
         </div>

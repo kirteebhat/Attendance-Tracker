@@ -23,3 +23,4 @@ export default function DisplayLayout({ children }: { children: React.ReactNode 
     </html>
   );
 }
+
