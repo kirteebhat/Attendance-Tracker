@@ -17,3 +17,4 @@ export const Icon: React.FC<IconProps> = ({ name, size = 20, color = "#FFFFFF", 
   const IconComponent: any = Ionicons;
   return <IconComponent name={name} size={size} color={color} style={style} />;
 };
+
