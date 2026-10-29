@@ -4,8 +4,34 @@ import { STATUS_REGISTRY, getStatusDescriptor, type StatusCategory } from '@vorl
 export { STATUS_REGISTRY, getStatusDescriptor, type StatusCategory };
 
 // -----------------------------------------------------------------------------
-// Safal's Cyberpunk / Liquid Glass Color Palette
+// Safal's Cyberpunk / Liquid Glass Color Palette (Dual-Access for Colleague Components)
 // -----------------------------------------------------------------------------
+const textBase = new String('#F4F5FF') as unknown as string & {
+  primary: string;
+  secondary: string;
+  muted: string;
+  accent: string;
+  danger: string;
+  success: string;
+};
+(textBase as any).primary = '#F4F5FF';
+(textBase as any).secondary = '#B3B7CE';
+(textBase as any).muted = '#7E849E';
+(textBase as any).accent = '#76B8FF';
+(textBase as any).danger = '#FF6B83';
+(textBase as any).success = '#45D6A6';
+
+const borderBase = new String('rgba(184, 190, 255, 0.13)') as unknown as string & {
+  subtle: string;
+  light: string;
+  active: string;
+  accent: string;
+};
+(borderBase as any).subtle = 'rgba(184, 190, 255, 0.13)';
+(borderBase as any).light = 'rgba(184, 190, 255, 0.22)';
+(borderBase as any).active = 'rgba(133, 145, 255, 0.42)';
+(borderBase as any).accent = '#5965F2';
+
 export const colors = {
   bg: '#07080E',
   bgRaised: '#0D101B',
@@ -17,7 +43,7 @@ export const colors = {
   indigo: '#5965F2',
   indigoSoft: '#8C95FF',
   lavender: '#9194BA',
-  text: '#F4F5FF',
+  text: textBase,
   textSecondary: '#B3B7CE',
   muted: '#7E849E',
   success: '#45D6A6',
@@ -25,7 +51,7 @@ export const colors = {
   danger: '#FF6B83',
   info: '#76B8FF',
   leave: '#C4A7FF',
-  border: 'rgba(184, 190, 255, 0.13)',
+  border: borderBase,
   borderActive: 'rgba(133, 145, 255, 0.42)',
   white: '#FFFFFF',
   black: '#000000',
@@ -58,6 +84,9 @@ export const colors = {
     wfhBg: 'rgba(118, 184, 255, 0.14)',
     demo: '#C4A7FF',
     demoBg: 'rgba(196, 167, 255, 0.14)',
+    warning: '#F5C76B',
+    danger: '#FF6B83',
+    success: '#45D6A6',
   },
 } as const;
 
@@ -152,6 +181,13 @@ export const shadows = {
     shadowRadius: 12,
     elevation: 6,
   },
+  glowCyan: {
+    shadowColor: '#76B8FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
+  },
 } as const;
 
 export const tones = {
@@ -174,6 +210,14 @@ export const typography = {
   xl: { fontSize: 20, lineHeight: 28, fontFamily: fonts.semibold },
   xxl: { fontSize: 24, lineHeight: 32, fontFamily: fonts.bold },
   hero: { fontSize: 32, lineHeight: 40, fontFamily: fonts.bold },
+  sizes: {
+    xs: 11,
+    sm: 13,
+    md: 15,
+    lg: 17,
+    xl: 20,
+    xxl: 24,
+  },
 } as const;
 
 export function getMobileStatusTheme(status: string | StatusCategory) {

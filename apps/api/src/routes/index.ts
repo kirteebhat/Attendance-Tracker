@@ -12,6 +12,12 @@ import { reportRouter } from "./report.routes";
 import { auditRouter } from "./audit.routes";
 import { calendarRouter } from "./calendar.routes";
 import { leaveRouter } from "./leave.routes";
+import { announcementRouter } from "./announcement.routes";
+import { enquiryRouter } from "./enquiry.routes";
+import { updateRouter } from "./update.routes";
+import { updateController } from "../controllers/update.controller";
+import { analyticsRouter } from "./analytics.routes";
+import { presenceRouter } from "./presence.routes";
 import featureFlagRoutes from "./featureFlag.routes";
 import extensionRoutes from "./extension.routes";
 import { AppError } from "../utils/AppError";
@@ -46,6 +52,20 @@ router.use("/api/leaves", leaveRouter);
 router.use("/leaves", leaveRouter);
 router.use("/api/admin/leave", leaveRouter);
 
+// Announcements & Broadcasts Subsystem (protected by 'announcements' feature flag)
+router.use("/api/announcements", announcementRouter);
+router.use("/announcements", announcementRouter);
+
+// Support Enquiries & Ticket Resolution Subsystem (protected by 'enquiries' feature flag)
+router.use("/api/enquiries", enquiryRouter);
+router.use("/enquiries", enquiryRouter);
+
+// OTA Updates & App Release Management
+router.use("/api/updates", updateRouter);
+router.use("/updates", updateRouter);
+router.get("/api/version", updateController.getVersion);
+router.get("/version.json", updateController.getVersion);
+
 // Office QR Display & Terminal endpoints (supports both /api/displays and /api/terminals)
 router.use("/api/displays", qrRouter);
 router.use("/api/terminals", qrRouter);
@@ -65,6 +85,11 @@ router.use("/dashboard", dashboardRouter);
 router.use("/api/dashboard", dashboardRouter);
 router.use("/api/admin/dashboard", dashboardRouter);
 
+// Live Attendance Analytics endpoints
+router.use("/analytics", analyticsRouter);
+router.use("/api/analytics", analyticsRouter);
+router.use("/api/admin/analytics", analyticsRouter);
+
 // Reporting & CSV Export endpoints
 router.use("/reports", reportRouter);
 router.use("/api/reports", reportRouter);
@@ -78,6 +103,9 @@ router.use("/api/admin/audit-logs", auditRouter);
 // Feature Flags & Extension endpoints
 router.use("/api", featureFlagRoutes);
 router.use("/api", extensionRoutes);
+
+// Real-Time HR Presence endpoints
+router.use(presenceRouter);
 
 // Test routes for integration verification (active in non-production)
 if (process.env.NODE_ENV !== "production") {

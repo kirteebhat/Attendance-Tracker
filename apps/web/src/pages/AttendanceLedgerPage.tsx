@@ -333,6 +333,7 @@ export const AttendanceLedgerPage: React.FC = () => {
               <option value={AttendanceStatus.LATE}>LATE</option>
               <option value={AttendanceStatus.CHECKED_OUT}>CHECKED_OUT</option>
               <option value={AttendanceStatus.WFH_APPROVED}>WFH_APPROVED</option>
+              <option value={AttendanceStatus.ON_LEAVE}>ON_LEAVE</option>
               <option value={AttendanceStatus.HALF_DAY}>HALF_DAY</option>
               <option value={AttendanceStatus.ABSENT}>ABSENT</option>
               <option value={AttendanceStatus.INCOMPLETE}>INCOMPLETE</option>
@@ -583,11 +584,13 @@ export const AttendanceLedgerPage: React.FC = () => {
                                   ? "warning"
                                   : rec.status === AttendanceStatus.WFH_APPROVED
                                     ? "info"
-                                    : rec.status === AttendanceStatus.CHECKED_OUT
-                                      ? "primary"
-                                      : rec.status === AttendanceStatus.ABSENT
-                                        ? "danger"
-                                        : "neutral"
+                                    : rec.status === AttendanceStatus.ON_LEAVE
+                                      ? "incomplete"
+                                      : rec.status === AttendanceStatus.CHECKED_OUT
+                                        ? "primary"
+                                        : rec.status === AttendanceStatus.ABSENT
+                                          ? "danger"
+                                          : "neutral"
                             }
                             size="sm"
                           >

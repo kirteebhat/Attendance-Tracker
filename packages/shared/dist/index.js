@@ -37,7 +37,9 @@ __exportStar(require("./schemas/staffAuth"), exports);
 __exportStar(require("./schemas/appRelease"), exports);
 __exportStar(require("./schemas/savedView"), exports);
 __exportStar(require("./schemas/notification"), exports);
+__exportStar(require("./schemas/analytics"), exports);
 // Types
 __exportStar(require("./types"), exports);
 // Time & State Utilities
 __exportStar(require("./utils/time"), exports);
+__exportStar(require("./utils/semver"), exports);

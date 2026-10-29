@@ -1809,15 +1809,20 @@ Mounted under `/reports`, `/api/reports`, and `/api/admin/reports`. All endpoint
 
 ---
 
-### 7.3 Announcements API
+### 7.3 Announcements Subsystem API (Behind `announcements` Feature Flag)
+
+Guarded by `requireFeatureFlag("announcements")`. When the flag is disabled, all endpoints return `404 Not Found` (`ERR_NOT_FOUND`).
 
 #### 7.3.1 `GET /api/announcements`
 - **Role**: `Authenticated (All)`
-- **Description**: Returns active announcements sorted by pinned status, priority, and date. Automatically filters out expired items.
+- **Description**: Returns active announcements visible to the current authenticated user based on audience scoping (`all`, matching `department`, or matching `role`), active date window (`startsAt <= now` and not expired), sorted by pinned status descending, priority descending, and start date descending. Each item includes calculated `isRead` and virtual `isAuto` fields.
+- **Query Params**:
+  - `limit` (optional, default: `50`, max: `100`)
 - **Response (200 OK)**:
   ```json
   {
     "success": true,
+    "count": 2,
     "data": [
       {
         "_id": "6714c400...",
@@ -1827,73 +1832,301 @@ Mounted under `/reports`, `/api/reports`, and `/api/admin/reports`. All endpoint
         "pinned": true,
         "startsAt": "2026-10-27T00:00:00.000Z",
         "expiresAt": "2026-10-28T23:59:59.000Z",
+        "audience": {
+          "scope": "all",
+          "departments": [],
+          "roles": []
+        },
         "source": "manual",
-        "isRead": false
+        "isAuto": false,
+        "isRead": false,
+        "createdAt": "2026-10-27T00:00:00.000Z"
+      },
+      {
+        "_id": "6714c401...",
+        "title": "Tomorrow is a holiday: Republic Day",
+        "body": "Office will remain closed tomorrow in observance of Republic Day.",
+        "priority": "HIGH",
+        "pinned": false,
+        "startsAt": "2026-01-25T00:00:00.000Z",
+        "expiresAt": "2026-01-26T23:59:59.000Z",
+        "audience": { "scope": "all" },
+        "source": "auto",
+        "isAuto": true,
+        "isRead": true,
+        "createdAt": "2026-01-25T00:00:00.000Z"
       }
     ]
   }
   ```
 
-#### 7.3.2 `POST /api/announcements`
+#### 7.3.2 `GET /api/announcements/unread-count`
+- **Role**: `Authenticated (All)`
+- **Description**: Returns the count of unread, active announcements targeting the authenticated user.
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "unreadCount": 1
+  }
+  ```
+
+#### 7.3.3 `POST /api/announcements/:id/read`
+- **Role**: `Authenticated (All)`
+- **Description**: Marks the specified announcement as read by the calling user. Atomic operation adding `userId` to `readBy` set.
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Announcement marked as read."
+  }
+  ```
+
+#### 7.3.4 `GET /api/announcements/admin`
 - **Role**: `HR` / `ADMIN`
+- **Description**: Paginated management list of all announcements including future-scheduled, active, expired, and auto-generated items.
+- **Query Params**:
+  - `status`: "active" | "scheduled" | "expired"
+  - `source`: "manual" | "auto"
+  - `scope`: "all" | "department" | "role"
+  - `department`: string
+  - `priority`: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
+  - `pinned`: `true` | `false`
+  - `search`: string (matches title or body)
+  - `page`: integer (default: 1)
+  - `limit`: integer (default: 20)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "data": [ ... ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 45,
+      "pages": 3
+    }
+  }
+  ```
+
+#### 7.3.5 `POST /api/announcements`
+- **Role**: `HR` / `ADMIN`
+- **Description**: Creates a manual broadcast announcement with audience targeting, priority, pinned status, and validity window. Dispatches realtime WebSocket event and creates user notifications for HIGH/URGENT items. Logged in audit trail.
 - **Request Body**:
   ```json
   {
-    "title": "Office Deep Clean Schedule",
-    "body": "Office sanitization scheduled for Friday evening.",
-    "priority": "MEDIUM",
-    "pinned": false,
-    "startsAt": "2026-10-30T10:00:00.000Z"
+    "title": "Quarterly All-Hands Meeting",
+    "body": "Please join us in the main amphitheater or via remote streaming.",
+    "priority": "HIGH",
+    "pinned": true,
+    "startsAt": "2026-11-01T09:00:00.000Z",
+    "expiresAt": "2026-11-01T18:00:00.000Z",
+    "audience": {
+      "scope": "department",
+      "departments": ["Engineering", "Product"]
+    }
   }
   ```
-- **Socket Event Dispatched**: `announcement.published` -> `all`.
+- **Response (201 Created)**: Returns created announcement object.
+- **Socket Events**: `announcement.published` (room: `all` or respective department/role rooms).
+- **Audit Event**: `ANNOUNCEMENT` - `CREATE`.
 
-#### 7.3.3 `POST /api/announcements/:id/read`
-- **Role**: `Authenticated`
-- **Description**: Marks announcement as read by the calling user.
+#### 7.3.6 `PUT /api/announcements/:id`
+- **Role**: `HR` / `ADMIN`
+- **Description**: Updates an existing announcement's content, schedule, priority, pinned state, or audience.
+- **Request Body**: Partial update object with fields to modify.
+- **Response (200 OK)**: Returns updated announcement document.
+- **Socket Events**: Emits `announcement.pinned` if pinned state was toggled.
+- **Audit Event**: `ANNOUNCEMENT` - `UPDATE`.
 
----
+#### 7.3.7 `DELETE /api/announcements/:id`
+- **Role**: `HR` / `ADMIN`
+- **Description**: Deletes an announcement permanently.
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Announcement deleted successfully."
+  }
+  ```
+- **Audit Event**: `ANNOUNCEMENT` - `DELETE`.
 
-### 7.4 Support Enquiries & Tickets API
-
-#### 7.4.1 `GET /api/enquiries`
-- **Role**: `Employee` (Own tickets) / `HR` (All department tickets)
+#### 7.3.8 `GET /api/announcements/templates`
+- **Role**: `HR` / `ADMIN`
+- **Description**: Returns all configurable automated announcement templates (`HOLIDAY_TOMORROW`, `MEETING_TODAY`, `OFFICE_CLOSED`, `POLICY_UPDATED`, `LEAVE_WFH_REMINDER`, `UPDATE_AVAILABLE`) with their current enabled status, default priority, available placeholder tokens, and title/body templates.
 - **Response (200 OK)**:
   ```json
   {
     "success": true,
     "data": [
       {
-        "_id": "6714c500...",
-        "category": "PAYROLL",
-        "subject": "Form 16 Tax Certificate Download",
-        "status": "OPEN",
-        "priority": "MEDIUM",
-        "lastMessageAt": "2026-10-27T10:30:00.000Z"
+        "_id": "6714c600...",
+        "key": "HOLIDAY_TOMORROW",
+        "name": "Holiday Eve Notification",
+        "description": "Triggered daily in the afternoon when tomorrow is a gazetted public holiday or company off-day.",
+        "isEnabled": true,
+        "defaultPriority": "HIGH",
+        "titleTemplate": "Tomorrow is a holiday: {title}",
+        "bodyTemplate": "Office will remain closed tomorrow ({date}) in observance of {title}. Enjoy your holiday!",
+        "variables": ["title", "date"],
+        "defaultAudienceScope": "all"
+      }
+    ]
+  }
+  ```
+
+#### 7.3.9 `GET /api/announcements/templates/:key`
+- **Role**: `HR` / `ADMIN`
+- **Description**: Retrieves single announcement template by key.
+- **Response (200 OK)**: Single template object.
+
+#### 7.3.10 `PUT /api/announcements/templates/:key`
+- **Role**: `HR` / `ADMIN`
+- **Description**: Updates template title/body patterns, default priority, default audience, or toggles `isEnabled` on/off individually.
+- **Request Body**:
+  ```json
+  {
+    "isEnabled": false,
+    "titleTemplate": "Holiday Alert: Tomorrow is {title}",
+    "defaultPriority": "MEDIUM"
+  }
+  ```
+- **Response (200 OK)**: Returns updated template object.
+- **Audit Event**: `ANNOUNCEMENT_TEMPLATE` - `UPDATE`.
+
+#### 7.3.11 `POST /api/announcements/trigger-auto`
+- **Role**: `HR` / `ADMIN`
+- **Description**: Manually triggers the scheduled automated announcement generation cycle (scans calendar for upcoming holidays, today's meetings, and office closures) on demand.
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "message": "Scheduled auto-announcement run completed successfully.",
+    "count": 2
+  }
+  ```
+
+---
+
+### 7.4 Support Enquiries & Tickets API
+
+> **Feature Flag Guard**: Protected by the `enquiries` feature flag (`FEATURE_FLAG_ENQUIRIES`). All endpoints return `404 ERR_NOT_FOUND` when the flag is disabled.
+> **Rate Limit**: Maximum 5 ticket creations per 15 minutes per user window (`429 ERR_RATE_LIMIT_EXCEEDED`).
+> **Attachments**: Optional image attachments allowed on ticket creation and message replies. Strictly enforced: max 5MB (`MAX_ENQUIRY_ATTACHMENT_SIZE_BYTES = 5242880`), allowed mime types: `image/jpeg`, `image/png`, `image/webp`, `image/gif`.
+
+#### 7.4.1 `GET /api/enquiries`
+- **Role**: `Employee` (Only own tickets) / `HR` & `ADMIN` (All company tickets)
+- **Query Parameters**:
+  - `status`: `OPEN` | `IN_PROGRESS` | `RESOLVED` | `CLOSED`
+  - `category`: `ATTENDANCE` | `LEAVE` | `WFH` | `PAYROLL` | `TECHNICAL` | `OTHER`
+  - `priority`: `LOW` | `MEDIUM` | `HIGH` | `URGENT`
+  - `assigneeId`: ObjectId
+  - `search`: Keyword string matched against ticket number or subject
+  - `page`: Page number (default: 1)
+  - `limit`: Page size (default: 20, max: 100)
+- **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 1,
+    "data": [
+      {
+        "_id": "671f...",
+        "ticketNumber": "ENQ-2026-92812",
+        "category": "ATTENDANCE",
+        "subject": "Missing check-in on Monday",
+        "status": "IN_PROGRESS",
+        "priority": "HIGH",
+        "firstResponseAt": "2026-10-28T16:30:00.000Z",
+        "lastMessageAt": "2026-10-28T16:30:00.000Z"
       }
     ]
   }
   ```
 
 #### 7.4.2 `POST /api/enquiries`
-- **Role**: `Employee`
+- **Role**: `Employee` / `HR` / `ADMIN`
 - **Request Body**:
   ```json
   {
     "category": "ATTENDANCE",
     "subject": "Missing Punch In Correction",
-    "message": "Badge reader was calibrating when I arrived at 9:02 AM."
+    "message": "Badge reader was calibrating when I arrived at 9:02 AM.",
+    "priority": "HIGH",
+    "attachment": {
+      "name": "reader_photo.png",
+      "mimeType": "image/png",
+      "sizeBytes": 204800,
+      "url": "https://cdn.vorldx.test/reader_photo.png"
+    }
   }
   ```
 - **Response (201 Created)**: Ticket initialized with embedded thread entry.
-- **Socket Event Dispatched**: `enquiry.created` -> `hr`.
+- **Socket Event Dispatched**: `enquiry.created`
+- **In-App Notification**: Sent to HR personnel.
 
-#### 7.4.3 `POST /api/enquiries/:id/messages`
-- **Role**: `Requester` / `HR Staff`
-- **Request Body**: `{ "message": "We have updated your punch log." }`
-- **Socket Event Dispatched**: `enquiry.message_received`.
+#### 7.4.3 `GET /api/enquiries/:id`
+- **Role**: `Owner Employee` / `HR` / `ADMIN` (Other employees receive `403 ERR_FORBIDDEN`)
+- **Response (200 OK)**: Complete ticket metadata and chronologically ordered conversation thread. Automatically marks unread incoming messages as read.
 
----
+#### 7.4.4 `POST /api/enquiries/:id/messages`
+- **Role**: `Owner Employee` / `HR` / `ADMIN`
+- **Behavior**:
+  - If HR responds for the first time on an `OPEN` ticket, records `firstResponseAt = new Date()` and shifts status to `IN_PROGRESS`.
+  - Rejects message sending on `CLOSED` tickets unless reopened first.
+- **Request Body**:
+  ```json
+  {
+    "message": "We have checked the kiosk logs and confirmed your attendance.",
+    "attachment": {
+      "name": "kiosk_log.jpg",
+      "mimeType": "image/jpeg",
+      "sizeBytes": 102400
+    }
+  }
+  ```
+- **Response (201 Created)**: Message appended to thread.
+- **Socket Event Dispatched**: `enquiry.message_received`
+- **In-App Notification**: Sent to Employee if HR replied, or to assigned HR if Employee replied.
+
+#### 7.4.5 `PATCH /api/enquiries/:id/status`
+- **Role**: `HR` / `ADMIN` (Employees can only set `RESOLVED` or `CLOSED` on their own tickets)
+- **Request Body**:
+  ```json
+  {
+    "status": "RESOLVED",
+    "note": "Issue resolved by attendance operations."
+  }
+  ```
+- **Behavior**: Sets `resolvedAt` and computes `reopenDeadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)`.
+- **Socket Event Dispatched**: `enquiry.status_updated`
+- **In-App Notification**: Sent to ticket owner.
+
+#### 7.4.6 `POST /api/enquiries/:id/reopen`
+- **Role**: `Owner Employee` / `HR` / `ADMIN`
+- **Request Body**:
+  ```json
+  {
+    "reason": "The attendance record still displays absent in monthly ledger."
+  }
+  ```
+- **Behavior**: Enforces 7-day reopen window. If `Date.now() > reopenDeadline`, returns `400 ERR_ENQUIRY_REOPEN_EXPIRED`. On success, sets status to `IN_PROGRESS` and appends reopen reason to thread.
+- **Socket Event Dispatched**: `enquiry.status_updated`
+
+#### 7.4.7 `PATCH /api/enquiries/:id/assign`
+- **Role**: `HR` / `ADMIN` only
+- **Request Body**:
+  ```json
+  {
+    "assigneeId": "6714c500..."
+  }
+  ```
+- **Response (200 OK)**: Ticket assignee updated.
+- **Socket Event Dispatched**: `enquiry.assigned`
+- **In-App Notification**: Sent to new assignee.
 
 ### 7.5 Staff Mobile OTP & Device Security API
 
@@ -1978,366 +2211,3 @@ Mounted under `/reports`, `/api/reports`, and `/api/admin/reports`. All endpoint
 
 
 ---
-
-## 7. Enterprise Extension API Specifications
-
-### 7.1 Leave Management System (Feature Flag: `leave`)
-
-> **Feature Flag Protection**: The entire Leave Management module is gated behind the `leave` feature flag via `requireFeatureFlag("leave")`. When disabled on an environment, all `/api/leave/*` endpoints return `404 Not Found`.
-
-#### 7.1.1 Configure Leave Types (HR / Admin)
-- **Endpoints**:
-  - `POST /api/leave/types` - Create a new leave type configuration
-  - `GET /api/leave/types` - List all leave types (`?includeInactive=true` for archived)
-  - `GET /api/leave/types/:id` - Retrieve single leave type
-  - `PATCH /api/leave/types/:id` (or `PUT`) - Update quota, carry-forward, half-day permission
-  - `DELETE /api/leave/types/:id` - Soft deactivate a leave type
-- **Role**: `HR` / `ADMIN` (Creation, update, and deletion); `Authenticated (All)` for listing
-- **Request Body (`POST /api/leave/types`)**:
-  ```json
-  {
-    "name": "Privilege Leave",
-    "code": "PL",
-    "paid": true,
-    "annualQuota": 15,
-    "carryForwardRule": {
-      "allowed": true,
-      "maxDays": 10,
-      "expiryMonths": 6
-    },
-    "halfDayAllowed": true,
-    "description": "Annual earned privilege leave"
-  }
-  ```
-- **Auditing**: Records `AuditEvent` with `entityType: "LEAVE_TYPE"`.
-
-#### 7.1.2 Leave Balances & Rollover
-- **Endpoints**:
-  - `GET /api/leave/balances/my` (alias: `GET /api/leave/my-balances`) - Current employee's annual balances
-  - `GET /api/leave/balances` - HR directory overview of balances across employees with `year`, `department`, `employeeId` filters
-  - `POST /api/leave/balances/adjust` - HR manual adjustment of allotted/carriedOver quota with audit reason
-  - `POST /api/leave/balances/carry-forward` - Execute annual carry-forward rollover between years
-- **Balance Calculation Formula**:
-  $$\text{Available Balance} = (\text{allotted} + \text{carriedOver}) - (\text{used} + \text{pending})$$
-- **Auto-Initialization**: If an employee has no balance record for an active leave type in a queried year, the system automatically provisions an initial balance record based on `LeaveType.annualQuota`.
-
-#### 7.1.3 Apply for Leave (Employee)
-- **Endpoint**: `POST /api/leave/requests`
-- **Role**: `Employee` (or any authenticated user)
-- **Request Body**:
-  ```json
-  {
-    "type": "6714c100...",
-    "startDate": "2026-11-09",
-    "endDate": "2026-11-13",
-    "isHalfDay": false,
-    "halfDayType": "FIRST_HALF",
-    "reason": "Family holiday trip"
-  }
-  ```
-- **Server Validations & Computations**:
-  1. **Working Days Calculation**: Uses `calendarService.countWorkingDays` to exclude weekends, public holidays, and company off-days. If `isHalfDay: true`, verifies `leaveType.halfDayAllowed === true` and assigns `0.5` days.
-  2. **Balance Sufficiency**: Requires $\text{workingDays} \le \text{Available Balance}$; throws `ERR_INSUFFICIENT_BALANCE` (400) if insufficient.
-  3. **Overlapping Leave**: Validates against any existing `PENDING` or `APPROVED` leave request for the employee; throws `ERR_OVERLAPPING_LEAVE` (409).
-  4. **WFH Conflict**: Checks for existing `APPROVED` Work From Home requests on any date in the range; throws `ERR_LEAVE_CONFLICT_WFH` (409).
-  5. **Past Date Rules**: Rejects backdated leave applications (`startDate < today`) with `ERR_LEAVE_PAST_DATE` (400).
-- **Atomic Balance Reservation**: Atomically increments `pending` by `workingDays`.
-- **Socket Events**: Dispatches `leave.requested` and `leave.balance_updated`.
-
-#### 7.1.4 Cancel Leave (Employee / HR)
-- **Endpoint**: `POST /api/leave/requests/:id/cancel` (alias: `PATCH` or `DELETE`)
-- **Permitted States**:
-  - `PENDING`: Restores balance by decrementing `pending` by `workingDays`.
-  - `APPROVED` (future dates only): Restores balance by decrementing `used` by `workingDays` and automatically reverts any `AttendanceRecord` marked `ON_LEAVE`.
-- **Socket Events**: Dispatches `leave.decided` (`status: "CANCELLED"`) and `leave.balance_updated`.
-
-#### 7.1.5 HR Review Queue & Atomic Decisions
-- **Endpoints**:
-  - `GET /api/leave/requests` - HR queue with filters (`status`, `type`, `startDate`, `endDate`, `employeeId`, `department`, `search`, `page`, `limit`)
-  - `PATCH /api/leave/requests/:id/decision` - Single decision (`APPROVED` or `REJECTED`)
-  - `POST /api/leave/requests/bulk-decision` - Bulk review with per-item atomic results
-- **Atomic Concurrency Guarantee**:
-  - Transitions only from `status: "PENDING"`.
-  - Double review or concurrent conflicting decisions return `409 Conflict` (`ERR_LEAVE_ALREADY_DECIDED`).
-- **Attendance State Machine Integration**:
-  - On `APPROVED`: Marks each working day in the range as `AttendanceStatus.ON_LEAVE` (or `HALF_DAY`).
-  - Automated Absence Job (`evaluateAbsenceAndIncompleteJob`) automatically skips employees on approved leave.
-- **Reporting Integration**:
-  - `getAttendanceLedgerReport`, `getEmployeeMonthlySummary`, and `getDepartmentAttendanceReport` include live `leaveCount` / `leaveDays`.
-- **Socket Events**: `leave.decided`, `leave.balance_updated`, `attendance.updated`.
-- **Notifications**: Creates in-app `Notification` (`type: "LEAVE_STATUS"`).
-
----
-
-### 7.2 Working Calendar & Events API
-
-#### 7.2.1 `GET /api/calendar/events`
-- **Role**: `Authenticated (All)`
-- **Query Params**: `startDate` (ISO), `endDate` (ISO), `type` (optional: `holiday|companyOffDay|meeting|event`), `year` (number)
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "data": [
-      {
-        "_id": "6714c300...",
-        "type": "holiday",
-        "title": "Republic Day",
-        "startDate": "2026-01-26T00:00:00.000Z",
-        "endDate": "2026-01-26T23:59:59.999Z",
-        "isFullDay": true,
-        "source": "manual",
-        "audience": { "scope": "all" }
-      }
-    ]
-  }
-  ```
-
-#### 7.2.2 `POST /api/calendar/events`
-- **Role**: `HR` / `ADMIN`
-- **Description**: Creates a new calendar event (holiday, company off day, meeting, or event) with audit logging and `calendar.updated` socket broadcast.
-- **Request Body**:
-  ```json
-  {
-    "type": "holiday",
-    "title": "New Year Day",
-    "startDate": "2027-01-01T00:00:00.000Z",
-    "endDate": "2027-01-01T23:59:59.999Z",
-    "isFullDay": true
-  }
-  ```
-- **Response (201 Created)**: Returns created `CalendarEvent` object.
-
-#### 7.2.3 `GET /api/calendar/day-type`
-- **Role**: `Authenticated (All)`
-- **Query Params**: `date` (`YYYY-MM-DD` or ISO string), `timezone` (optional, default: `Asia/Kolkata`)
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "dateKey": "2026-01-26",
-    "timezone": "Asia/Kolkata",
-    "dayType": "public-holiday",
-    "isWorkingDay": false
-  }
-  ```
-
-#### 7.2.4 `GET /api/calendar/working-days`
-- **Role**: `Authenticated (All)`
-- **Query Params**: `start` (`YYYY-MM-DD`), `end` (`YYYY-MM-DD`), `timezone` (optional)
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "start": "2026-01-01",
-    "end": "2026-01-31",
-    "timezone": "Asia/Kolkata",
-    "workingDaysCount": 21
-  }
-  ```
-
-#### 7.2.5 `GET /api/calendar/next-working-day`
-- **Role**: `Authenticated (All)`
-- **Query Params**: `date` (`YYYY-MM-DD`), `timezone` (optional)
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "fromDate": "2026-01-23",
-    "nextWorkingDay": "2026-01-27"
-  }
-  ```
-
-#### 7.2.6 `GET /api/calendar/holidays/preview`
-- **Role**: `HR` / `ADMIN`
-- **Query Params**: `year` (optional, default: current year), `country` (optional, default: `IN`)
-- **Description**: Previews holidays from configured provider (`stub` or `public`) with conflict detection against existing manual/imported events before committing.
-- **Response (200 OK)**: Returns preview list with status `to_create`, `already_exists`, or `skip_manual_conflict`.
-
-#### 7.2.7 `POST /api/calendar/holidays/import`
-- **Role**: `HR` / `ADMIN`
-- **Description**: Imports holidays from external provider adapter. Never overwrites manual entries and marks imported items with `source: "imported"`.
-- **Request Body**: `{ "year": 2026, "country": "IN" }`
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "importedCount": 10,
-    "skippedCount": 2
-  }
-  ```
-
-#### 7.2.8 `GET /api/calendar/export.ics`
-- **Role**: `Authenticated (All)`
-- **Query Params**: `year` (optional), `types` (comma-separated, e.g. `holiday,companyOffDay`)
-- **Description**: Streams RFC 5545 compliant `.ics` calendar file for subscription in Outlook, Google Calendar, and Apple Calendar.
-
----
-
-### 7.3 Announcements API
-
-#### 7.3.1 `GET /api/announcements`
-- **Role**: `Authenticated (All)`
-- **Description**: Returns active announcements sorted by pinned status, priority, and date. Automatically filters out expired items.
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "data": [
-      {
-        "_id": "6714c400...",
-        "title": "Town Hall Meeting Tomorrow",
-        "body": "Executive briefing at 1:00 PM on Google Meet.",
-        "priority": "HIGH",
-        "pinned": true,
-        "startsAt": "2026-10-27T00:00:00.000Z",
-        "expiresAt": "2026-10-28T23:59:59.000Z",
-        "source": "manual",
-        "isRead": false
-      }
-    ]
-  }
-  ```
-
-#### 7.3.2 `POST /api/announcements`
-- **Role**: `HR` / `ADMIN`
-- **Request Body**:
-  ```json
-  {
-    "title": "Office Deep Clean Schedule",
-    "body": "Office sanitization scheduled for Friday evening.",
-    "priority": "MEDIUM",
-    "pinned": false,
-    "startsAt": "2026-10-30T10:00:00.000Z"
-  }
-  ```
-- **Socket Event Dispatched**: `announcement.published` -> `all`.
-
-#### 7.3.3 `POST /api/announcements/:id/read`
-- **Role**: `Authenticated`
-- **Description**: Marks announcement as read by the calling user.
-
----
-
-### 7.4 Support Enquiries & Tickets API
-
-#### 7.4.1 `GET /api/enquiries`
-- **Role**: `Employee` (Own tickets) / `HR` (All department tickets)
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "data": [
-      {
-        "_id": "6714c500...",
-        "category": "PAYROLL",
-        "subject": "Form 16 Tax Certificate Download",
-        "status": "OPEN",
-        "priority": "MEDIUM",
-        "lastMessageAt": "2026-10-27T10:30:00.000Z"
-      }
-    ]
-  }
-  ```
-
-#### 7.4.2 `POST /api/enquiries`
-- **Role**: `Employee`
-- **Request Body**:
-  ```json
-  {
-    "category": "ATTENDANCE",
-    "subject": "Missing Punch In Correction",
-    "message": "Badge reader was calibrating when I arrived at 9:02 AM."
-  }
-  ```
-- **Response (201 Created)**: Ticket initialized with embedded thread entry.
-- **Socket Event Dispatched**: `enquiry.created` -> `hr`.
-
-#### 7.4.3 `POST /api/enquiries/:id/messages`
-- **Role**: `Requester` / `HR Staff`
-- **Request Body**: `{ "message": "We have updated your punch log." }`
-- **Socket Event Dispatched**: `enquiry.message_received`.
-
----
-
-### 7.5 Staff Mobile OTP & Device Security API
-
-#### 7.5.1 `POST /api/auth/staff/otp-start`
-- **Role**: `Public` (Rate-limited)
-- **Description**: Generates a 6-digit OTP sent via SMS to verified staff mobile numbers for passwordless admin/HR login.
-- **Request Body**: `{ "mobileNumber": "+919876543210", "purpose": "LOGIN" }`
-- **Response (200 OK)**:
-  ```json
-  {
-    "success": true,
-    "message": "Security code dispatched via SMS",
-    "expiresInSeconds": 300
-  }
-  ```
-
-#### 7.5.2 `POST /api/auth/staff/otp-verify`
-- **Role**: `Public`
-- **Request Body**:
-  ```json
-  {
-    "mobileNumber": "+919876543210",
-    "otp": "849201",
-    "deviceFingerprint": "hw_mac_fp_88291a",
-    "deviceName": "Kirtee MacBook Pro",
-    "trustDevice": true
-  }
-  ```
-- **Response (200 OK)**: Returns JWT access token, refresh token, and registers device in `TrustedDevice`.
-
----
-
-### 7.6 App Release & OTA Management API
-
-#### 7.6.1 `GET /api/releases/check-update`
-- **Role**: `Public`
-- **Query Params**: `platform=ANDROID&currentVersion=1.0.0&currentVersionCode=10000`
-- **Response (200 OK)**:
-  ```json
-  {
-    "updateAvailable": true,
-    "forceUpdate": false,
-    "latestVersion": "1.2.0",
-    "latestVersionCode": 10200,
-    "notes": "Fast QR scanner engine and offline punch cache",
-    "downloadUrl": "https://cdn.vorldx.demo/releases/app-v1.2.0.apk"
-  }
-  ```
-
----
-
-### 7.7 Saved Views API
-
-#### 7.7.1 `GET /api/saved-views`
-- **Role**: `Authenticated`
-- **Query Params**: `page=attendance`
-- **Response (200 OK)**: Returns list of user's saved filter views for that table.
-
-#### 7.7.2 `POST /api/saved-views`
-- **Role**: `Authenticated`
-- **Request Body**:
-  ```json
-  {
-    "page": "attendance",
-    "name": "Only Late Employees",
-    "filters": { "status": "LATE" },
-    "isDefault": false
-  }
-  ```
-
----
-
-### 7.8 Notifications API
-
-#### 7.8.1 `GET /api/notifications`
-- **Role**: `Authenticated`
-- **Response (200 OK)**: Returns unread & recent notifications with payload metadata.
-
-#### 7.8.2 `PATCH /api/notifications/:id/read`
-- **Role**: `Authenticated`
-- **Description**: Marks a notification as read and synchronizes read status via `notification.read`.
-

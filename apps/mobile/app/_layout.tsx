@@ -16,6 +16,7 @@ import {
 import { AuthProvider } from "../src/context/AuthContext";
 import { ToastProvider } from "../src/components/Toast";
 import { OfflineBanner } from "../src/components/OfflineBanner";
+import { UpdateSheet } from "../src/components/UpdateSheet";
 import { colors } from "../src/theme/tokens";
 
 export default function RootLayout() {
@@ -38,6 +39,7 @@ export default function RootLayout() {
         <ToastProvider>
           <StatusBar style="light" />
           <OfflineBanner />
+          <UpdateSheet />
           <Stack
             screenOptions={{
               headerShown: false,
@@ -51,6 +53,8 @@ export default function RootLayout() {
             <Stack.Screen name="verify-otp" options={{ headerShown: false }} />
             <Stack.Screen name="set-password" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="announcements" options={{ headerShown: false }} />
+            <Stack.Screen name="enquiries" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" options={{ headerShown: false }} />
           </Stack>
         </ToastProvider>

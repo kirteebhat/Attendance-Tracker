@@ -3,14 +3,17 @@ import {
   View,
   StyleSheet,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   AlertCircle,
+  Bell,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
   Clock3,
+  HelpCircle,
   House,
   QrCode,
 } from 'lucide-react-native';
@@ -30,10 +33,13 @@ import {
   Avatar,
   Text,
   PressableScale,
+  AnnouncementBanner,
 } from '../../src/components';
 import { colors, radii, spacing } from '../../src/theme/tokens';
 import {
   attendanceApi,
+  announcementsApi,
+  MobileAnnouncementItem,
   TodayAttendanceResponse,
   AttendanceHistoryResponse,
   subscribeToSocketEvent,
@@ -91,16 +97,26 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [todayData, setTodayData] = useState<TodayAttendanceResponse | null>(null);
   const [historyData, setHistoryData] = useState<AttendanceHistoryResponse | null>(null);
+  const [topAnnouncement, setTopAnnouncement] = useState<MobileAnnouncementItem | null>(null);
+  const [unreadAnnouncementsCount, setUnreadAnnouncementsCount] = useState<number>(0);
 
   const fetchHomeData = useCallback(async () => {
     try {
-      const [todayRes, historyRes] = await Promise.allSettled([
+      const [todayRes, historyRes, announceRes, countRes] = await Promise.allSettled([
         attendanceApi.getTodayAttendance(),
         attendanceApi.getMyAttendance({ limit: 5 }),
+        announcementsApi.getAnnouncements(1),
+        announcementsApi.getUnreadCount(),
       ]);
 
       if (todayRes.status === 'fulfilled') setTodayData(todayRes.value);
       if (historyRes.status === 'fulfilled') setHistoryData(historyRes.value);
+      if (announceRes.status === 'fulfilled' && announceRes.value?.success && announceRes.value?.data?.length > 0) {
+        setTopAnnouncement(announceRes.value.data[0]);
+      }
+      if (countRes.status === 'fulfilled' && countRes.value?.success) {
+        setUnreadAnnouncementsCount(countRes.value.unreadCount || 0);
+      }
     } catch (err) {
       console.error('Failed to load home dashboard data', err);
     } finally {
@@ -115,12 +131,16 @@ export default function HomeScreen() {
     const unsubAttendance = subscribeToSocketEvent('attendance.updated', () => fetchHomeData());
     const unsubWfhDecided = subscribeToSocketEvent('wfh.decided', () => fetchHomeData());
     const unsubWfhCreated = subscribeToSocketEvent('wfh.created', () => fetchHomeData());
+    const unsubAnnouncePub = subscribeToSocketEvent('announcement.published', () => fetchHomeData());
+    const unsubAnnouncePin = subscribeToSocketEvent('announcement.pinned', () => fetchHomeData());
     const unsubResync = subscribeToResync(() => fetchHomeData());
 
     return () => {
       unsubAttendance();
       unsubWfhDecided();
       unsubWfhCreated();
+      unsubAnnouncePub();
+      unsubAnnouncePin();
       unsubResync();
     };
   }, [fetchHomeData]);
@@ -137,47 +157,44 @@ export default function HomeScreen() {
 
   const punchStatusLabel = isWfhToday
     ? 'WFH Active'
-    : isCheckedOut
-      ? 'Completed'
-      : isCheckedIn
-        ? 'Punched In'
-        : 'Not Punched';
+    : isCheckedIn
+      ? 'Punched In'
+      : isCheckedOut
+        ? 'Punched Out'
+        : 'Not Checked In';
 
   const punchStatusTone = isWfhToday
-    ? 'info'
-    : isCheckedOut || isCheckedIn
+    ? 'leave'
+    : isCheckedIn
       ? 'success'
-      : 'neutral';
+      : isCheckedOut
+        ? 'neutral'
+        : 'warning';
+
+  const firstName = user?.name ? user.name.split(' ')[0] : 'there';
 
   const stats = historyData?.stats;
   const presentCount = stats?.presentDays ?? 0;
   const lateCount = stats?.lateDays ?? 0;
-  const wfhCount = stats?.wfhDays ?? 0;
   const absentCount = stats?.absentDays ?? 0;
-  const totalRecordedDays = presentCount + lateCount + wfhCount + absentCount;
+  const wfhCount = stats?.wfhDays ?? 0;
 
   const donutSegments = useMemo(
     () => [
       { label: 'Present', value: presentCount, color: colors.success },
       { label: 'Late', value: lateCount, color: colors.warning },
-      { label: 'WFH', value: wfhCount, color: colors.info },
       { label: 'Absent', value: absentCount, color: colors.danger },
+      { label: 'WFH', value: wfhCount, color: colors.info },
     ],
-    [presentCount, lateCount, wfhCount, absentCount]
+    [presentCount, lateCount, absentCount, wfhCount]
   );
 
-  const recentRecords = historyData?.data?.slice(0, 4) || [];
+  const totalRecordedDays = presentCount + lateCount + absentCount + wfhCount;
+  const recentRecords = historyData?.data ?? [];
 
-  const firstName = user?.name ? user.name.split(' ')[0] : 'there';
-
-  if (loading && !todayData) {
+  if (loading && !refreshing) {
     return (
-      <Screen>
-        <PageHeader
-          eyebrow="VorldX Operations"
-          title={`${getGreeting()}, ${firstName}`}
-          subtitle={getFormattedDate()}
-        />
+      <Screen edges={['top', 'bottom']}>
         <DashboardSkeleton />
       </Screen>
     );
@@ -185,6 +202,7 @@ export default function HomeScreen() {
 
   return (
     <Screen
+      edges={['top', 'bottom']}
       refreshControl={
         <RefreshControl
           colors={[colors.indigoSoft]}
@@ -199,16 +217,53 @@ export default function HomeScreen() {
         title={`${getGreeting()}, ${firstName}`}
         subtitle={getFormattedDate()}
         right={
-          <PressableScale
-            accessibilityRole="button"
-            accessibilityLabel="Open profile"
-            haptic="selection"
-            onPress={() => router.navigate('/(tabs)/profile')}
-          >
-            <Avatar name={user?.name ?? 'VX'} showRing size={44} />
-          </PressableScale>
+          <View style={styles.headerRight}>
+            {/* Contact HR / Help */}
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => router.push('/enquiries' as any)}
+              accessibilityLabel="Contact HR & Enquiries"
+            >
+              <HelpCircle size={18} color={colors.indigoSoft} strokeWidth={2} />
+            </TouchableOpacity>
+
+            {/* Announcements Bell */}
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => router.push('/announcements' as any)}
+              accessibilityLabel="View Announcements"
+            >
+              <Bell size={18} color={colors.indigoSoft} strokeWidth={2} />
+              {unreadAnnouncementsCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>
+                    {unreadAnnouncementsCount > 9 ? '9+' : unreadAnnouncementsCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Profile Avatar */}
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="Open profile"
+              haptic="selection"
+              onPress={() => router.navigate('/(tabs)/profile')}
+            >
+              <Avatar name={user?.name ?? 'VX'} showRing size={40} />
+            </PressableScale>
+          </View>
         }
       />
+
+      {/* Top Live Announcement Banner */}
+      {topAnnouncement && (
+        <AnnouncementBanner
+          announcement={topAnnouncement}
+          unreadCount={unreadAnnouncementsCount}
+          onDismiss={() => setTopAnnouncement(null)}
+        />
+      )}
 
       {/* 1. Hero Punch Status Card */}
       <Card style={styles.heroCard} variant="raised" padding={20}>
@@ -382,6 +437,39 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(89, 101, 242, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(89, 101, 242, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.indigo,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   heroCard: {
     gap: spacing.md,
   },

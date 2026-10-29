@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, tokenStorage, getFullApiUrl } from "./client";
-import { AttendanceStatus, WorkType } from "@vorldx/shared";
+import { AttendanceStatus, WorkType, LiveAttendanceAnalyticsResponse, LiveAnalyticsQuery } from "@vorldx/shared";
 
 export interface DashboardDayTrend {
   dateKey: string;
@@ -184,6 +184,26 @@ export function useDashboardSummary() {
     queryFn: () => api.get<DashboardSummaryData>("/api/dashboard/summary"),
     staleTime: 1000 * 30,
     refetchOnWindowFocus: true,
+  });
+}
+
+export function useLiveAnalytics(params?: {
+  dateKey?: string;
+  department?: string;
+  simulatedNow?: string;
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.dateKey) searchParams.set("dateKey", params.dateKey);
+  if (params?.department) searchParams.set("department", params.department);
+  if (params?.simulatedNow) searchParams.set("simulatedNow", params.simulatedNow);
+  const qs = searchParams.toString();
+
+  return useQuery<LiveAttendanceAnalyticsResponse>({
+    queryKey: ["live-attendance-analytics", params?.dateKey, params?.department],
+    queryFn: () =>
+      api.get<LiveAttendanceAnalyticsResponse>(`/api/analytics/live${qs ? `?${qs}` : ""}`),
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -1222,6 +1242,1000 @@ export function useDeleteCalendarEvent() {
     },
   });
 }
+
+// ============================================================================
+// LEAVE SUBSYSTEM QUERIES & MUTATIONS
+// ============================================================================
+
+export interface LeaveTypeItem {
+  _id: string;
+  name: string;
+  code: string;
+  paid: boolean;
+  annualQuota: number;
+  carryForwardRule: {
+    allowed: boolean;
+    maxDays: number;
+    expiryMonths?: number;
+  };
+  halfDayAllowed: boolean;
+  description?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LeaveBalanceSummary {
+  id: string;
+  type: {
+    id: string;
+    name: string;
+    code: string;
+    paid: boolean;
+  };
+  allotted: number;
+  used: number;
+  pending: number;
+  carriedOver: number;
+  available: number;
+}
+
+export interface EmployeeBalanceGroup {
+  employee: {
+    id: string;
+    employeeId: string;
+    name: string;
+    department?: string;
+    designation?: string;
+  };
+  year: number;
+  balances: LeaveBalanceSummary[];
+}
+
+export interface LeaveRequestPopulated {
+  _id: string;
+  employee: {
+    _id: string;
+    employeeId: string;
+    name: string;
+    email: string;
+    department: string;
+    designation: string;
+    workType?: string;
+  } | string;
+  type: {
+    _id: string;
+    name: string;
+    code: string;
+    paid: boolean;
+    annualQuota?: number;
+  } | string;
+  startDate: string;
+  endDate: string;
+  isHalfDay: boolean;
+  halfDayType?: "FIRST_HALF" | "SECOND_HALF";
+  workingDays: number;
+  reason: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  decidedBy?: {
+    _id: string;
+    email?: string;
+    employeeId?: string;
+  } | null;
+  decidedAt?: string;
+  decisionNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeaveRequestListResponse {
+  success: boolean;
+  data: LeaveRequestPopulated[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface BulkDecisionResponse {
+  success: boolean;
+  message: string;
+  data: {
+    total: number;
+    successful: Array<{
+      requestId: string;
+      employeeId: string;
+      status: string;
+    }>;
+    failed: Array<{
+      requestId: string;
+      reason: string;
+      code: string;
+    }>;
+  };
+}
+
+// 1. Leave Types Queries
+export function useLeaveTypes(includeInactive = false) {
+  return useQuery<{ success: boolean; count: number; data: LeaveTypeItem[] }>({
+    queryKey: ["leave-types", includeInactive],
+    queryFn: () =>
+      api.get<{ success: boolean; count: number; data: LeaveTypeItem[] }>(
+        `/api/leave/types${includeInactive ? "?includeInactive=true" : ""}`
+      ),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useCreateLeaveType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      name: string;
+      code: string;
+      paid?: boolean;
+      annualQuota: number;
+      carryForwardRule?: { allowed: boolean; maxDays: number; expiryMonths?: number };
+      halfDayAllowed?: boolean;
+      description?: string;
+    }) => api.post<{ success: boolean; data: LeaveTypeItem }>("/api/leave/types", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-types"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+    },
+  });
+}
+
+export function useUpdateLeaveType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<LeaveTypeItem> }) =>
+      api.patch<{ success: boolean; data: LeaveTypeItem }>(`/api/leave/types/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-types"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+    },
+  });
+}
+
+export function useDeleteLeaveType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete<{ success: boolean; message: string }>(`/api/leave/types/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-types"] });
+    },
+  });
+}
+
+// 2. Leave Balances Queries
+export function useMyLeaveBalances(year?: number) {
+  return useQuery<{
+    success: boolean;
+    data: {
+      employee: { id: string; employeeId: string; name: string };
+      year: number;
+      balances: LeaveBalanceSummary[];
+    };
+  }>({
+    queryKey: ["my-leave-balances", year],
+    queryFn: () =>
+      api.get(`/api/leave/balances/my${year ? `?year=${year}` : ""}`),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useEmployeeLeaveBalances(employeeId: string, year?: number) {
+  return useQuery<{
+    success: boolean;
+    data: {
+      employee: { id: string; employeeId: string; name: string };
+      year: number;
+      balances: LeaveBalanceSummary[];
+    };
+  }>({
+    queryKey: ["employee-leave-balances", employeeId, year],
+    queryFn: () =>
+      api.get(`/api/leave/balances/employee/${employeeId}${year ? `?year=${year}` : ""}`),
+    enabled: Boolean(employeeId),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useAllLeaveBalances(params?: {
+  year?: number;
+  department?: string;
+  employeeId?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const searchParams = new URLSearchParams();
+  if (params?.year) searchParams.set("year", String(params.year));
+  if (params?.department) searchParams.set("department", params.department);
+  if (params?.employeeId) searchParams.set("employeeId", params.employeeId);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  const queryString = searchParams.toString();
+
+  return useQuery<{
+    success: boolean;
+    data: EmployeeBalanceGroup[];
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+  }>({
+    queryKey: ["all-leave-balances", params],
+    queryFn: () =>
+      api.get(`/api/leave/balances${queryString ? `?${queryString}` : ""}`),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useAdjustLeaveBalance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      employeeId: string;
+      typeId: string;
+      year?: number;
+      allotted?: number;
+      carriedOver?: number;
+      reason: string;
+    }) => api.post<{ success: boolean; data: unknown }>("/api/leave/balances/adjust", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["employee-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+    },
+  });
+}
+
+export function useCarryForwardLeave() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { fromYear: number; toYear: number; employeeId?: string }) =>
+      api.post<{ success: boolean; data: unknown }>("/api/leave/balances/carry-forward", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+    },
+  });
+}
+
+// 3. Leave Requests Queries
+export function useLeaveRequests(filters?: {
+  status?: string;
+  type?: string;
+  department?: string;
+  employeeId?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const searchParams = new URLSearchParams();
+  if (filters?.status && filters.status !== "ALL") searchParams.set("status", filters.status);
+  if (filters?.type) searchParams.set("type", filters.type);
+  if (filters?.department) searchParams.set("department", filters.department);
+  if (filters?.employeeId) searchParams.set("employeeId", filters.employeeId);
+  if (filters?.startDate) searchParams.set("startDate", filters.startDate);
+  if (filters?.endDate) searchParams.set("endDate", filters.endDate);
+  if (filters?.search) searchParams.set("search", filters.search);
+  if (filters?.page) searchParams.set("page", String(filters.page));
+  if (filters?.limit) searchParams.set("limit", String(filters.limit));
+  const queryString = searchParams.toString();
+
+  return useQuery<LeaveRequestListResponse>({
+    queryKey: ["leave-requests", filters],
+    queryFn: () =>
+      api.get<LeaveRequestListResponse>(`/api/leave/requests${queryString ? `?${queryString}` : ""}`),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useMyLeaveRequests(params?: { status?: string; page?: number; limit?: number }) {
+  const searchParams = new URLSearchParams();
+  if (params?.status && params.status !== "ALL") searchParams.set("status", params.status);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  const queryString = searchParams.toString();
+
+  return useQuery<LeaveRequestListResponse>({
+    queryKey: ["my-leave-requests", params],
+    queryFn: () =>
+      api.get<LeaveRequestListResponse>(`/api/leave/requests/my${queryString ? `?${queryString}` : ""}`),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useApplyLeave() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      type: string;
+      startDate: string;
+      endDate: string;
+      isHalfDay?: boolean;
+      halfDayType?: "FIRST_HALF" | "SECOND_HALF";
+      reason: string;
+    }) => api.post<{ success: boolean; data: LeaveRequestPopulated }>("/api/leave/requests", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+    },
+  });
+}
+
+export function useCancelLeave() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      api.post<{ success: boolean; data: LeaveRequestPopulated }>(`/api/leave/requests/${id}/cancel`, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["my-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+    },
+  });
+}
+
+export function useDecideLeaveRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      status,
+      decisionNote,
+    }: {
+      id: string;
+      status: "APPROVED" | "REJECTED";
+      decisionNote?: string;
+    }) =>
+      api.patch<{ success: boolean; data: LeaveRequestPopulated }>(`/api/leave/requests/${id}/decision`, {
+        status,
+        decisionNote,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["employee-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+    },
+  });
+}
+
+export function useBulkDecideLeaveRequests() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      requestIds: string[];
+      status: "APPROVED" | "REJECTED";
+      decisionNote?: string;
+    }) => api.post<BulkDecisionResponse>("/api/leave/requests/bulk-decision", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leave-balances"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+    },
+  });
+}
+
+// ============================================================================
+// ANNOUNCEMENTS MODULE QUERIES & MUTATIONS
+// ============================================================================
+
+export interface AnnouncementItem {
+  _id: string;
+  title: string;
+  body: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  pinned: boolean;
+  startsAt: string;
+  expiresAt?: string | null;
+  audience: {
+    scope: "all" | "department" | "role";
+    departments?: string[];
+    roles?: string[];
+  };
+  source: "manual" | "auto";
+  templateKey?: string;
+  isAuto?: boolean;
+  isRead?: boolean;
+  readCount?: number;
+  readBy?: Array<{ user: string; readAt: string }>;
+  createdBy?: {
+    _id: string;
+    employeeId?: string;
+    email?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AnnouncementTemplateItem {
+  _id: string;
+  key: string;
+  name: string;
+  titleTemplate: string;
+  bodyTemplate: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  audience: {
+    scope: "all" | "department" | "role";
+    departments?: string[];
+    roles?: string[];
+  };
+  isEnabled: boolean;
+  variables: string[];
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AnnouncementListResponse {
+  success: boolean;
+  count: number;
+  data: AnnouncementItem[];
+}
+
+export interface AdminAnnouncementListResponse {
+  success: boolean;
+  data: AnnouncementItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export function useAnnouncements(options?: { limit?: number }) {
+  const limit = options?.limit || 50;
+  return useQuery<AnnouncementListResponse>({
+    queryKey: ["announcements", limit],
+    queryFn: () => api.get(`/api/announcements?limit=${limit}`),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useAdminAnnouncements(params?: {
+  status?: string;
+  source?: string;
+  scope?: string;
+  department?: string;
+  priority?: string;
+  pinned?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const queryParams = new URLSearchParams();
+  if (params?.status) queryParams.set("status", params.status);
+  if (params?.source) queryParams.set("source", params.source);
+  if (params?.scope) queryParams.set("scope", params.scope);
+  if (params?.department) queryParams.set("department", params.department);
+  if (params?.priority) queryParams.set("priority", params.priority);
+  if (typeof params?.pinned === "boolean") queryParams.set("pinned", String(params.pinned));
+  if (params?.search) queryParams.set("search", params.search);
+  if (params?.page) queryParams.set("page", String(params.page));
+  if (params?.limit) queryParams.set("limit", String(params.limit));
+
+  const qs = queryParams.toString();
+  const url = qs ? `/api/announcements/admin?${qs}` : "/api/announcements/admin";
+
+  return useQuery<AdminAnnouncementListResponse>({
+    queryKey: ["admin-announcements", params],
+    queryFn: () => api.get(url),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useUnreadAnnouncementsCount() {
+  return useQuery<{ success: boolean; unreadCount: number }>({
+    queryKey: ["announcements-unread-count"],
+    queryFn: () => api.get("/api/announcements/unread-count"),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useMarkAnnouncementRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<{ success: boolean; message: string }>(`/api/announcements/${id}/read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements-unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+    },
+  });
+}
+
+export function useCreateAnnouncement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      title: string;
+      body: string;
+      priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+      pinned?: boolean;
+      startsAt?: string;
+      expiresAt?: string | null;
+      audience?: {
+        scope: "all" | "department" | "role";
+        departments?: string[];
+        roles?: string[];
+      };
+    }) => api.post<{ success: boolean; message: string; data: AnnouncementItem }>("/api/announcements", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements-unread-count"] });
+    },
+  });
+}
+
+export function useUpdateAnnouncement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<{
+        title: string;
+        body: string;
+        priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+        pinned: boolean;
+        startsAt: string;
+        expiresAt: string | null;
+        audience: {
+          scope: "all" | "department" | "role";
+          departments?: string[];
+          roles?: string[];
+        };
+      }>;
+    }) => api.put<{ success: boolean; message: string; data: AnnouncementItem }>(`/api/announcements/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+    },
+  });
+}
+
+export function useDeleteAnnouncement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ success: boolean; message: string }>(`/api/announcements/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements-unread-count"] });
+    },
+  });
+}
+
+export function useAnnouncementTemplates() {
+  return useQuery<{ success: boolean; data: AnnouncementTemplateItem[] }>({
+    queryKey: ["announcement-templates"],
+    queryFn: () => api.get("/api/announcements/templates"),
+    staleTime: 1000 * 60,
+  });
+}
+
+export function useUpdateAnnouncementTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      key,
+      payload,
+    }: {
+      key: string;
+      payload: Partial<{
+        titleTemplate: string;
+        bodyTemplate: string;
+        priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+        audience: {
+          scope: "all" | "department" | "role";
+          departments?: string[];
+          roles?: string[];
+        };
+        isEnabled: boolean;
+      }>;
+    }) =>
+      api.put<{ success: boolean; message: string; data: AnnouncementTemplateItem }>(
+        `/api/announcements/templates/${key}`,
+        payload
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcement-templates"] });
+    },
+  });
+}
+
+export function useTriggerAutoAnnouncements() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ success: boolean; message: string; count: number }>("/api/announcements/trigger-auto"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements-unread-count"] });
+    },
+  });
+}
+
+// ============================================================================
+// ENQUIRIES & HELPDESK MODULE
+// ============================================================================
+
+export interface EnquiryAttachment {
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  url?: string;
+  dataUrl?: string;
+}
+
+export interface EnquirySender {
+  _id: string;
+  email: string;
+  role: string;
+  name?: string;
+  employeeId?: string;
+  avatar?: string;
+}
+
+export interface EnquiryMessage {
+  _id: string;
+  enquiry: string;
+  sender: EnquirySender | string;
+  senderRole: "EMPLOYEE" | "HR" | "ADMIN";
+  message: string;
+  attachments: EnquiryAttachment[];
+  readByRecipient: boolean;
+  createdAt: string;
+}
+
+export interface EnquiryItem {
+  _id: string;
+  ticketNumber: string;
+  employee: {
+    _id: string;
+    name: string;
+    employeeId: string;
+    department: string;
+    designation: string;
+  };
+  employeeUser: string;
+  category: "ATTENDANCE" | "LEAVE" | "WFH" | "PAYROLL" | "TECHNICAL" | "OTHER" | "BENEFITS" | "IT" | "GENERAL";
+  subject: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  assignee?: {
+    _id: string;
+    name?: string;
+    email: string;
+    role: string;
+    employeeId?: string;
+  } | null;
+  firstResponseAt?: string | null;
+  resolvedAt?: string | null;
+  closedAt?: string | null;
+  reopenDeadline?: string | null;
+  lastMessageAt: string;
+  attachments: EnquiryAttachment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EnquiriesResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  data: EnquiryItem[];
+}
+
+export interface EnquiriesFilters {
+  status?: string;
+  category?: string;
+  priority?: string;
+  assigneeId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function useEnquiries(filters: EnquiriesFilters = {}) {
+  const query = new URLSearchParams();
+  if (filters.status && filters.status !== "ALL") query.set("status", filters.status);
+  if (filters.category && filters.category !== "ALL") query.set("category", filters.category);
+  if (filters.priority && filters.priority !== "ALL") query.set("priority", filters.priority);
+  if (filters.assigneeId && filters.assigneeId !== "ALL") query.set("assigneeId", filters.assigneeId);
+  if (filters.search) query.set("search", filters.search);
+  if (filters.page) query.set("page", String(filters.page));
+  if (filters.limit) query.set("limit", String(filters.limit));
+
+  const qs = query.toString();
+  return useQuery<EnquiriesResponse>({
+    queryKey: ["enquiries", filters],
+    queryFn: () => api.get<EnquiriesResponse>(`/api/enquiries${qs ? `?${qs}` : ""}`),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useEnquiryDetails(id?: string | null) {
+  return useQuery<{
+    success: boolean;
+    data: EnquiryItem;
+    messages: EnquiryMessage[];
+  }>({
+    queryKey: ["enquiry-details", id],
+    queryFn: () => api.get(`/api/enquiries/${id}`),
+    enabled: !!id,
+    staleTime: 1000 * 10,
+  });
+}
+
+export function useCreateEnquiry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      category: string;
+      subject: string;
+      message: string;
+      priority?: string;
+      attachment?: EnquiryAttachment;
+      attachments?: EnquiryAttachment[];
+    }) => api.post<{ success: boolean; message: string; data: EnquiryItem }>("/api/enquiries", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+    },
+  });
+}
+
+export function useSendEnquiryMessage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: {
+        message: string;
+        attachment?: EnquiryAttachment;
+        attachments?: EnquiryAttachment[];
+      };
+    }) =>
+      api.post<{ success: boolean; message: string; data: EnquiryMessage }>(
+        `/api/enquiries/${id}/messages`,
+        payload
+      ),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["enquiry-details", id] });
+    },
+  });
+}
+
+export function useUpdateEnquiryStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      status,
+      note,
+    }: {
+      id: string;
+      status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+      note?: string;
+    }) =>
+      api.patch<{ success: boolean; message: string; data: EnquiryItem }>(
+        `/api/enquiries/${id}/status`,
+        { status, note }
+      ),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["enquiry-details", id] });
+    },
+  });
+}
+
+export function useAssignEnquiry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      assigneeId,
+    }: {
+      id: string;
+      assigneeId: string;
+    }) =>
+      api.patch<{ success: boolean; message: string; data: EnquiryItem }>(
+        `/api/enquiries/${id}/assign`,
+        { assigneeId }
+      ),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["enquiry-details", id] });
+    },
+  });
+}
+
+export function useReopenEnquiry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      reason,
+    }: {
+      id: string;
+      reason: string;
+    }) =>
+      api.post<{ success: boolean; message: string; data: EnquiryItem }>(
+        `/api/enquiries/${id}/reopen`,
+        { reason }
+      ),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+      queryClient.invalidateQueries({ queryKey: ["enquiry-details", id] });
+    },
+  });
+}
+
+// ============================================================================
+// APP RELEASES & OTA UPDATES
+// ============================================================================
+
+export interface AppReleaseItem {
+  _id: string;
+  platform: "ANDROID" | "IOS" | "WEB" | "DISPLAY" | "MOBILE";
+  version: string;
+  versionCode: number;
+  minSupportedVersion: string;
+  minSupportedVersionCode: number;
+  notes: string;
+  downloadUrl?: string;
+  bundleUrl?: string;
+  forceUpdate: boolean;
+  channel: "production" | "development" | "staging";
+  isPublished: boolean;
+  publishedAt: string;
+  publishedBy?: {
+    _id: string;
+    name?: string;
+    email?: string;
+    employeeId?: string;
+  } | null;
+  createdAt: string;
+}
+
+export interface AppReleasesResponse {
+  success: boolean;
+  data: AppReleaseItem[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface CheckUpdateResult {
+  updateAvailable: boolean;
+  forceUpdate: boolean;
+  currentVersion: string;
+  latestVersion?: string;
+  minSupportedVersion?: string;
+  notes?: string;
+  downloadUrl?: string;
+  bundleUrl?: string;
+  channel?: string;
+  publishedAt?: string;
+  otaUpdatesEnabled: boolean;
+  message?: string;
+}
+
+export interface DeploymentVersionResult {
+  version: string;
+  buildNumber: number;
+  timestamp: string;
+  otaUpdatesEnabled: boolean;
+  environment: string;
+}
+
+export function useAppReleases(filters: {
+  platform?: string;
+  channel?: string;
+  page?: number;
+  limit?: number;
+}) {
+  return useQuery<AppReleasesResponse>({
+    queryKey: ["app-releases", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.platform && filters.platform !== "ALL") params.set("platform", filters.platform);
+      if (filters.channel && filters.channel !== "ALL") params.set("channel", filters.channel);
+      if (filters.page) params.set("page", String(filters.page));
+      if (filters.limit) params.set("limit", String(filters.limit));
+
+      return api.get<AppReleasesResponse>(`/api/updates/releases?${params.toString()}`);
+    },
+    staleTime: 1000 * 30,
+  });
+}
+
+export function usePublishRelease() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      platform: string;
+      version: string;
+      versionCode?: number;
+      minSupportedVersion?: string;
+      minSupportedVersionCode?: number;
+      notes: string;
+      downloadUrl?: string;
+      bundleUrl?: string;
+      forceUpdate?: boolean;
+      channel?: string;
+    }) =>
+      api.post<{ success: boolean; message: string; data: AppReleaseItem }>(
+        "/api/updates/releases",
+        payload
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["app-releases"] });
+      queryClient.invalidateQueries({ queryKey: ["deployment-version"] });
+    },
+  });
+}
+
+export function useDeleteRelease() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete<{ success: boolean; message: string }>(`/api/updates/releases/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["app-releases"] });
+      queryClient.invalidateQueries({ queryKey: ["deployment-version"] });
+    },
+  });
+}
+
+export function useCheckAppUpdate(platform = "WEB", currentVersion = "1.2.0", channel = "production") {
+  return useQuery<CheckUpdateResult>({
+    queryKey: ["check-app-update", platform, currentVersion, channel],
+    queryFn: () =>
+      api.get<CheckUpdateResult>(
+        `/api/updates/check?platform=${platform}&version=${currentVersion}&channel=${channel}`
+      ),
+    refetchInterval: 1000 * 60 * 3, // Check every 3 minutes
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useDeploymentVersion() {
+  return useQuery<DeploymentVersionResult>({
+    queryKey: ["deployment-version"],
+    queryFn: () => api.get<DeploymentVersionResult>("/api/version"),
+    refetchInterval: 1000 * 60 * 3,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+
+
 
 
 

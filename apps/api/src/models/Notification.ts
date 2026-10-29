@@ -5,6 +5,8 @@ export type NotificationType =
   | "WFH_STATUS"
   | "ANNOUNCEMENT"
   | "ENQUIRY_REPLY"
+  | "ENQUIRY_STATUS"
+  | "ENQUIRY_ASSIGNED"
   | "SYSTEM"
   | "SECURITY";
 
@@ -36,6 +38,8 @@ const NotificationSchema = new Schema<INotification>(
         "WFH_STATUS",
         "ANNOUNCEMENT",
         "ENQUIRY_REPLY",
+        "ENQUIRY_STATUS",
+        "ENQUIRY_ASSIGNED",
         "SYSTEM",
         "SECURITY",
       ],

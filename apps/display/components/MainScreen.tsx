@@ -4,8 +4,9 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { io, Socket } from "socket.io-client";
 import { StoredDisplayCredentials, clearStoredCredentials } from "../lib/storage";
-import { fetchRotatingChallenge, DisplayApiError, QrTokenResponse } from "../lib/api";
+import { fetchRotatingChallenge, DisplayApiError, QrTokenResponse, checkDisplayUpdate } from "../lib/api";
 import { CountdownRing } from "./CountdownRing";
+import { AnnouncementTicker } from "./AnnouncementTicker";
 import {
   Wifi,
   WifiOff,
@@ -37,10 +38,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
   const [isRotating, setIsRotating] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>("");
   const [currentDate, setCurrentDate] = useState<string>("");
+  const [pendingUpdate, setPendingUpdate] = useState<{ version: string; notes?: string } | null>(null);
+  const [isQuietUpdating, setIsQuietUpdating] = useState<boolean>(false);
 
   const socketRef = useRef<Socket | null>(null);
   const isFetchingRef = useRef<boolean>(false);
   const tokenDataRef = useRef<QrTokenResponse | null>(null);
+  const lastPunchRef = useRef<number>(Date.now());
   tokenDataRef.current = tokenData;
 
   // Live wall-clock updater
@@ -220,6 +224,19 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
     socket.on(SocketEvent.DISPLAY_STATUS, handleDisplayStatus);
     socket.on(SocketEvent.TERMINAL_STATUS_CHANGED, handleDisplayStatus);
 
+    const handleReleasePublished = (data: { platform: string; version: string; notes?: string }) => {
+      if (data.platform === "DISPLAY" || data.platform === "ALL") {
+        setPendingUpdate({ version: data.version, notes: data.notes });
+      }
+    };
+    socket.on(SocketEvent.APP_RELEASE_PUBLISHED, handleReleasePublished);
+    socket.on(SocketEvent.ATTENDANCE_PUNCHED, () => {
+      lastPunchRef.current = Date.now();
+    });
+    socket.on(SocketEvent.ATTENDANCE_UPDATED, () => {
+      lastPunchRef.current = Date.now();
+    });
+
     // Heartbeat every 30s
     const heartbeatInterval = setInterval(() => {
       if (socket.connected) {
@@ -232,6 +249,41 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
       socket.disconnect();
     };
   }, [creds, requestNewChallenge]);
+
+  // Periodic Display Version Poll
+  useEffect(() => {
+    let isMounted = true;
+    const checkVersion = async () => {
+      const res = await checkDisplayUpdate("1.0.0");
+      if (isMounted && res.updateAvailable && res.latestVersion) {
+        setPendingUpdate({ version: res.latestVersion, notes: res.notes });
+      }
+    };
+    checkVersion();
+    const interval = setInterval(checkVersion, 1000 * 60 * 2);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Safe Quiet-Moment Auto-Reload Evaluator
+  useEffect(() => {
+    if (!pendingUpdate || isQuietUpdating) return;
+
+    const quietInterval = setInterval(() => {
+      const idleSeconds = (Date.now() - lastPunchRef.current) / 1000;
+      // Quiet moment: terminal is ACTIVE and idle without any punch for at least 30s
+      if (idleSeconds >= 30 && terminalState === "ACTIVE") {
+        setIsQuietUpdating(true);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+    }, 5000);
+
+    return () => clearInterval(quietInterval);
+  }, [pendingUpdate, isQuietUpdating, terminalState]);
 
   // Initial fetch on mount
   useEffect(() => {
@@ -478,6 +530,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
         )}
       </main>
 
+      {/* Optional Slim Announcement Ticker at the Bottom */}
+      <AnnouncementTicker />
+
       {/* BOTTOM TELEMETRY & PRIVACY GUARANTEE */}
       <footer className="relative z-10 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
         <div className="flex items-center gap-2">
@@ -489,9 +544,30 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
 
         <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
           <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span>VorldX High-Contrast Display Engine v1.0</span>
+          <span>VorldX High-Contrast Display Engine v1.0.0</span>
+          {pendingUpdate && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[10px] animate-pulse">
+              <RotateCw className="w-2.5 h-2.5 animate-spin" />
+              <span>v{pendingUpdate.version} ready (auto-reload at quiet interval)</span>
+            </span>
+          )}
         </div>
       </footer>
+
+      {/* QUIET MOMENT RE-LOAD OVERLAY */}
+      {isQuietUpdating && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+            <RotateCw className="w-8 h-8 animate-spin" />
+          </div>
+          <div className="text-center space-y-1">
+            <h3 className="text-xl font-bold text-white">Quiet Interval Detected</h3>
+            <p className="text-xs text-slate-400">
+              Safely reloading kiosk to apply update v{pendingUpdate?.version || "latest"}...
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

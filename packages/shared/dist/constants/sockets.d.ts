@@ -43,6 +43,8 @@ export declare const SocketEvent: {
     readonly APP_RELEASE_PUBLISHED: "app_release.published";
     readonly NOTIFICATION_NEW: "notification.new";
     readonly NOTIFICATION_READ: "notification.read";
+    readonly HR_PRESENCE: "hr:presence";
+    readonly PRESENCE_UPDATED: "presence.updated";
 };
 export type SocketEventType = (typeof SocketEvent)[keyof typeof SocketEvent];
 /**

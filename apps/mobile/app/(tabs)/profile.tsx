@@ -15,6 +15,7 @@ import {
   Hash,
   LogOut,
   Mail,
+  RefreshCw,
   ShieldCheck,
   UserCheck,
   type LucideIcon,
@@ -31,6 +32,7 @@ import {
   SectionHeader,
   Avatar,
   Text,
+  PressableScale,
 } from '../../src/components';
 import { colors, spacing } from '../../src/theme/tokens';
 import { useResponsive } from '../../src/lib/responsive';
@@ -40,6 +42,12 @@ import {
   EmployeeDetails,
   PolicyData,
 } from '../../src/services';
+import {
+  useAppUpdates,
+  APP_VERSION,
+  APP_BUILD_NUMBER,
+  APP_CHANNEL,
+} from '../../src/services/updateService';
 
 function InfoRow({
   icon: Icon,
@@ -75,6 +83,18 @@ export default function ProfileScreen() {
   const { showToast } = useToast();
   const { isWide } = useResponsive();
   const [loggingOut, setLoggingOut] = useState(false);
+  const { checkNow, isChecking, updateInfo } = useAppUpdates();
+
+  const handleManualCheckUpdates = async () => {
+    await checkNow();
+    if (!updateInfo?.updateAvailable) {
+      showToast({
+        title: 'Up to Date',
+        message: `You are running the latest version (v${APP_VERSION}).`,
+        type: 'success',
+      });
+    }
+  };
 
   const [employeeDetails, setEmployeeDetails] = useState<EmployeeDetails | null>(null);
   const [policyData, setPolicyData] = useState<PolicyData | null>(null);
@@ -230,7 +250,36 @@ export default function ProfileScreen() {
           <InfoRow icon={Globe2} label="Working days" value={workdaysStr} last />
         </Card>
 
-        {/* 4. Actions & Sign Out */}
+        {/* 4. Application & System Updates */}
+        <SectionHeader title="Application & Updates" caption="App version and release channel" />
+        <Card padding={0}>
+          <PressableScale
+            onPress={handleManualCheckUpdates}
+            accessibilityRole="button"
+            style={styles.updateRow}
+          >
+            <View style={styles.infoLeft}>
+              <View style={styles.infoIconWrap}>
+                <RefreshCw size={16} color={colors.indigoSoft} strokeWidth={1.8} />
+              </View>
+              <View>
+                <Text variant="small" color={colors.text} weight="semibold">
+                  v{APP_VERSION} (Build {APP_BUILD_NUMBER})
+                </Text>
+                <Text variant="caption" color={colors.muted}>
+                  Channel: {APP_CHANNEL.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+            <Badge
+              label={isChecking ? 'CHECKING...' : updateInfo?.updateAvailable ? 'UPDATE AVAILABLE' : 'UP TO DATE'}
+              tone={updateInfo?.updateAvailable ? 'warning' : 'success'}
+              dot
+            />
+          </PressableScale>
+        </Card>
+
+        {/* 5. Actions & Sign Out */}
         <View style={styles.actionsSection}>
           <Button
             icon={<LogOut size={16} color={colors.danger} />}
@@ -240,7 +289,7 @@ export default function ProfileScreen() {
             variant="danger"
           />
           <Text variant="caption" color={colors.muted} align="center">
-            VorldX Attendance · v0.1.0 · Build 2026
+            VorldX Attendance Suite · {APP_CHANNEL.toUpperCase()}
           </Text>
         </View>
       </View>
@@ -250,21 +299,21 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
-    gap: spacing.lg,
+    gap: spacing.md,
     paddingBottom: spacing.xxl,
   },
   containerWide: {
-    maxWidth: 580,
+    maxWidth: 640,
     alignSelf: 'center',
+    width: '100%',
   },
   identityCard: {
-    width: '100%',
+    marginBottom: spacing.xs,
   },
   identityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   identityCopy: {
     flex: 1,
@@ -273,19 +322,25 @@ const styles = StyleSheet.create({
   badgeRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 4,
+    marginTop: 2,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.md,
+    paddingVertical: 14,
     paddingHorizontal: spacing.lg,
-    gap: spacing.md,
+  },
+  updateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
   },
   rowDivider: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   infoLeft: {
     flexDirection: 'row',
@@ -293,18 +348,19 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   infoIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: 'rgba(89, 101, 242, 0.08)',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(89, 101, 242, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   infoValue: {
     textAlign: 'right',
+    maxWidth: '55%',
   },
   actionsSection: {
-    gap: spacing.md,
+    gap: spacing.sm,
     marginTop: spacing.md,
   },
 });

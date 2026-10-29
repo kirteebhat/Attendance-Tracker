@@ -1,4 +1,5 @@
 import { Schema, model, Document, Types } from "mongoose";
+import { IEnquiryAttachment } from "./Enquiry";
 
 export interface IEnquiryMessage extends Document {
   _id: Types.ObjectId;
@@ -6,10 +7,21 @@ export interface IEnquiryMessage extends Document {
   sender: Types.ObjectId;
   senderRole: "EMPLOYEE" | "HR" | "ADMIN";
   message: string;
-  attachments: string[];
+  attachments: IEnquiryAttachment[];
   readByRecipient: boolean;
   createdAt: Date;
 }
+
+const EnquiryAttachmentSubschema = new Schema<IEnquiryAttachment>(
+  {
+    name: { type: String, required: true, trim: true },
+    mimeType: { type: String, required: true, trim: true },
+    sizeBytes: { type: Number, required: true },
+    url: { type: String, trim: true },
+    dataUrl: { type: String, trim: true },
+  },
+  { _id: false }
+);
 
 const EnquiryMessageSchema = new Schema<IEnquiryMessage>(
   {
@@ -37,12 +49,7 @@ const EnquiryMessageSchema = new Schema<IEnquiryMessage>(
       minlength: [1, "Message cannot be empty"],
       maxlength: [3000, "Message cannot exceed 3000 characters"],
     },
-    attachments: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
+    attachments: [EnquiryAttachmentSubschema],
     readByRecipient: {
       type: Boolean,
       default: false,
@@ -62,4 +69,3 @@ const EnquiryMessageSchema = new Schema<IEnquiryMessage>(
 EnquiryMessageSchema.index({ enquiry: 1, createdAt: 1 });
 
 export const EnquiryMessage = model<IEnquiryMessage>("EnquiryMessage", EnquiryMessageSchema);
-

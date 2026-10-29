@@ -13,10 +13,19 @@ import {
   LogOut,
   Building2,
   Lock,
+  Megaphone,
+  LifeBuoy,
+  Package,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Badge } from "../ui/Badge";
-import { useFeatureFlags, FeatureFlagsMap } from "../../api/queries";
+import {
+  useFeatureFlags,
+  FeatureFlagsMap,
+  useLeaveRequests,
+  useUnreadAnnouncementsCount,
+  useEnquiries,
+} from "../../api/queries";
 
 interface NavItem {
   name: string;
@@ -29,18 +38,19 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: "Executive Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Attendance Ledger", href: "/attendance", icon: CalendarCheck },
-  { name: "Reports & Analytics", href: "/reports", icon: BarChart3 },
+  { name: "Leave Requests", href: "/leave", icon: CalendarCheck },
+  { name: "Support Enquiries", href: "/enquiries", icon: LifeBuoy },
   { name: "WFH Approvals", href: "/wfh", icon: Home },
+  { name: "Working Calendar", href: "/calendar", icon: Calendar },
+  { name: "Announcements", href: "/announcements", icon: Megaphone },
+  { name: "Reports & Analytics", href: "/reports", icon: BarChart3 },
   { name: "Employee Directory", href: "/employees", icon: Users },
   { name: "Policy & Shifts", href: "/policies", icon: Settings2 },
-  { name: "Working Calendar", href: "/calendar", icon: Calendar },
   { name: "Office QR Displays", href: "/displays", icon: Tv },
   { name: "Security & Sessions", href: "/security", icon: Lock },
+  { name: "App Releases & OTA", href: "/releases", icon: Package },
   { name: "Audit Trail", href: "/audit-logs", icon: ShieldCheck },
-  // Extension Modules (hidden in UI when flag is off)
-  { name: "Leave Requests", href: "/leave", icon: CalendarCheck, flagKey: "leave" },
-  { name: "Announcements", href: "/announcements", icon: LayoutDashboard, flagKey: "announcements" },
-  { name: "Enquiries & Helpdesk", href: "/enquiries", icon: Users, flagKey: "enquiries" },
+  // Optional Extension Modules
   { name: "3D Floor View", href: "/three-d", icon: Tv, flagKey: "threeD" },
 ];
 
@@ -48,6 +58,15 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
   const { user, logout } = useAuth();
   const { data: flagData } = useFeatureFlags();
   const flags = flagData?.data;
+
+  const { data: pendingLeaveData } = useLeaveRequests({ status: "PENDING", limit: 1 });
+  const pendingLeaveCount = pendingLeaveData?.pagination?.total || 0;
+
+  const { data: unreadAnnouncementsData } = useUnreadAnnouncementsCount();
+  const unreadAnnouncementsCount = unreadAnnouncementsData?.unreadCount || 0;
+
+  const { data: openEnquiriesData } = useEnquiries({ status: "OPEN", limit: 1 });
+  const openEnquiriesCount = openEnquiriesData?.total || 0;
 
   const visibleNav = navigation.filter((item) => {
     if (item.flagKey && (!flags || !flags[item.flagKey])) {
@@ -98,7 +117,22 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
               }
             >
               <Icon className="w-4 h-4 shrink-0" />
-              <span>{item.name}</span>
+              <span className="truncate">{item.name}</span>
+              {item.href === "/leave" && pendingLeaveCount > 0 && (
+                <span className="ml-auto px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500 text-slate-950 shadow-xs">
+                  {pendingLeaveCount}
+                </span>
+              )}
+              {item.href === "/enquiries" && openEnquiriesCount > 0 && (
+                <span className="ml-auto px-2 py-0.5 text-[11px] font-bold rounded-full bg-cyan-400 text-slate-950 shadow-xs">
+                  {openEnquiriesCount}
+                </span>
+              )}
+              {item.href === "/announcements" && unreadAnnouncementsCount > 0 && (
+                <span className="ml-auto px-2 py-0.5 text-[11px] font-bold rounded-full bg-blue-500 text-white shadow-xs">
+                  {unreadAnnouncementsCount}
+                </span>
+              )}
             </NavLink>
           );
         })}
@@ -116,6 +150,13 @@ export const Sidebar: React.FC<{ onCloseMobile?: () => void }> = ({ onCloseMobil
           <Badge variant="info" size="sm" className="shrink-0 uppercase font-mono">
             {user?.role}
           </Badge>
+        </div>
+        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2.5 px-0.5">
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span>Platform</span>
+          </span>
+          <span className="font-mono text-slate-400">v1.2.0</span>
         </div>
         <button
           onClick={() => logout()}

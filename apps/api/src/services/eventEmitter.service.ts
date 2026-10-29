@@ -67,6 +67,12 @@ export class EventEmitterService {
         case SocketEvent.LEAVE_BALANCE_UPDATED:
           this.emitLeaveBalanceUpdated(payload);
           break;
+        case SocketEvent.ANNOUNCEMENT_PUBLISHED:
+          this.emitAnnouncementPublished(payload);
+          break;
+        case SocketEvent.ANNOUNCEMENT_PINNED:
+          this.emitAnnouncementPinned(payload);
+          break;
         default:
           io.emit(event, payload);
           break;
@@ -330,6 +336,35 @@ export class EventEmitterService {
       logger.debug(`[Socket] Emitted leave.balance_updated for ${payload.employeeId}`);
     } catch (err) {
       logger.error(`Failed to emit leave.balance_updated:`, err);
+    }
+  }
+  /**
+   * Emits announcement published event to all connected clients and HR rooms
+   */
+  public emitAnnouncementPublished(payload: any): void {
+    const io = getSocketServer();
+    if (!io) return;
+
+    try {
+      io.emit(SocketEvent.ANNOUNCEMENT_PUBLISHED, payload);
+      logger.debug(`[Socket] Emitted announcement.published for '${payload.title || payload.id}'`);
+    } catch (err) {
+      logger.error(`Failed to emit announcement.published:`, err);
+    }
+  }
+
+  /**
+   * Emits announcement pinned state toggle event
+   */
+  public emitAnnouncementPinned(payload: any): void {
+    const io = getSocketServer();
+    if (!io) return;
+
+    try {
+      io.emit(SocketEvent.ANNOUNCEMENT_PINNED, payload);
+      logger.debug(`[Socket] Emitted announcement.pinned for '${payload.id}'`);
+    } catch (err) {
+      logger.error(`Failed to emit announcement.pinned:`, err);
     }
   }
 }

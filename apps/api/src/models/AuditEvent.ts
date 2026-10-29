@@ -15,7 +15,13 @@ export type AuditEntityType =
   | "CALENDAR_EVENT"
   | "LEAVE_REQUEST"
   | "LEAVE_TYPE"
-  | "LEAVE_BALANCE";
+  | "LEAVE_BALANCE"
+  | "ANNOUNCEMENT"
+  | "ANNOUNCEMENT_TEMPLATE"
+  | "ENQUIRY"
+  | "ENQUIRY_MESSAGE"
+  | "APP_RELEASE"
+  | "OTA_UPDATE";
 
 export interface IAuditEvent extends Document {
   _id: Types.ObjectId;
@@ -51,6 +57,12 @@ const AuditEventSchema = new Schema<IAuditEvent>(
         "LEAVE_REQUEST",
         "LEAVE_TYPE",
         "LEAVE_BALANCE",
+        "ANNOUNCEMENT",
+        "ANNOUNCEMENT_TEMPLATE",
+        "ENQUIRY",
+        "ENQUIRY_MESSAGE",
+        "APP_RELEASE",
+        "OTA_UPDATE",
       ],
       required: true,
       index: true,

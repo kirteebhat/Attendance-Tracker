@@ -17,6 +17,7 @@ export * from "./LeaveBalance";
 export * from "./LeaveRequest";
 export * from "./CalendarEvent";
 export * from "./Announcement";
+export * from "./AnnouncementTemplate";
 export * from "./Enquiry";
 export * from "./EnquiryMessage";
 export * from "./StaffOtpChallenge";

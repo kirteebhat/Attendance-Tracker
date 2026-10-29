@@ -4,10 +4,10 @@ import { LucideIcon } from "lucide-react";
 
 export interface StatCardProps {
   label: string;
-  value: number | string;
+  value: React.ReactNode;
   subtext?: string;
   icon: LucideIcon;
-  variant?: "blue" | "emerald" | "amber" | "indigo" | "rose" | "cyan";
+  variant?: "blue" | "emerald" | "amber" | "indigo" | "rose" | "cyan" | "purple";
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -47,6 +47,11 @@ export const StatCard: React.FC<StatCardProps> = ({
       bg: "bg-cyan-50 text-cyan-700 border-cyan-100",
       iconBg: "bg-cyan-100 text-cyan-700",
       accent: "text-cyan-600",
+    },
+    purple: {
+      bg: "bg-purple-50 text-purple-700 border-purple-100",
+      iconBg: "bg-purple-100 text-purple-700",
+      accent: "text-purple-600",
     },
   };
 
