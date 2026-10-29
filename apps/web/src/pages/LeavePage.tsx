@@ -36,11 +36,8 @@ import {
   X,
   Search,
   CheckCircle2,
-  XCircle,
   Clock,
   AlertTriangle,
-  User,
-  Building2,
   Calendar,
   Layers,
   Settings2,
@@ -49,11 +46,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  RefreshCw,
   Users,
-  ShieldAlert,
-  ArrowRight,
-  Info,
 } from "lucide-react";
 
 const DEPARTMENT_OPTIONS = [
@@ -124,7 +117,7 @@ export const LeavePage: React.FC = () => {
   const pagination = requestsResponse?.pagination || { total: 0, page: 1, limit: 15, totalPages: 1 };
 
   // Leave Types for filter dropdowns & settings
-  const { data: typesResponse, isLoading: isTypesLoading, refetch: refetchTypes } = useLeaveTypes(true);
+  const { data: typesResponse, isLoading: isTypesLoading } = useLeaveTypes(true);
   const leaveTypes = typesResponse?.data || [];
 
   // Mutations
@@ -539,7 +532,7 @@ export const LeavePage: React.FC = () => {
   }, [calendarMonthDate]);
 
   // Fetch approved leaves covering this month
-  const { data: monthLeavesResponse, isLoading: isCalendarLeavesLoading } = useLeaveRequests({
+  const { data: monthLeavesResponse } = useLeaveRequests({
     startDate: `${monthYearStr}-01`,
     endDate: `${monthYearStr}-31`,
     department: calendarDept || undefined,
@@ -804,7 +797,7 @@ export const LeavePage: React.FC = () => {
             <div className="overflow-hidden bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold uppercase tracking-wider">
+                  <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold uppercase tracking-wider text-[11px] select-none z-10">
                     <tr>
                       <th className="py-3 px-4 w-10">
                         <input
@@ -1053,7 +1046,7 @@ export const LeavePage: React.FC = () => {
             <div className="overflow-hidden bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold uppercase tracking-wider">
+                  <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-semibold uppercase tracking-wider text-[11px] select-none z-10">
                     <tr>
                       <th className="py-3 px-4">Employee</th>
                       <th className="py-3 px-4">Department</th>
@@ -1183,7 +1176,11 @@ export const LeavePage: React.FC = () => {
               title="No Leave Types Configured"
               description="Define your first leave category to allow employees to submit requests."
               icon={Settings2}
-              action={{ label: "Add Leave Type", onClick: handleOpenCreateType }}
+              action={
+                <Button size="sm" onClick={handleOpenCreateType}>
+                  Add Leave Type
+                </Button>
+              }
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

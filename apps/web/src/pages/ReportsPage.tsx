@@ -154,17 +154,17 @@ export const ReportsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header & Actions (hidden on print) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200 print:hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800 print:hidden">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
               Reports & Workforce Analytics
             </h1>
             <Badge variant="primary" className="text-xs font-semibold px-2.5 py-0.5">
               Live Aggregations
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Aggregated attendance, employee and department metrics, punctuality breakdown, and streaming CSV exports
           </p>
         </div>
@@ -177,7 +177,7 @@ export const ReportsPage: React.FC = () => {
             onClick={handlePrint}
             className="gap-1.5 text-xs font-semibold"
           >
-            <Printer className="w-4 h-4 text-slate-600" />
+            <Printer className="w-4 h-4 text-slate-600 dark:text-slate-300" />
             Print Report
           </Button>
 
@@ -205,11 +205,11 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Global Filter Toolbar (hidden on print) */}
-      <Card className="p-4 bg-white border border-slate-200 shadow-xs print:hidden space-y-3">
+      <Card className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs print:hidden space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           {/* Start Date */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
               Start Date
             </label>
             <Input
@@ -226,7 +226,7 @@ export const ReportsPage: React.FC = () => {
 
           {/* End Date */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">End Date</label>
+            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">End Date</label>
             <Input
               type="date"
               id="report-end-date-input"
@@ -241,7 +241,7 @@ export const ReportsPage: React.FC = () => {
 
           {/* Department Filter */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
               Department
             </label>
             <Select
@@ -257,7 +257,7 @@ export const ReportsPage: React.FC = () => {
 
           {/* Search */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
               Search Employee
             </label>
             <div className="relative">
@@ -277,7 +277,7 @@ export const ReportsPage: React.FC = () => {
       </Card>
 
       {/* Tabs Toolbar (hidden on print) */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 pb-2 text-xs font-semibold print:hidden">
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2 text-xs font-semibold print:hidden">
         <button
           type="button"
           onClick={() => {
@@ -287,7 +287,7 @@ export const ReportsPage: React.FC = () => {
           className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all ${
             activeTab === "summary"
               ? "bg-blue-600 text-white shadow-xs"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
           }`}
         >
           <BarChart3 className="w-3.5 h-3.5" />
@@ -304,7 +304,7 @@ export const ReportsPage: React.FC = () => {
           className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all ${
             activeTab === "employee"
               ? "bg-blue-600 text-white shadow-xs"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
           }`}
         >
           <Users className="w-3.5 h-3.5" />
@@ -321,7 +321,7 @@ export const ReportsPage: React.FC = () => {
           className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all ${
             activeTab === "department"
               ? "bg-blue-600 text-white shadow-xs"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
           }`}
         >
           <Building className="w-3.5 h-3.5" />
@@ -338,7 +338,7 @@ export const ReportsPage: React.FC = () => {
           className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all ${
             activeTab === "late"
               ? "bg-blue-600 text-white shadow-xs"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
           }`}
         >
           <Clock className="w-3.5 h-3.5" />
@@ -355,7 +355,7 @@ export const ReportsPage: React.FC = () => {
           className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all ${
             activeTab === "wfh"
               ? "bg-blue-600 text-white shadow-xs"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
           }`}
         >
           <Home className="w-3.5 h-3.5" />
@@ -369,56 +369,56 @@ export const ReportsPage: React.FC = () => {
           {/* Summary Stat Cards */}
           {summary && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <Card className="p-3 text-center border-slate-200 shadow-xs">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              <Card className="p-3 text-center border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                   Total Records
                 </span>
-                <span className="text-xl font-extrabold text-slate-900 block mt-1 font-mono">
+                <span className="text-xl font-extrabold text-slate-900 dark:text-slate-100 block mt-1 font-mono">
                   {summary.totalRecords}
                 </span>
               </Card>
 
-              <Card className="p-3 text-center border-slate-200 shadow-xs">
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">
+              <Card className="p-3 text-center border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
                   Present
                 </span>
-                <span className="text-xl font-extrabold text-emerald-700 block mt-1 font-mono">
+                <span className="text-xl font-extrabold text-emerald-700 dark:text-emerald-400 block mt-1 font-mono">
                   {summary.presentCount}
                 </span>
               </Card>
 
-              <Card className="p-3 text-center border-slate-200 shadow-xs">
-                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">
+              <Card className="p-3 text-center border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900">
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">
                   Late
                 </span>
-                <span className="text-xl font-extrabold text-amber-700 block mt-1 font-mono">
+                <span className="text-xl font-extrabold text-amber-700 dark:text-amber-400 block mt-1 font-mono">
                   {summary.lateCount}
                 </span>
               </Card>
 
-              <Card className="p-3 text-center border-slate-200 shadow-xs">
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">
+              <Card className="p-3 text-center border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900">
+                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">
                   WFH
                 </span>
-                <span className="text-xl font-extrabold text-blue-700 block mt-1 font-mono">
+                <span className="text-xl font-extrabold text-blue-700 dark:text-blue-400 block mt-1 font-mono">
                   {summary.wfhCount}
                 </span>
               </Card>
 
-              <Card className="p-3 text-center border-slate-200 shadow-xs">
-                <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">
+              <Card className="p-3 text-center border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900">
+                <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block">
                   Absent
                 </span>
-                <span className="text-xl font-extrabold text-red-700 block mt-1 font-mono">
+                <span className="text-xl font-extrabold text-red-700 dark:text-red-400 block mt-1 font-mono">
                   {summary.absentCount}
                 </span>
               </Card>
 
-              <Card className="p-3 text-center border-slate-200 shadow-xs">
-                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">
+              <Card className="p-3 text-center border-slate-200 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900">
+                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
                   Total Hours
                 </span>
-                <span className="text-xl font-extrabold text-indigo-700 block mt-1 font-mono">
+                <span className="text-xl font-extrabold text-indigo-700 dark:text-indigo-400 block mt-1 font-mono">
                   {summary.totalHours}h
                 </span>
               </Card>
@@ -426,9 +426,9 @@ export const ReportsPage: React.FC = () => {
           )}
 
           {/* Real Report Bar Chart */}
-          <Card className="p-5 border-slate-200 shadow-sm space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+          <Card className="p-5 border-slate-200 dark:border-slate-800 shadow-sm space-y-3 bg-white dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+              <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-blue-600" />
                 Attendance Status Distribution ({startDate} to {endDate})
               </h3>
@@ -446,7 +446,7 @@ export const ReportsPage: React.FC = () => {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={summaryChartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.3} />
                     <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
                     <YAxis stroke="#64748b" fontSize={11} allowDecimals={false} />
                     <Tooltip
@@ -454,6 +454,7 @@ export const ReportsPage: React.FC = () => {
                         borderRadius: "8px",
                         fontSize: "12px",
                         backgroundColor: "#0f172a",
+                        borderColor: "#1e293b",
                         color: "#fff",
                       }}
                     />
@@ -465,9 +466,9 @@ export const ReportsPage: React.FC = () => {
           </Card>
 
           {/* Breakdown Table */}
-          <Card className="border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800">
-              Detailed Attendance Ledger ({summaryData?.data.length || 0} Records)
+          <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 font-bold text-xs text-slate-800 dark:text-slate-200">
+              Detailed Attendance Ledger ({summaryData?.data?.length || 0} Records)
             </div>
 
             {isSummaryLoading ? (
@@ -485,7 +486,7 @@ export const ReportsPage: React.FC = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-semibold">
+                    <tr className="sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold uppercase tracking-wider text-[11px] select-none z-10">
                       <th className="py-2.5 px-3">Date</th>
                       <th className="py-2.5 px-3">Employee</th>
                       <th className="py-2.5 px-3">Department</th>
@@ -495,24 +496,24 @@ export const ReportsPage: React.FC = () => {
                       <th className="py-2.5 px-3">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {summaryData!.data.map((r) => {
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {(summaryData?.data || []).map((r) => {
                       const emp = typeof r.employee === "object" && r.employee !== null ? r.employee : null;
                       return (
-                        <tr key={r._id} className="hover:bg-slate-50/60 transition-colors">
-                          <td className="py-2.5 px-3 font-mono text-slate-700 font-semibold">{r.dateKey}</td>
+                        <tr key={r._id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                          <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300 font-semibold">{r.dateKey}</td>
                           <td className="py-2.5 px-3">
-                            <span className="font-semibold text-slate-900 block">{emp?.name || r.employeeId}</span>
-                            <span className="text-[10px] font-mono text-slate-400">{r.employeeId}</span>
+                            <span className="font-semibold text-slate-900 dark:text-slate-100 block">{emp?.name || r.employeeId}</span>
+                            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{r.employeeId}</span>
                           </td>
-                          <td className="py-2.5 px-3 text-slate-600">{r.department}</td>
-                          <td className="py-2.5 px-3 font-mono text-slate-700">
+                          <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{r.department}</td>
+                          <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
                             {r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
                           </td>
-                          <td className="py-2.5 px-3 font-mono text-slate-700">
+                          <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
                             {r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
                           </td>
-                          <td className="py-2.5 px-3 font-mono">
+                          <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
                             {r.durationMinutes ? `${Math.floor(r.durationMinutes / 60)}h ${r.durationMinutes % 60}m` : "—"}
                           </td>
                           <td className="py-2.5 px-3">
@@ -543,10 +544,10 @@ export const ReportsPage: React.FC = () => {
 
       {/* TAB 2: EMPLOYEE-WISE REPORT */}
       {activeTab === "employee" && (
-        <Card className="border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800 flex items-center justify-between">
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center justify-between">
             <span>Employee Attendance Aggregation</span>
-            <span className="text-[11px] font-normal text-slate-500">
+            <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
               {employeeData?.pagination.total || 0} active employees evaluated
             </span>
           </div>
@@ -566,7 +567,7 @@ export const ReportsPage: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-semibold">
+                  <tr className="sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold uppercase tracking-wider text-[11px] select-none z-10">
                     <th className="py-2.5 px-3">Employee</th>
                     <th className="py-2.5 px-3">Department</th>
                     <th className="py-2.5 px-3 text-center">Total Days</th>
@@ -578,20 +579,20 @@ export const ReportsPage: React.FC = () => {
                     <th className="py-2.5 px-3 text-right">Attendance %</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {employeeData!.data.map((row) => (
-                    <tr key={row.employeeId} className="hover:bg-slate-50/60 transition-colors">
+                    <tr key={row.employeeId} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
                       <td className="py-2.5 px-3">
-                        <span className="font-semibold text-slate-900 block">{row.name}</span>
-                        <span className="text-[10px] font-mono text-slate-400">{row.employeeId}</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100 block">{row.name}</span>
+                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{row.employeeId}</span>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600">{row.department}</td>
-                      <td className="py-2.5 px-3 text-center font-mono font-medium">{row.totalDays}</td>
-                      <td className="py-2.5 px-3 text-center font-mono text-emerald-600 font-semibold">{row.presentDays}</td>
-                      <td className="py-2.5 px-3 text-center font-mono text-amber-600">{row.lateDays}</td>
-                      <td className="py-2.5 px-3 text-center font-mono text-blue-600">{row.wfhDays}</td>
-                      <td className="py-2.5 px-3 text-center font-mono text-red-600">{row.absentDays}</td>
-                      <td className="py-2.5 px-3 text-center font-mono font-bold">{row.totalWorkHours}h</td>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{row.department}</td>
+                      <td className="py-2.5 px-3 text-center font-mono font-medium text-slate-800 dark:text-slate-200">{row.totalDays}</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{row.presentDays}</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-amber-600 dark:text-amber-400">{row.lateDays}</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-blue-600 dark:text-blue-400">{row.wfhDays}</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-red-600 dark:text-red-400">{row.absentDays}</td>
+                      <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-900 dark:text-slate-100">{row.totalWorkHours}h</td>
                       <td className="py-2.5 px-3 text-right">
                         <Badge
                           variant={
@@ -618,8 +619,8 @@ export const ReportsPage: React.FC = () => {
       {activeTab === "department" && (
         <div className="space-y-6">
           {/* Department Performance Bar Chart */}
-          <Card className="p-5 border-slate-200 shadow-sm space-y-3">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+          <Card className="p-5 border-slate-200 dark:border-slate-800 shadow-sm space-y-3 bg-white dark:bg-slate-900">
+            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
               <Building className="w-4 h-4 text-blue-600" />
               Department Attendance Rate (%)
             </h3>
@@ -636,7 +637,7 @@ export const ReportsPage: React.FC = () => {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={departmentData!.data}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.3} />
                     <XAxis dataKey="department" stroke="#64748b" fontSize={11} />
                     <YAxis stroke="#64748b" fontSize={11} domain={[0, 100]} />
                     <Tooltip
@@ -644,6 +645,7 @@ export const ReportsPage: React.FC = () => {
                         borderRadius: "8px",
                         fontSize: "12px",
                         backgroundColor: "#0f172a",
+                        borderColor: "#1e293b",
                         color: "#fff",
                       }}
                     />
@@ -655,11 +657,11 @@ export const ReportsPage: React.FC = () => {
           </Card>
 
           {/* Department Breakdown Table */}
-          <Card className="border-slate-200 shadow-sm overflow-hidden">
+          <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-semibold">
+                  <tr className="sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold uppercase tracking-wider text-[11px] select-none z-10">
                     <th className="py-2.5 px-3">Department</th>
                     <th className="py-2.5 px-3 text-center">Headcount</th>
                     <th className="py-2.5 px-3 text-center">Total Logs</th>
@@ -670,16 +672,16 @@ export const ReportsPage: React.FC = () => {
                     <th className="py-2.5 px-3 text-right">Attendance Rate</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {(departmentData?.data || []).map((row) => (
-                    <tr key={row.department} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-2.5 px-3 font-semibold text-slate-900">{row.department}</td>
-                      <td className="py-2.5 px-3 text-center font-mono">{row.headcount}</td>
-                      <td className="py-2.5 px-3 text-center font-mono">{row.totalRecords}</td>
-                      <td className="py-2.5 px-3 text-center font-mono text-emerald-600 font-semibold">{row.presentCount}</td>
-                      <td className="py-2.5 px-3 text-center font-mono text-amber-600">{row.lateCount}</td>
-                      <td className="py-2.5 px-3 text-center font-mono text-blue-600">{row.wfhCount}</td>
-                      <td className="py-2.5 px-3 text-center font-mono font-bold">{row.totalWorkHours}h</td>
+                    <tr key={row.department} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-slate-100">{row.department}</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-slate-800 dark:text-slate-200">{row.headcount}</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-slate-800 dark:text-slate-200">{row.totalRecords}</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{row.presentCount}</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-amber-600 dark:text-amber-400">{row.lateCount}</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-blue-600 dark:text-blue-400">{row.wfhCount}</td>
+                      <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-900 dark:text-slate-100">{row.totalWorkHours}h</td>
                       <td className="py-2.5 px-3 text-right">
                         <Badge
                           variant={
@@ -704,8 +706,8 @@ export const ReportsPage: React.FC = () => {
 
       {/* TAB 4: LATE ARRIVALS BREAKDOWN */}
       {activeTab === "late" && (
-        <Card className="border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800">
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 font-bold text-xs text-slate-800 dark:text-slate-200">
             Punctuality Violations & Late Arrivals Ledger
           </div>
 
@@ -724,7 +726,7 @@ export const ReportsPage: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-semibold">
+                  <tr className="sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold uppercase tracking-wider text-[11px] select-none z-10">
                     <th className="py-2.5 px-3">Date</th>
                     <th className="py-2.5 px-3">Employee</th>
                     <th className="py-2.5 px-3">Department</th>
@@ -733,20 +735,20 @@ export const ReportsPage: React.FC = () => {
                     <th className="py-2.5 px-3">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {lateData!.data.map((row) => (
-                    <tr key={row._id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-2.5 px-3 font-mono text-slate-700 font-semibold">{row.dateKey}</td>
+                    <tr key={row._id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300 font-semibold">{row.dateKey}</td>
                       <td className="py-2.5 px-3">
-                        <span className="font-semibold text-slate-900 block">{row.name}</span>
-                        <span className="text-[10px] font-mono text-slate-400">{row.employeeId}</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100 block">{row.name}</span>
+                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{row.employeeId}</span>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600">{row.department}</td>
-                      <td className="py-2.5 px-3 font-mono text-slate-800">
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{row.department}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-800 dark:text-slate-200">
                         {row.checkInTime ? new Date(row.checkInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
                       </td>
                       <td className="py-2.5 px-3">
-                        <span className="font-mono font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded text-[11px]">
+                        <span className="font-mono font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded text-[11px]">
                           +{row.lateMinutes} mins
                         </span>
                       </td>
@@ -764,8 +766,8 @@ export const ReportsPage: React.FC = () => {
 
       {/* TAB 5: WFH UTILIZATION REPORT */}
       {activeTab === "wfh" && (
-        <Card className="border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800">
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 font-bold text-xs text-slate-800 dark:text-slate-200">
             Remote Work (WFH) Utilization & Decisions
           </div>
 
@@ -784,7 +786,7 @@ export const ReportsPage: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-semibold">
+                  <tr className="sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold uppercase tracking-wider text-[11px] select-none z-10">
                     <th className="py-2.5 px-3">Target Date</th>
                     <th className="py-2.5 px-3">Employee</th>
                     <th className="py-2.5 px-3">Department</th>
@@ -793,19 +795,19 @@ export const ReportsPage: React.FC = () => {
                     <th className="py-2.5 px-3">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {wfhData!.data.map((row) => (
-                    <tr key={row._id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-2.5 px-3 font-mono text-slate-700 font-semibold">{row.dateKey}</td>
+                    <tr key={row._id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300 font-semibold">{row.dateKey}</td>
                       <td className="py-2.5 px-3">
-                        <span className="font-semibold text-slate-900 block">{row.name}</span>
-                        <span className="text-[10px] font-mono text-slate-400">{row.employeeId}</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100 block">{row.name}</span>
+                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{row.employeeId}</span>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600">{row.department}</td>
-                      <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate" title={row.reason}>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{row.department}</td>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300 max-w-xs truncate" title={row.reason}>
                         {row.reason}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-500 italic text-[11px]">
+                      <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400 italic text-[11px]">
                         {row.reviewerRemarks || "—"}
                       </td>
                       <td className="py-2.5 px-3">

@@ -9,8 +9,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Trash2,
-  Download,
-  Calendar,
   Layers,
   Sparkles,
   ExternalLink,
@@ -40,7 +38,7 @@ export const AppReleasesPage: React.FC = () => {
   // Filters State
   const [selectedPlatform, setSelectedPlatform] = useState<string>("ALL");
   const [selectedChannel, setSelectedChannel] = useState<string>("production");
-  const [page, setPage] = useState<number>(1);
+  const [page] = useState<number>(1);
 
   // Modal & Form State
   const [isPublishModalOpen, setIsPublishModalOpen] = useState<boolean>(false);

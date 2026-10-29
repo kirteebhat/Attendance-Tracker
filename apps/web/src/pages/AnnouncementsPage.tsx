@@ -2,18 +2,14 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   Megaphone,
   Plus,
-  Settings,
   Sparkles,
   Search,
-  Filter,
   Pin,
   Clock,
   Calendar,
   Eye,
-  CheckCircle2,
   Trash2,
   Edit3,
-  AlertTriangle,
   AlertCircle,
   Info,
   Bell,
@@ -22,24 +18,19 @@ import {
   Shield,
   RotateCw,
   Send,
-  X,
-  ChevronRight,
   Sliders,
   Check,
   Flame,
 } from "lucide-react";
 import {
   useAdminAnnouncements,
-  useAnnouncements,
   useCreateAnnouncement,
   useUpdateAnnouncement,
   useDeleteAnnouncement,
   useAnnouncementTemplates,
   useUpdateAnnouncementTemplate,
   useTriggerAutoAnnouncements,
-  useMarkAnnouncementRead,
   AnnouncementItem,
-  AnnouncementTemplateItem,
 } from "../api/queries";
 import { useSocket } from "../context/SocketContext";
 import { useToast } from "../components/ui/Toast";
@@ -101,7 +92,6 @@ export const AnnouncementsPage: React.FC = () => {
   const deleteMutation = useDeleteAnnouncement();
   const updateTemplateMutation = useUpdateAnnouncementTemplate();
   const triggerAutoMutation = useTriggerAutoAnnouncements();
-  const markReadMutation = useMarkAnnouncementRead();
 
   // Modals
   const [isComposerOpen, setIsComposerOpen] = useState(false);

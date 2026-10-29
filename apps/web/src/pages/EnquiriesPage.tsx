@@ -2,18 +2,13 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   LifeBuoy,
   Search,
-  Filter,
   CheckCircle2,
   Clock,
-  AlertCircle,
   Paperclip,
   Send,
   UserCheck,
-  UserPlus,
   RefreshCw,
   X,
-  MessageSquare,
-  ShieldAlert,
   ArrowRight,
   ExternalLink,
 } from "lucide-react";
@@ -27,7 +22,6 @@ import {
   useUpdateEnquiryStatus,
   useAssignEnquiry,
   useEmployees,
-  EnquiryItem,
   EnquiryAttachment,
 } from "../api/queries";
 import { Card } from "../components/ui/Card";
@@ -76,7 +70,7 @@ export const EnquiriesPage: React.FC = () => {
   const [quickReplyAttachment, setQuickReplyAttachment] = useState<EnquiryAttachment | null>(null);
   const [statusNote, setStatusNote] = useState<string>("");
   const [isEmployeeTyping, setIsEmployeeTyping] = useState<boolean>(false);
-  const employeeTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const employeeTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Lightbox
@@ -145,7 +139,13 @@ export const EnquiriesPage: React.FC = () => {
   // HR Staff list for assignment
   const hrStaffMembers = useMemo(() => {
     return (employeesData?.data || []).filter(
-      (emp) => emp.department?.toLowerCase().includes("hr") || emp.department?.toLowerCase().includes("human") || emp.role === "HR" || emp.role === "ADMIN"
+      (emp) =>
+        emp.department?.toLowerCase().includes("hr") ||
+        emp.department?.toLowerCase().includes("human") ||
+        (emp as any).role === "HR" ||
+        (emp as any).role === "ADMIN" ||
+        emp.userId?.role === "HR" ||
+        emp.userId?.role === "ADMIN"
     );
   }, [employeesData]);
 
@@ -542,15 +542,21 @@ export const EnquiriesPage: React.FC = () => {
       ) : enquiries.length === 0 ? (
         <EmptyState
           title="No Enquiries Found"
-          message="No support tickets match the current filter criteria."
-          actionLabel="Clear Filters"
-          onAction={() => {
-            setActiveView("ALL");
-            setStatusFilter("ALL");
-            setCategoryFilter("ALL");
-            setPriorityFilter("ALL");
-            setSearchQuery("");
-          }}
+          description="No support tickets match the current filter criteria."
+          action={
+            <Button
+              size="sm"
+              onClick={() => {
+                setActiveView("ALL");
+                setStatusFilter("ALL");
+                setCategoryFilter("ALL");
+                setPriorityFilter("ALL");
+                setSearchQuery("");
+              }}
+            >
+              Clear Filters
+            </Button>
+          }
         />
       ) : (
         <Card className="overflow-hidden border border-slate-200 dark:border-slate-800">
@@ -798,7 +804,7 @@ export const EnquiriesPage: React.FC = () => {
                       </option>
                     )}
                     {hrStaffMembers.map((hr) => (
-                      <option key={hr._id} value={hr.userId || hr._id}>
+                      <option key={hr._id} value={typeof hr.userId === "string" ? hr.userId : hr.userId?._id || hr._id}>
                         {hr.name} ({hr.department})
                       </option>
                     ))}
