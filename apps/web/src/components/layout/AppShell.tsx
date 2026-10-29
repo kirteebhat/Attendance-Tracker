@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { MobileNav } from "./MobileNav";
 import { VersionUpdateBanner, CURRENT_WEB_VERSION } from "../ui/VersionUpdateBanner";
+import { useTheme } from "../../context/ThemeContext";
 
 const SIDEBAR_STORAGE_KEY = "vorldx_sidebar_collapsed";
 
@@ -41,6 +42,9 @@ export const AppShell: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSidebar]);
 
+  const location = useLocation();
+  const { prefersReducedMotion } = useTheme();
+
   return (
     <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden transition-colors flex-col">
       <VersionUpdateBanner />
@@ -69,7 +73,12 @@ export const AppShell: React.FC = () => {
             className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 md:p-8 flex flex-col justify-between"
           >
             <div className="max-w-7xl mx-auto space-y-6 w-full min-w-0">
-              <Outlet />
+              <div
+                key={location.pathname}
+                className={prefersReducedMotion ? "" : "animate-page-enter"}
+              >
+                <Outlet />
+              </div>
             </div>
 
             {/* Platform Web Footer */}

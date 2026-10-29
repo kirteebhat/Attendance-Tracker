@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
 import { clsx } from "clsx";
+import { useTheme } from "../../context/ThemeContext";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   maxWidth = "lg",
 }) => {
+  const { prefersReducedMotion } = useTheme();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -50,7 +53,10 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-150"
+        className={clsx(
+          "fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity",
+          prefersReducedMotion ? "" : "animate-in fade-in duration-150"
+        )}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -61,7 +67,8 @@ export const Modal: React.FC<ModalProps> = ({
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
         className={clsx(
-          "relative w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-10 overflow-hidden animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col transition-colors",
+          "relative w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-10 overflow-hidden max-h-[90vh] flex flex-col transition-colors",
+          prefersReducedMotion ? "" : "animate-in zoom-in-95 duration-150",
           maxWidthMap[maxWidth]
         )}
       >

@@ -14,4 +14,5 @@ export * from "./ConfirmDialog";
 export * from "./Toast";
 export * from "./Modal";
 export * from "./Tooltip";
+export * from "./ProgressRing";
 
