@@ -241,10 +241,11 @@ export const AppReleasesPage: React.FC = () => {
 
           {/* Platform Filter */}
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-slate-500">Platform:</span>
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Platform:</span>
             <select
               value={selectedPlatform}
               onChange={(e) => setSelectedPlatform(e.target.value)}
+              aria-label="Filter releases by platform"
               className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
             >
               <option value="ALL">All Platforms</option>
@@ -366,7 +367,7 @@ export const AppReleasesPage: React.FC = () => {
                         </a>
                       )}
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap text-slate-500">
+                    <td className="py-3 px-4 whitespace-nowrap text-slate-500 dark:text-slate-400">
                       <div>{new Date(release.publishedAt).toLocaleDateString()}</div>
                       <div className="text-[10px] text-slate-400">
                         {new Date(release.publishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -405,6 +406,7 @@ export const AppReleasesPage: React.FC = () => {
               <select
                 value={formPlatform}
                 onChange={(e) => setFormPlatform(e.target.value)}
+                aria-label="Target Platform"
                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
               >
                 <option value="MOBILE">Mobile (Android & iOS)</option>
@@ -422,6 +424,7 @@ export const AppReleasesPage: React.FC = () => {
               <select
                 value={formChannel}
                 onChange={(e) => setFormChannel(e.target.value)}
+                aria-label="Channel"
                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
               >
                 <option value="production">Production</option>

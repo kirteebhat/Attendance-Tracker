@@ -209,12 +209,13 @@ export const ReportsPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           {/* Start Date */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+            <label htmlFor="report-start-date-input" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
               Start Date
             </label>
             <Input
               type="date"
               id="report-start-date-input"
+              aria-label="Start Date"
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value);
@@ -226,10 +227,11 @@ export const ReportsPage: React.FC = () => {
 
           {/* End Date */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">End Date</label>
+            <label htmlFor="report-end-date-input" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">End Date</label>
             <Input
               type="date"
               id="report-end-date-input"
+              aria-label="End Date"
               value={endDate}
               onChange={(e) => {
                 setEndDate(e.target.value);
@@ -241,7 +243,7 @@ export const ReportsPage: React.FC = () => {
 
           {/* Department Filter */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+            <label id="report-dept-label" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
               Department
             </label>
             <Select
@@ -250,6 +252,7 @@ export const ReportsPage: React.FC = () => {
                 setDepartment(e.target.value);
                 setPage(1);
               }}
+              aria-label="Filter report by department"
               options={DEPARTMENT_OPTIONS}
               className="text-xs"
             />
@@ -257,12 +260,14 @@ export const ReportsPage: React.FC = () => {
 
           {/* Search */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+            <label htmlFor="report-search-input" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
               Search Employee
             </label>
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
               <Input
+                id="report-search-input"
+                aria-label="Search Employee"
                 placeholder="Name or ID..."
                 value={search}
                 onChange={(e) => {

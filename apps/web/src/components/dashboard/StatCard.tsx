@@ -157,7 +157,6 @@ export const StatCard: React.FC<StatCardProps> = ({
       <Link
         to={to}
         className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-2xl"
-        aria-label={`${label}: click to view filtered records`}
       >
         {cardContent}
       </Link>
@@ -170,7 +169,6 @@ export const StatCard: React.FC<StatCardProps> = ({
         type="button"
         onClick={onClick}
         className="block w-full text-left h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-2xl"
-        aria-label={`${label}: click to view filtered records`}
       >
         {cardContent}
       </button>

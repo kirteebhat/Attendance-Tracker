@@ -407,10 +407,10 @@ export const Topbar: React.FC<TopbarProps> = ({
               setIsNotificationsOpen(false);
             }}
             className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            aria-label="Open user profile menu"
             aria-expanded={isProfileOpen}
+            title={user?.name || user?.employeeId || "User profile"}
           >
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+            <div aria-hidden="true" className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
               {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-3.5 h-3.5" />}
             </div>
             <div className="hidden sm:block text-left">
@@ -421,6 +421,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 {user?.role}
               </span>
             </div>
+            <span className="sr-only sm:hidden">{user?.name || user?.employeeId || "User Profile"}</span>
           </button>
 
           {isProfileOpen && (

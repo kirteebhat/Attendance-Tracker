@@ -187,7 +187,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           return (
             <div key={group.groupName} className="space-y-1">
               {!collapsed ? (
-                <div className="px-3 pb-1 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <div className="px-3 pb-1 text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
                   {group.groupName}
                 </div>
               ) : (
@@ -297,7 +297,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {user?.role}
               </Badge>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2.5 px-0.5">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2.5 px-0.5">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 <span>VorldX Enterprise</span>

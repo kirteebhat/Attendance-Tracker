@@ -172,6 +172,7 @@ export const AuditLogsPage: React.FC = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, entityType: e.target.value, page: 1 }))
               }
+              aria-label="Filter audit logs by entity type"
               className="w-full px-2.5 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600"
             >
               <option value="">All Entities</option>
@@ -192,6 +193,7 @@ export const AuditLogsPage: React.FC = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, action: e.target.value, page: 1 }))
               }
+              aria-label="Filter audit logs by action"
               className="w-full px-2.5 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600"
             >
               <option value="">All Actions</option>

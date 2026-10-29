@@ -440,6 +440,7 @@ export const EmployeesPage: React.FC = () => {
               onClick={() => setSelectedIds([])}
               className="p-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               title="Clear selection"
+              aria-label="Clear selection"
             >
               <X className="w-4 h-4" />
             </button>
@@ -458,6 +459,7 @@ export const EmployeesPage: React.FC = () => {
               placeholder="Search by name, ID or email..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
+              aria-label="Search employees by name, ID or email"
               className="w-full pl-9 pr-20 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:bg-white dark:focus-visible:bg-slate-900"
             />
             <Button
@@ -477,6 +479,7 @@ export const EmployeesPage: React.FC = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, department: e.target.value, page: 1 }))
               }
+              aria-label="Filter by department"
               className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
             >
               <option value="">All Departments</option>
@@ -495,6 +498,7 @@ export const EmployeesPage: React.FC = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, status: e.target.value, page: 1 }))
               }
+              aria-label="Filter by employee status"
               className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
             >
               <option value="">All Statuses</option>
@@ -510,6 +514,7 @@ export const EmployeesPage: React.FC = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, workType: e.target.value, page: 1 }))
               }
+              aria-label="Filter by work type"
               className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
             >
               <option value="">All Work Types</option>
@@ -547,6 +552,7 @@ export const EmployeesPage: React.FC = () => {
                     onClick={handleToggleSelectAll}
                     className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 inline-flex items-center"
                     title={isAllPageSelected ? "Deselect all on this page" : "Select all on this page"}
+                    aria-label={isAllPageSelected ? "Deselect all employees on this page" : "Select all employees on this page"}
                   >
                     {isAllPageSelected ? (
                       <CheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -699,6 +705,7 @@ export const EmployeesPage: React.FC = () => {
                           type="button"
                           onClick={(e) => handleToggleSelectRow(emp._id, e)}
                           className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                          aria-label={`Select employee ${emp.name || emp.employeeId}`}
                         >
                           {isSelected ? (
                             <CheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -794,6 +801,7 @@ export const EmployeesPage: React.FC = () => {
                             onClick={() => setProfileEmployee(emp)}
                             className="p-1.5 h-8 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                             title="View Profile & Snapshot"
+                            aria-label={`View profile for ${emp.name}`}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -803,6 +811,7 @@ export const EmployeesPage: React.FC = () => {
                             onClick={(e) => handleOpenEdit(emp, e)}
                             className="p-1.5 h-8 text-slate-500 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400"
                             title="Edit Employee"
+                            aria-label={`Edit employee ${emp.name}`}
                           >
                             <Pencil className="w-4 h-4" />
                           </Button>
@@ -820,6 +829,7 @@ export const EmployeesPage: React.FC = () => {
                                 : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                             }`}
                             title={emp.isActive ? "Deactivate employee" : "Activate employee"}
+                            aria-label={emp.isActive ? `Deactivate employee ${emp.name}` : `Activate employee ${emp.name}`}
                           >
                             <Power className="w-4 h-4" />
                           </Button>
@@ -847,6 +857,7 @@ export const EmployeesPage: React.FC = () => {
                     page: 1,
                   }))
                 }
+                aria-label="Rows per page"
                 className="px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
               >
                 <option value={10}>10</option>

@@ -349,7 +349,7 @@ export const LoginPage: React.FC = () => {
           >
             <Smartphone className="w-3.5 h-3.5" />
             <span>Staff Mobile OTP</span>
-            <span className="text-[10px] bg-blue-500/30 text-cyan-200 px-1.5 py-0.2 rounded font-mono">
+            <span className="text-[10px] bg-cyan-950 border border-cyan-400/40 text-cyan-300 px-1.5 py-0.5 rounded font-mono font-bold">
               2.0
             </span>
           </button>
@@ -473,6 +473,7 @@ export const LoginPage: React.FC = () => {
                     </label>
                     <div className="flex gap-2">
                       <select
+                        aria-label="Country code"
                         value={countryCode}
                         onChange={(e) => setCountryCode(e.target.value)}
                         className="w-28 px-2.5 py-2.5 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -762,7 +763,7 @@ export const LoginPage: React.FC = () => {
         </Card>
 
         {/* Footer */}
-        <p className="text-center text-xs text-slate-500">
+        <p className="text-center text-xs text-slate-400 font-medium">
           VorldX Industries &copy; 2026. Zero-Trust Hardware & Multi-Factor Staff Portal.
         </p>
       </div>

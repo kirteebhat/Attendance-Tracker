@@ -31,6 +31,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <select
           id={generatedId}
           ref={ref}
+          aria-label={props["aria-label"] || label}
           className={twMerge(
             clsx(
               "w-full px-3.5 py-2.5 text-sm rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 shadow-xs transition-colors",

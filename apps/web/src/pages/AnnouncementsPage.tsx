@@ -489,6 +489,7 @@ export const AnnouncementsPage: React.FC = () => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
+            aria-label="Filter announcements by status"
             className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
           >
             <option value="all">All Statuses</option>
@@ -504,6 +505,7 @@ export const AnnouncementsPage: React.FC = () => {
               setPriorityFilter(e.target.value);
               setPage(1);
             }}
+            aria-label="Filter announcements by priority"
             className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
           >
             <option value="all">All Priorities</option>
@@ -574,7 +576,7 @@ export const AnnouncementsPage: React.FC = () => {
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
               No Announcements Found
             </h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
               {searchQuery || statusFilter !== "all" || priorityFilter !== "all" || sourceTab !== "all"
                 ? "No announcements matched your active filter criteria. Try resetting filters."
                 : "Broadcast company-wide news, urgent alerts, and automated holiday notices to your team."}
@@ -816,6 +818,7 @@ export const AnnouncementsPage: React.FC = () => {
                   <select
                     value={formPriority}
                     onChange={(e) => setFormPriority(e.target.value as any)}
+                    aria-label="Priority Level"
                     className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-800 dark:text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="LOW">Low (Casual Bulletin)</option>
@@ -1184,6 +1187,7 @@ export const AnnouncementsPage: React.FC = () => {
                     <select
                       value={tplPriority}
                       onChange={(e) => setTplPriority(e.target.value as any)}
+                      aria-label="Default Broadcast Priority"
                       className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
                     >
                       <option value="LOW">Low</option>

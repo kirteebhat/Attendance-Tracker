@@ -1049,6 +1049,7 @@ export const CalendarPage: React.FC = () => {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
+              aria-label="Filter events by type"
               className="px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs text-slate-800 dark:text-slate-200"
             >
               <option value="all">All Types</option>
@@ -1997,6 +1998,7 @@ export const CalendarPage: React.FC = () => {
                   })
                 }
                 disabled={drawerMode === "view"}
+                aria-label="Event Type"
                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900"
               >
                 <option value="holiday">Official Public Holiday</option>
@@ -2019,6 +2021,7 @@ export const CalendarPage: React.FC = () => {
                   })
                 }
                 disabled={drawerMode === "view"}
+                aria-label="Audience Scope"
                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900"
               >
                 <option value="all">All Staff (Company-Wide)</option>
@@ -2203,6 +2206,7 @@ export const CalendarPage: React.FC = () => {
               <select
                 value={importCountry}
                 onChange={(e) => setImportCountry(e.target.value)}
+                aria-label="Select Country"
                 className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-md text-xs bg-white dark:bg-slate-900"
               >
                 <option value="IN">India (Gazetted National Holidays)</option>
@@ -2218,6 +2222,7 @@ export const CalendarPage: React.FC = () => {
               <select
                 value={importYear}
                 onChange={(e) => setImportYear(Number(e.target.value))}
+                aria-label="Target Year"
                 className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-md text-xs bg-white dark:bg-slate-900"
               >
                 <option value={activeYear - 1}>{activeYear - 1}</option>

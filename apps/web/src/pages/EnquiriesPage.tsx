@@ -457,6 +457,7 @@ export const EnquiriesPage: React.FC = () => {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
+              aria-label="Filter tickets by category"
               className="h-9 px-3 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
             >
               <option value="ALL">All Categories</option>
@@ -471,6 +472,7 @@ export const EnquiriesPage: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Filter tickets by status"
               className="h-9 px-3 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
             >
               <option value="ALL">All Statuses</option>
@@ -483,6 +485,7 @@ export const EnquiriesPage: React.FC = () => {
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
+              aria-label="Filter tickets by priority"
               className="h-9 px-3 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
             >
               <option value="ALL">All Priorities</option>
@@ -569,6 +572,7 @@ export const EnquiriesPage: React.FC = () => {
                       type="checkbox"
                       checked={selectedTicketIds.length === enquiries.length && enquiries.length > 0}
                       onChange={handleToggleSelectAll}
+                      aria-label="Select all tickets"
                       className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                   </th>
@@ -609,6 +613,7 @@ export const EnquiriesPage: React.FC = () => {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleToggleSelect(ticket._id)}
+                          aria-label={`Select ticket ${ticket.ticketNumber}`}
                           className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                         />
                       </td>
@@ -761,6 +766,7 @@ export const EnquiriesPage: React.FC = () => {
                     onChange={(e) =>
                       handleStatusChange(e.target.value as "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED")
                     }
+                    aria-label="Change Status"
                     className="w-full h-8 px-2 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-semibold"
                   >
                     <option value="OPEN">OPEN</option>
@@ -795,6 +801,7 @@ export const EnquiriesPage: React.FC = () => {
                         });
                       }
                     }}
+                    aria-label="Assignee"
                     className="w-full h-8 px-2 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
                   >
                     <option value="UNASSIGNED">Unassigned</option>

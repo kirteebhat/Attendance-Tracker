@@ -674,7 +674,7 @@ export const LeavePage: React.FC = () => {
                 className={`px-4 py-2 text-xs font-semibold whitespace-nowrap border-b-2 transition-all ${
                   filters.status === tab.value
                     ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 rounded-t-lg"
-                    : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    : "border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
                 {tab.label}
@@ -849,7 +849,7 @@ export const LeavePage: React.FC = () => {
                                 <p className="font-semibold text-slate-900 dark:text-white">
                                   {emp?.name || emp?.employeeId || "Unknown"}
                                 </p>
-                                <p className="text-[11px] text-slate-500">
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                   {emp?.employeeId} • {emp?.department || "General"}
                                 </p>
                               </div>
@@ -867,7 +867,7 @@ export const LeavePage: React.FC = () => {
                                 <>to {req.endDate.substring(0, 10)}</>
                               )}
                             </div>
-                            <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
                               <span className="font-semibold text-blue-600 dark:text-blue-400">
                                 {req.workingDays} working day{req.workingDays > 1 ? "s" : ""}
                               </span>

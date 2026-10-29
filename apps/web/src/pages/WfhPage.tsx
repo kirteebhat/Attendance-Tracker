@@ -324,6 +324,7 @@ export const WfhPage: React.FC = () => {
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, department: e.target.value, page: 1 }))
             }
+            aria-label="Filter WFH requests by department"
             options={DEPARTMENT_OPTIONS}
             className="text-xs w-44"
           />
@@ -362,6 +363,7 @@ export const WfhPage: React.FC = () => {
               onClick={() => setSelectedIds([])}
               className="p-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
               title="Clear selection"
+              aria-label="Clear selection"
             >
               <X className="w-4 h-4" />
             </button>
@@ -395,6 +397,11 @@ export const WfhPage: React.FC = () => {
                         onClick={handleToggleSelectAll}
                         className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 inline-flex items-center"
                         title={
+                          isAllPendingSelected
+                            ? "Deselect all pending requests"
+                            : "Select all pending requests"
+                        }
+                        aria-label={
                           isAllPendingSelected
                             ? "Deselect all pending requests"
                             : "Select all pending requests"
@@ -454,6 +461,7 @@ export const WfhPage: React.FC = () => {
                             type="button"
                             onClick={(e) => handleToggleSelectRow(req._id, e)}
                             className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                            aria-label={`Select request from ${typeof req.employee === "object" ? req.employee?.name : req.employeeId}`}
                           >
                             {isSelected ? (
                               <CheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />

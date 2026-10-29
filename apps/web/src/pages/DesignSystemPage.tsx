@@ -164,7 +164,7 @@ export const DesignSystemPage: React.FC = () => {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <StatusBadge status={s} size="md" />
-                    <span className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500">
+                    <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">
                       {descriptor.icon}
                     </span>
                   </div>
