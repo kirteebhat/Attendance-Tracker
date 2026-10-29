@@ -1,23 +1,38 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
-import { useAuth } from "../src/context/AuthContext";
-import { SafeAreaWrapper, Input, Button, Card, StatusBadge, Icon } from "../src/components";
-import { colors, spacing, typography, radii } from "../src/theme";
-import { ApiError } from "../src/services/api";
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Hash, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { useAuth } from '../src/context/AuthContext';
+import {
+  Screen,
+  Card,
+  Input,
+  Field,
+  Button,
+  Badge,
+  Notice,
+  Text,
+  PageHeader,
+  PressableScale,
+} from '../src/components';
+import { colors, radii, spacing } from '../src/theme/tokens';
+import { useResponsive } from '../src/lib/responsive';
+import { ApiError } from '../src/services/api';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { registerStart } = useAuth();
+  const { isWide } = useResponsive();
 
-  const [employeeId, setEmployeeId] = useState("");
+  const [employeeId, setEmployeeId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleStartRegistration = async () => {
     const cleanId = employeeId.trim().toUpperCase();
     if (!cleanId) {
-      setError("Please enter your employee ID.");
+      setError('Please enter your employee ID.');
       return;
     }
 
@@ -28,12 +43,13 @@ export default function RegisterScreen() {
       const res = await registerStart(cleanId);
       const raw = res as unknown as Record<string, string | undefined>;
       const targetEmpId = res.data?.employeeId || raw.employeeId || cleanId;
-      const targetEmail = res.data?.maskedEmail || raw.maskedEmail || raw.email || "registered email";
-      const targetOtp = res.data?.simulatedOtp || raw.simulatedDemoOtp || raw.simulatedOtp || "";
+      const targetEmail = res.data?.maskedEmail || raw.maskedEmail || raw.email || 'registered email';
+      const targetOtp = res.data?.simulatedOtp || raw.simulatedDemoOtp || raw.simulatedOtp || '';
 
-      // Navigate to Step 2: Verify OTP
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+
       router.push({
-        pathname: "/verify-otp",
+        pathname: '/verify-otp',
         params: {
           employeeId: targetEmpId,
           maskedEmail: targetEmail,
@@ -41,164 +57,137 @@ export default function RegisterScreen() {
         },
       });
     } catch (err: unknown) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
       if (err instanceof ApiError) {
-        if (err.code === "ERR_EMPLOYEE_NOT_FOUND") {
-          setError(`No employee record found for ID "${cleanId}". Please check your offer letter or verify with HR.`);
-        } else if (err.code === "ERR_ACCOUNT_ALREADY_REGISTERED") {
+        if (err.code === 'ERR_EMPLOYEE_NOT_FOUND') {
+          setError(`No employee record found for ID "${cleanId}". Check your offer letter or verify with HR.`);
+        } else if (err.code === 'ERR_ACCOUNT_ALREADY_REGISTERED') {
           setError(`An account is already registered for "${cleanId}". Please sign in with your password.`);
-        } else if (err.code === "ERR_EMPLOYEE_INACTIVE") {
+        } else if (err.code === 'ERR_EMPLOYEE_INACTIVE') {
           setError(`Employee "${cleanId}" is marked inactive. Contact HR to restore your account.`);
         } else {
-          setError(err.message || "Failed to start registration.");
+          setError(err.message || 'Failed to start registration.');
         }
       } else {
-        setError("Unable to connect to VorldX attendance server.");
+        setError('Unable to connect to VorldX attendance server.');
       }
     } finally {
       setLoading(false);
     }
   };
 
+  const fillDemoId = () => {
+    setEmployeeId('EMP-1003');
+    setError(null);
+    void Haptics.selectionAsync().catch(() => undefined);
+  };
+
   return (
-    <SafeAreaWrapper contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.stepBadgeRow}>
-          <StatusBadge status="ACTIVE" label="STEP 1 OF 3" />
-        </View>
-        <Text style={styles.title}>Activate Account</Text>
-        <Text style={styles.subtitle}>
-          Enter your official VorldX Employee ID to initiate verification
-        </Text>
-      </View>
-
-      <Card variant="surface" style={styles.formCard}>
-        <Input
-          label="Employee ID"
-          placeholder="e.g. EMP-001 or EMP-010"
-          value={employeeId}
-          onChangeText={(val) => {
-            setEmployeeId(val.toUpperCase());
-            if (error) setError(null);
-          }}
-          autoCapitalize="characters"
-          leftIcon={<Icon name="card-outline" size={18} color={colors.text.secondary} />}
-          testID="register-employee-id-input"
-        />
-
-        {error && (
-          <View style={styles.errorBanner} testID="register-error-banner">
-            <Icon name="alert-circle" size={18} color={colors.text.danger} />
-            <Text style={styles.errorBannerText}>{error}</Text>
-          </View>
-        )}
-
-        <Button
-          title="Send Verification Code"
-          onPress={handleStartRegistration}
-          isLoading={loading}
-          size="lg"
-          testID="register-submit-btn"
-          style={styles.submitBtn}
-        />
-
-        <View style={styles.infoBox}>
-          <Icon name="information-circle-outline" size={16} color={colors.text.accent} />
-          <Text style={styles.infoBoxText}>
-            A one-time verification code will be dispatched to your corporate email on file. In demo mode, the code is provided directly on screen.
-          </Text>
-        </View>
-      </Card>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerPrompt}>Already have an active account?</Text>
+    <Screen edges={['top', 'bottom']}>
+      <View style={[styles.content, isWide && styles.contentWide]}>
+        {/* Back Link */}
         <TouchableOpacity
-          onPress={() => router.push("/login")}
-          testID="register-goto-login-btn"
-          style={styles.loginLink}
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/login');
+          }}
+          style={styles.backLink}
         >
-          <Text style={styles.loginLinkText}>Sign In</Text>
+          <ArrowLeft size={16} color={colors.textSecondary} />
+          <Text variant="small" color={colors.textSecondary}>
+            Back
+          </Text>
         </TouchableOpacity>
+
+        <View style={styles.stepBadge}>
+          <Badge label="Step 1 of 3" tone="indigo" dot />
+        </View>
+
+        <PageHeader
+          title="Activate Account"
+          subtitle="Enter your official VorldX Employee ID to initiate verification."
+        />
+
+        <Card style={styles.card} padding={22} variant="raised">
+          {error ? <Notice tone="danger" title="Lookup Failed" message={error} /> : null}
+
+          <Field label="Employee ID" required hint="Found on your ID badge or employment letter">
+            <Input
+              autoCapitalize="characters"
+              autoCorrect={false}
+              leftIcon={Hash}
+              onChangeText={(val) => {
+                setEmployeeId(val);
+                if (error) setError(null);
+              }}
+              placeholder="e.g. EMP-1003"
+              returnKeyType="go"
+              onSubmitEditing={handleStartRegistration}
+              value={employeeId}
+            />
+          </Field>
+
+          {/* Demo ID filler */}
+          <PressableScale
+            accessibilityRole="button"
+            haptic="selection"
+            onPress={fillDemoId}
+            style={styles.demoPill}
+          >
+            <Sparkles size={14} color={colors.indigoSoft} />
+            <Text variant="small" color={colors.indigoSoft} weight="medium">
+              Use demo ID (EMP-1003)
+            </Text>
+          </PressableScale>
+
+          <Button
+            label={loading ? 'Verifying ID...' : 'Continue to OTP'}
+            loading={loading}
+            onPress={handleStartRegistration}
+            rightIcon={
+              loading ? undefined : <ArrowRight size={17} color={colors.white} strokeWidth={2.2} />
+            }
+          />
+        </Card>
       </View>
-    </SafeAreaWrapper>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    justifyContent: "space-between",
+  content: {
+    width: '100%',
+    maxWidth: 460,
+    gap: spacing.md,
+    alignSelf: 'center',
+    paddingVertical: spacing.md,
   },
-  header: {
-    marginTop: spacing.md,
-    marginBottom: spacing.xl,
+  contentWide: {
+    maxWidth: 520,
   },
-  stepBadgeRow: {
-    marginBottom: spacing.sm,
+  backLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
   },
-  title: {
-    ...typography.xxl,
-    fontWeight: "800",
-    color: colors.text.primary,
-  },
-  subtitle: {
-    ...typography.sm,
-    color: colors.text.secondary,
-    marginTop: 4,
-    lineHeight: 20,
-  },
-  formCard: {
-    marginBottom: spacing.xl,
-  },
-  errorBanner: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: colors.status.absentBg,
-    borderColor: colors.status.absent,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  errorBannerText: {
-    flex: 1,
-    ...typography.xs,
-    color: colors.text.danger,
-    fontWeight: "600",
-    lineHeight: 18,
-  },
-  submitBtn: {
+  stepBadge: {
     marginTop: spacing.xs,
   },
-  infoBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: colors.background.elevated,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    marginTop: spacing.lg,
+  card: {
+    gap: spacing.lg,
+    marginTop: spacing.sm,
   },
-  infoBoxText: {
-    flex: 1,
-    ...typography.xs,
-    color: colors.text.muted,
-    lineHeight: 16,
-  },
-  footer: {
-    alignItems: "center",
-    paddingVertical: spacing.lg,
-  },
-  footerPrompt: {
-    ...typography.xs,
-    color: colors.text.muted,
-    marginBottom: spacing.xs,
-  },
-  loginLink: {
-    padding: spacing.xs,
-  },
-  loginLinkText: {
-    ...typography.sm,
-    fontWeight: "700",
-    color: colors.accent.cyan,
+  demoPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(89, 101, 242, 0.08)',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(89, 101, 242, 0.2)',
   },
 });

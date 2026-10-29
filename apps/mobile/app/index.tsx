@@ -1,217 +1,208 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { useAuth } from "../src/context/AuthContext";
-import { SafeAreaWrapper, Button, Card, StatusBadge, Skeleton, Icon } from "../src/components";
-import { colors, spacing, typography, radii } from "../src/theme";
+import React, { useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { QrCode, ShieldCheck, Clock, ArrowRight } from 'lucide-react-native';
+import { useAuth } from '../src/context/AuthContext';
+import {
+  Screen,
+  Card,
+  Button,
+  Badge,
+  Text,
+  DashboardSkeleton,
+} from '../src/components';
+import { colors, radii, spacing } from '../src/theme/tokens';
+import { useResponsive } from '../src/lib/responsive';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { isWide } = useResponsive();
 
   useEffect(() => {
-    // If already logged in, redirect directly to home
     if (!isLoading && isAuthenticated && user) {
-      router.replace("/(tabs)/home");
+      router.replace('/(tabs)/home');
     }
   }, [isAuthenticated, isLoading, user, router]);
 
   if (isLoading) {
     return (
-      <SafeAreaWrapper contentContainerStyle={styles.loadingContainer}>
-        <Skeleton width={120} height={120} borderRadius={60} style={{ alignSelf: "center", marginBottom: spacing.xl }} />
-        <Skeleton width="70%" height={28} style={{ alignSelf: "center", marginBottom: spacing.md }} />
-        <Skeleton width="90%" height={16} style={{ alignSelf: "center" }} />
-      </SafeAreaWrapper>
+      <Screen>
+        <DashboardSkeleton />
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaWrapper contentContainerStyle={styles.container}>
-      {/* Top Branding Section */}
-      <View style={styles.brandingSection}>
-        <View style={styles.logoBadgeContainer}>
-          <View style={styles.logoIcon}>
-            <Icon name="qr-code-outline" size={36} color={colors.accent.cyan} />
+    <Screen edges={['top', 'bottom']}>
+      <View style={[styles.container, isWide && styles.containerWide]}>
+        {/* Top Branding Section */}
+        <View style={styles.brandingSection}>
+          <View style={styles.logoBadgeContainer}>
+            <View style={styles.logoIcon}>
+              <QrCode size={34} color={colors.indigoSoft} strokeWidth={2} />
+            </View>
           </View>
-        </View>
 
-        <View style={styles.titleWrapper}>
-          <StatusBadge status="DEMO" label="VORLDX ENTERPRISE SUITE" style={styles.badge} />
-          <Text style={styles.brandTitle}>
+          <Badge label="VORLDX ENTERPRISE SUITE" tone="indigo" dot />
+
+          <Text variant="display" style={styles.brandTitle}>
             Vorld<Text style={styles.brandAccent}>X</Text>
           </Text>
-          <Text style={styles.tagline}>Workforce Attendance & Punctuality</Text>
+          <Text variant="subheading" color={colors.textSecondary} style={styles.tagline}>
+            Workforce Attendance & Remote Operations
+          </Text>
+
+          <Text variant="body" color={colors.muted} align="center" style={styles.description}>
+            Cryptographic dynamic QR check-ins, automated grace period evaluation, and transparent remote work accounting.
+          </Text>
         </View>
 
-        <Text style={styles.description}>
-          High-precision dynamic QR check-ins, automated grace period evaluation, and transparent work-from-home accounting.
-        </Text>
-      </View>
+        {/* Feature Highlights Card */}
+        <Card style={styles.featureCard} variant="raised" padding={18}>
+          <View style={styles.featureItem}>
+            <View style={styles.featureIconWrap}>
+              <ShieldCheck size={18} color={colors.success} strokeWidth={2} />
+            </View>
+            <View style={styles.featureTextContainer}>
+              <Text variant="bodyMedium" weight="semibold">
+                Cryptographic QR Punch
+              </Text>
+              <Text variant="small" color={colors.muted}>
+                Dynamic 30s rotating lobby codes with zero client timestamps
+              </Text>
+            </View>
+          </View>
 
-      {/* Feature Highlights Card */}
-      <Card style={styles.featureCard} variant="surface">
-        <View style={styles.featureItem}>
-          <View style={[styles.featureIcon, { backgroundColor: colors.accent.cyanMuted }]}>
-            <Icon name="shield-checkmark" size={18} color={colors.accent.cyan} />
+          <View style={styles.featureDivider} />
+
+          <View style={styles.featureItem}>
+            <View style={styles.featureIconWrap}>
+              <Clock size={18} color={colors.indigoSoft} strokeWidth={2} />
+            </View>
+            <View style={styles.featureTextContainer}>
+              <Text variant="bodyMedium" weight="semibold">
+                Authoritative Punctuality
+              </Text>
+              <Text variant="small" color={colors.muted}>
+                Grace minutes and shift boundaries evaluated server-side
+              </Text>
+            </View>
           </View>
-          <View style={styles.featureTextContainer}>
-            <Text style={styles.featureTitle}>Cryptographic QR Punch</Text>
-            <Text style={styles.featureSubtitle}>Dynamic 30s rotating lobby codes with replay defense</Text>
-          </View>
+        </Card>
+
+        {/* Action Buttons */}
+        <View style={styles.actionSection}>
+          <Button
+            label="Log In to Account"
+            onPress={() => router.push('/login')}
+            variant="primary"
+            size="lg"
+            testID="btn-login"
+            rightIcon={<ArrowRight size={17} color={colors.white} strokeWidth={2.2} />}
+          />
+
+          <Button
+            label="Activate New Account"
+            onPress={() => router.push('/register')}
+            variant="secondary"
+            size="lg"
+            testID="btn-register"
+          />
         </View>
 
-        <View style={styles.featureDivider} />
-
-        <View style={styles.featureItem}>
-          <View style={[styles.featureIcon, { backgroundColor: colors.accent.indigoMuted }]}>
-            <Icon name="time" size={18} color={colors.accent.indigo} />
-          </View>
-          <View style={styles.featureTextContainer}>
-            <Text style={styles.featureTitle}>Server-Side Punctuality</Text>
-            <Text style={styles.featureSubtitle}>Grace minutes and shift boundaries calculated strictly on the backend</Text>
-          </View>
+        {/* Footer Info */}
+        <View style={styles.footer}>
+          <Text variant="caption" color={colors.muted} align="center">
+            Encrypted & NTP-synchronized · Built for VorldX Industries
+          </Text>
         </View>
-      </Card>
-
-      {/* Action Buttons */}
-      <View style={styles.actionSection}>
-        <Button
-          title="Log In to Account"
-          onPress={() => router.push("/login")}
-          variant="primary"
-          size="lg"
-          testID="welcome-login-btn"
-          style={styles.actionBtn}
-        />
-
-        <Button
-          title="Activate New Account"
-          onPress={() => router.push("/register")}
-          variant="secondary"
-          size="lg"
-          testID="welcome-register-btn"
-          style={styles.actionBtn}
-        />
       </View>
-
-      {/* Footer Info */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Secure Authentication • Built with Expo &amp; TypeScript
-        </Text>
-      </View>
-    </SafeAreaWrapper>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    justifyContent: "space-between",
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+    gap: spacing.lg,
+    paddingVertical: spacing.md,
   },
-  loadingContainer: {
-    justifyContent: "center",
-    alignItems: "center",
+  containerWide: {
+    maxWidth: 540,
   },
   brandingSection: {
-    alignItems: "center",
-    marginTop: spacing.xl,
-    marginBottom: spacing.xxl,
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.lg,
   },
   logoBadgeContainer: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xs,
   },
   logoIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: radii.xxl,
-    backgroundColor: colors.background.elevated,
-    borderWidth: 2,
-    borderColor: colors.accent.cyan,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.accent.cyan,
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    backgroundColor: 'rgba(89, 101, 242, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(89, 101, 242, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.indigo,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
-    elevation: 8,
-  },
-  titleWrapper: {
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  badge: {
-    marginBottom: spacing.xs + 2,
+    elevation: 6,
   },
   brandTitle: {
-    ...typography.hero,
-    fontWeight: "900",
-    color: colors.text.primary,
-    letterSpacing: -1,
+    fontSize: 34,
+    lineHeight: 40,
+    marginTop: 4,
   },
   brandAccent: {
-    color: colors.accent.cyan,
+    color: colors.indigoSoft,
   },
   tagline: {
-    ...typography.md,
-    fontWeight: "600",
-    color: colors.text.secondary,
-    marginTop: 2,
+    marginTop: -2,
   },
   description: {
-    ...typography.sm,
-    color: colors.text.muted,
-    textAlign: "center",
-    maxWidth: 320,
-    marginTop: spacing.md,
+    maxWidth: 340,
     lineHeight: 20,
+    marginTop: 4,
   },
   featureCard: {
-    marginVertical: spacing.lg,
+    gap: spacing.md,
   },
   featureItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  featureIcon: {
-    width: 36,
-    height: 36,
+  featureIconWrap: {
+    width: 38,
+    height: 38,
     borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   featureTextContainer: {
     flex: 1,
-  },
-  featureTitle: {
-    ...typography.sm,
-    fontWeight: "700",
-    color: colors.text.primary,
-  },
-  featureSubtitle: {
-    ...typography.xs,
-    color: colors.text.muted,
-    marginTop: 2,
+    gap: 2,
   },
   featureDivider: {
     height: 1,
-    backgroundColor: colors.background.border,
-    marginVertical: spacing.md,
+    backgroundColor: colors.border,
   },
   actionSection: {
+    width: '100%',
     gap: spacing.md,
-    marginTop: spacing.lg,
-  },
-  actionBtn: {
-    width: "100%",
+    marginTop: spacing.xs,
   },
   footer: {
-    marginTop: spacing.xl,
-    alignItems: "center",
-  },
-  footerText: {
-    ...typography.xs,
-    color: colors.text.muted,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
   },
 });

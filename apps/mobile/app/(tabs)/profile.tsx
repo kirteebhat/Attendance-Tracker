@@ -1,33 +1,81 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   Alert,
-} from "react-native";
-import * as Linking from "expo-linking";
-import { useRouter } from "expo-router";
-import { useAuth } from "../../src/context/AuthContext";
-import { useToast } from "../../src/components/Toast";
-import { Card, Button, StatusBadge, Icon } from "../../src/components";
-import { colors, spacing, typography, radii } from "../../src/theme";
+  Platform,
+} from 'react-native';
+import { useRouter } from 'expo-router';
 import {
-  getApiBaseUrl,
+  Briefcase,
+  Building2,
+  CalendarDays,
+  Clock3,
+  Globe2,
+  Hash,
+  LogOut,
+  Mail,
+  ShieldCheck,
+  UserCheck,
+  type LucideIcon,
+} from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { useAuth } from '../../src/context/AuthContext';
+import { useToast } from '../../src/components/Toast';
+import {
+  Screen,
+  Card,
+  Button,
+  Badge,
+  PageHeader,
+  SectionHeader,
+  Avatar,
+  Text,
+} from '../../src/components';
+import { colors, spacing } from '../../src/theme/tokens';
+import { useResponsive } from '../../src/lib/responsive';
+import {
   employeeApi,
   policyApi,
   EmployeeDetails,
   PolicyData,
-} from "../../src/services";
+} from '../../src/services';
+
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+  last = false,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.infoRow, !last ? styles.rowDivider : null]}>
+      <View style={styles.infoLeft}>
+        <View style={styles.infoIconWrap}>
+          <Icon size={16} color={colors.indigoSoft} strokeWidth={1.8} />
+        </View>
+        <Text variant="small" color={colors.textSecondary}>
+          {label}
+        </Text>
+      </View>
+      <Text variant="small" color={colors.text} weight="semibold" style={styles.infoValue}>
+        {value}
+      </Text>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { showToast } = useToast();
+  const { isWide } = useResponsive();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // Dynamic employment and policy data
   const [employeeDetails, setEmployeeDetails] = useState<EmployeeDetails | null>(null);
   const [policyData, setPolicyData] = useState<PolicyData | null>(null);
 
@@ -36,10 +84,10 @@ export default function ProfileScreen() {
     Promise.allSettled([employeeApi.getMyProfile(), policyApi.getPolicy()])
       .then(([empRes, polRes]) => {
         if (!isMounted) return;
-        if (empRes.status === "fulfilled" && empRes.value.data) {
+        if (empRes.status === 'fulfilled' && empRes.value.data) {
           setEmployeeDetails(empRes.value.data);
         }
-        if (polRes.status === "fulfilled" && polRes.value.data) {
+        if (polRes.status === 'fulfilled' && polRes.value.data) {
           setPolicyData(polRes.value.data);
         }
       })
@@ -50,414 +98,213 @@ export default function ProfileScreen() {
     };
   }, []);
 
-  const handleLogout = async () => {
-    Alert.alert(
-      "Confirm Sign Out",
-      "Are you sure you want to sign out of your VorldX account? All active sessions and socket connections will be closed.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: async () => {
-            setLoggingOut(true);
-            try {
-              await logout();
-              showToast({
-                title: "Signed Out",
-                message: "You have been safely signed out.",
-                type: "info",
-              });
-              if (typeof window !== "undefined" && window.location) {
-                window.location.href = "/";
-              } else {
-                router.replace("/");
-              }
-            } finally {
-              setLoggingOut(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleDirectLogout = async () => {
-    setLoggingOut(true);
-    try {
-      await logout();
-      if (typeof window !== "undefined" && window.location) {
-        window.location.href = "/";
-      } else {
-        router.replace("/");
+  const handleLogout = () => {
+    const performLogout = async () => {
+      setLoggingOut(true);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+      try {
+        await logout();
+        showToast({
+          title: 'Signed Out',
+          message: 'You have been safely signed out.',
+          type: 'info',
+        });
+      } catch (err) {
+        console.error('Logout error:', err);
+      } finally {
+        setLoggingOut(false);
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
+          window.location.href = '/';
+        } else {
+          router.replace('/');
+        }
       }
-    } finally {
-      setLoggingOut(false);
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed =
+        typeof window !== 'undefined' && window.confirm
+          ? window.confirm('Sign out of VorldX?\nYou will need your work credentials to sign in again.')
+          : true;
+      if (confirmed) {
+        void performLogout();
+      }
+    } else {
+      Alert.alert(
+        'Sign out of VorldX?',
+        'You will need your work credentials to sign in again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign out',
+            style: 'destructive',
+            onPress: () => {
+              void performLogout();
+            },
+          },
+        ]
+      );
     }
   };
-
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : "VX";
 
   const shift = policyData?.shifts?.[0];
   const workdaysStr = policyData?.workdays
     ? policyData.workdays
-        .map((d) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d])
-        .join(", ")
-    : "Mon, Tue, Wed, Thu, Fri";
+        .map((d) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d])
+        .join(', ')
+    : 'Mon, Tue, Wed, Thu, Fri';
+
+  const joiningFormatted = employeeDetails?.joiningDate
+    ? new Date(employeeDetails.joiningDate).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : 'March 1, 2024';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* 1. Profile Header Card */}
-      <Card variant="surface" style={styles.profileCard}>
-        <View style={styles.avatarLarge}>
-          <Text style={styles.avatarLargeText}>{initials}</Text>
+    <Screen edges={['top', 'bottom']}>
+      <PageHeader
+        eyebrow="VorldX Operations"
+        title={user?.name ?? 'Your Profile'}
+        subtitle={employeeDetails?.designation || user?.department || 'Employee Profile'}
+        right={<Avatar name={user?.name ?? 'VX'} showRing size={48} />}
+      />
+
+      <View style={[styles.container, isWide && styles.containerWide]}>
+        {/* 1. Identity Card */}
+        <Card style={styles.identityCard} variant="raised" padding={20}>
+          <View style={styles.identityRow}>
+            <Avatar name={user?.name ?? 'VX'} size={68} />
+            <View style={styles.identityCopy}>
+              <Text variant="subheading" numberOfLines={1}>
+                {user?.name ?? 'VorldX Employee'}
+              </Text>
+              <Text variant="small" color={colors.textSecondary} numberOfLines={1}>
+                {user?.employeeId} · {user?.email}
+              </Text>
+              <View style={styles.badgeRow}>
+                <Badge dot label={user?.role || 'EMPLOYEE'} tone="indigo" />
+                <Badge label="VERIFIED" tone="success" dot />
+              </View>
+            </View>
+          </View>
+        </Card>
+
+        {/* 2. Work Details Section */}
+        <SectionHeader title="Profile details" caption="Read-only in the mobile app" />
+        <Card padding={0}>
+          <InfoRow icon={Hash} label="Employee ID" value={user?.employeeId ?? '—'} />
+          <InfoRow icon={Mail} label="Work email" value={user?.email ?? '—'} />
+          <InfoRow
+            icon={Briefcase}
+            label="Department"
+            value={employeeDetails?.department || user?.department || 'Engineering'}
+          />
+          <InfoRow
+            icon={Building2}
+            label="Designation"
+            value={employeeDetails?.designation || 'Software Engineer'}
+          />
+          <InfoRow
+            icon={UserCheck}
+            label="Employment type"
+            value={employeeDetails?.workType || 'Full-Time'}
+          />
+          <InfoRow icon={CalendarDays} label="Joining date" value={joiningFormatted} last />
+        </Card>
+
+        {/* 3. Assigned Shift & Policy Card */}
+        <SectionHeader title="Shift specifications" caption="Company attendance policy" />
+        <Card padding={0}>
+          <InfoRow
+            icon={Clock3}
+            label="Shift timings"
+            value={shift ? `${shift.startTime} – ${shift.endTime}` : '09:30 AM – 06:30 PM'}
+          />
+          <InfoRow
+            icon={ShieldCheck}
+            label="Grace period"
+            value={shift ? `${shift.graceMinutes} minutes` : '15 minutes'}
+          />
+          <InfoRow icon={Globe2} label="Working days" value={workdaysStr} last />
+        </Card>
+
+        {/* 4. Actions & Sign Out */}
+        <View style={styles.actionsSection}>
+          <Button
+            icon={<LogOut size={16} color={colors.danger} />}
+            label={loggingOut ? 'Signing out...' : 'Sign out of VorldX'}
+            loading={loggingOut}
+            onPress={handleLogout}
+            variant="danger"
+          />
+          <Text variant="caption" color={colors.muted} align="center">
+            VorldX Attendance · v0.1.0 · Build 2026
+          </Text>
         </View>
-
-        <Text style={styles.profileName} testID="profile-user-name">
-          {user?.name || "VorldX Employee"}
-        </Text>
-
-        <Text style={styles.profileIdText}>{user?.employeeId}</Text>
-        <Text style={styles.profileEmailText}>{user?.email}</Text>
-
-        <View style={styles.badgeRow}>
-          <StatusBadge status="ACTIVE" label={user?.role || "EMPLOYEE"} />
-          <StatusBadge status="PRESENT" label="ACCOUNT VERIFIED" />
-        </View>
-      </Card>
-
-      {/* 2. Work Details Section */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Work Details</Text>
       </View>
-
-      <Card variant="surface" style={styles.detailsCard}>
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconBox}>
-            <Icon name="business-outline" size={18} color={colors.accent.cyan} />
-          </View>
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Department</Text>
-            <Text style={styles.detailValue}>
-              {employeeDetails?.department || user?.department || "Engineering"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.detailDivider} />
-
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconBox}>
-            <Icon name="briefcase-outline" size={18} color={colors.accent.indigo} />
-          </View>
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Designation</Text>
-            <Text style={styles.detailValue}>
-              {employeeDetails?.designation || user?.designation || "Senior Engineer"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.detailDivider} />
-
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconBox}>
-            <Icon name="person-outline" size={18} color={colors.accent.cyan} />
-          </View>
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Employment Type</Text>
-            <Text style={styles.detailValue}>
-              {employeeDetails?.workType || "Full-Time"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.detailDivider} />
-
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconBox}>
-            <Icon name="calendar-outline" size={18} color={colors.status.present} />
-          </View>
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Joining Date</Text>
-            <Text style={styles.detailValue}>
-              {employeeDetails?.joiningDate
-                ? new Date(employeeDetails.joiningDate).toLocaleDateString(undefined, {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })
-                : "March 1, 2024"}
-            </Text>
-          </View>
-        </View>
-      </Card>
-
-      {/* 3. Shift Information Section */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Shift & Attendance Policy</Text>
-      </View>
-
-      <Card variant="surface" style={styles.detailsCard}>
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconBox}>
-            <Icon name="time-outline" size={18} color={colors.accent.cyan} />
-          </View>
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Assigned Shift</Text>
-            <Text style={styles.detailValue}>{shift?.name || "General Day Shift"}</Text>
-          </View>
-        </View>
-
-        <View style={styles.detailDivider} />
-
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconBox}>
-            <Icon name="alarm-outline" size={18} color={colors.status.present} />
-          </View>
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Working Hours</Text>
-            <Text style={styles.detailValue}>
-              {shift ? `${shift.startTime} – ${shift.endTime}` : "09:00 – 18:00 (9 hours)"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.detailDivider} />
-
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconBox}>
-            <Icon name="checkmark-done-circle-outline" size={18} color={colors.status.late} />
-          </View>
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Grace Period Tolerance</Text>
-            <Text style={styles.detailValue}>
-              {shift?.graceMinutes ?? policyData?.defaultGraceMinutes ?? 15} minutes
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.detailDivider} />
-
-        <View style={styles.detailRow}>
-          <View style={styles.detailIconBox}>
-            <Icon name="calendar-clear-outline" size={18} color={colors.accent.indigo} />
-          </View>
-          <View style={styles.detailContent}>
-            <Text style={styles.detailLabel}>Working Schedule</Text>
-            <Text style={styles.detailValue}>{workdaysStr}</Text>
-          </View>
-        </View>
-      </Card>
-
-      {/* 4. App & System Settings */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>App & System Settings</Text>
-      </View>
-
-      <Card variant="surface" style={styles.detailsCard}>
-        <TouchableOpacity
-          onPress={() => Linking.openSettings()}
-          style={styles.settingItem}
-          accessibilityLabel="Open native camera permissions in device settings"
-          accessibilityRole="button"
-          testID="profile-camera-settings-btn"
-        >
-          <View style={styles.detailIconBox}>
-            <Icon name="camera-outline" size={18} color={colors.accent.cyan} />
-          </View>
-          <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Camera Permissions</Text>
-            <Text style={styles.settingSubtitle}>Open native OS settings to grant camera access</Text>
-          </View>
-          <Icon name="chevron-forward" size={18} color={colors.text.muted} />
-        </TouchableOpacity>
-
-        <View style={styles.detailDivider} />
-
-        <View style={styles.settingItem}>
-          <View style={styles.detailIconBox}>
-            <Icon name="server-outline" size={18} color={colors.status.present} />
-          </View>
-          <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>Server Endpoint</Text>
-            <Text style={styles.settingSubtitle}>{getApiBaseUrl()}</Text>
-          </View>
-          <StatusBadge status="ACTIVE" label="CONNECTED" />
-        </View>
-      </Card>
-
-      {/* 5. Logout Section (Clears Tokens and Socket Connection) */}
-      <View style={styles.logoutSection}>
-        <Button
-          title="Sign Out of VorldX"
-          onPress={handleLogout}
-          variant="outline"
-          size="lg"
-          isLoading={loggingOut}
-          icon={<Icon name="log-out-outline" size={18} color={colors.accent.cyan} />}
-          accessibilityLabel="Sign out of VorldX account"
-          testID="profile-logout-btn"
-          style={styles.logoutBtn}
-        />
-
-        {/* Direct sign out action for headless automated tests */}
-        <TouchableOpacity
-          onPress={handleDirectLogout}
-          accessibilityLabel="Direct Sign Out"
-          accessibilityRole="button"
-          testID="profile-direct-logout-btn"
-          style={styles.directLogoutBtn}
-        >
-          <Text style={styles.directLogoutText}>Direct Sign Out</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
+    gap: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  containerWide: {
+    maxWidth: 580,
+    alignSelf: 'center',
+  },
+  identityCard: {
+    width: '100%',
+  },
+  identityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
+  identityCopy: {
     flex: 1,
-    backgroundColor: colors.background.base,
-  },
-  contentContainer: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl * 2,
-  },
-  profileCard: {
-    padding: spacing.xl,
-    alignItems: "center",
-    borderColor: colors.accent.blue,
-    marginBottom: spacing.lg,
-  },
-  avatarLarge: {
-    width: 72,
-    height: 72,
-    borderRadius: radii.full,
-    backgroundColor: colors.accent.blue,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-    borderWidth: 2,
-    borderColor: colors.accent.cyan,
-  },
-  avatarLargeText: {
-    ...typography.xl,
-    fontWeight: "900",
-    color: "#FFFFFF",
-  },
-  profileName: {
-    ...typography.xl,
-    fontWeight: "800",
-    color: colors.text.primary,
-    marginBottom: 2,
-  },
-  profileIdText: {
-    ...typography.sm,
-    fontWeight: "700",
-    color: colors.accent.cyan,
-    marginBottom: 2,
-  },
-  profileEmailText: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    marginBottom: spacing.md,
+    gap: 4,
   },
   badgeRow: {
-    flexDirection: "row",
-    gap: spacing.xs,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
   },
-  sectionHeader: {
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
-  sectionTitle: {
-    ...typography.md,
-    fontWeight: "800",
-    color: colors.text.primary,
+  rowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  detailsCard: {
-    padding: spacing.md,
-    borderColor: colors.border.subtle,
-    marginBottom: spacing.lg,
+  infoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.xs,
-    minHeight: 44, // 44px minimum touch target
+  infoIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: 'rgba(89, 101, 242, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  detailIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.sm,
-    backgroundColor: colors.background.base,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.md,
+  infoValue: {
+    textAlign: 'right',
   },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    ...typography.xs,
-    color: colors.text.muted,
-    fontWeight: "600",
-    marginBottom: 1,
-  },
-  detailValue: {
-    ...typography.sm,
-    fontWeight: "700",
-    color: colors.text.primary,
-  },
-  detailDivider: {
-    height: 1,
-    backgroundColor: colors.border.subtle,
-    marginVertical: spacing.xs,
-  },
-  settingItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.xs,
-    minHeight: 44,
-  },
-  settingContent: {
-    flex: 1,
-  },
-  settingTitle: {
-    ...typography.sm,
-    fontWeight: "700",
-    color: colors.text.primary,
-    marginBottom: 1,
-  },
-  settingSubtitle: {
-    ...typography.xs,
-    color: colors.text.muted,
-  },
-  logoutSection: {
+  actionsSection: {
+    gap: spacing.md,
     marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  logoutBtn: {
-    width: "100%",
-    minHeight: 48,
-    borderColor: "rgba(239, 68, 68, 0.4)",
-  },
-  directLogoutBtn: {
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-    minHeight: 44,
-  },
-  directLogoutText: {
-    ...typography.xs,
-    color: colors.text.muted,
   },
 });

@@ -1,20 +1,36 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  ScrollView,
   RefreshControl,
   TouchableOpacity,
-  TextInput,
   Alert,
-  Platform,
   AppState,
   AppStateStatus,
-} from "react-native";
-import { Card, Button, StatusBadge, Skeleton, Icon } from "../../src/components";
-import { useToast } from "../../src/components/Toast";
-import { colors, spacing, typography, radii } from "../../src/theme";
+} from 'react-native';
+import {
+  Calendar as CalendarIcon,
+  House,
+  Plus,
+  X,
+} from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { useToast } from '../../src/components/Toast';
+import {
+  Screen,
+  Card,
+  Button,
+  Badge,
+  StatusBadge,
+  PageHeader,
+  SectionHeader,
+  Input,
+  Field,
+  Notice,
+  Text,
+} from '../../src/components';
+import { colors, radii, spacing } from '../../src/theme/tokens';
+import { useResponsive } from '../../src/lib/responsive';
 import {
   wfhApi,
   WfhEligibilityResponse,
@@ -22,12 +38,12 @@ import {
   ApiError,
   subscribeToSocketEvent,
   subscribeToResync,
-} from "../../src/services";
+} from '../../src/services';
 
 export default function WfhScreen() {
   const { showToast } = useToast();
+  const { isWide } = useResponsive();
 
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [eligibility, setEligibility] = useState<WfhEligibilityResponse | null>(null);
   const [requests, setRequests] = useState<WfhRequestItem[]>([]);
@@ -35,16 +51,14 @@ export default function WfhScreen() {
   // Request form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [requestDate, setRequestDate] = useState(() => {
-    // Tomorrow's date as default (YYYY-MM-DD)
     const d = new Date();
     d.setDate(d.getDate() + 1);
-    return d.toISOString().split("T")[0];
+    return d.toISOString().split('T')[0];
   });
-  const [requestReason, setRequestReason] = useState("");
+  const [requestReason, setRequestReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // In-flight sequence tracking to prevent stale cache overwriting newer authoritative data
   const latestFetchTimestampRef = useRef<number>(0);
 
   const fetchWfhData = useCallback(async () => {
@@ -57,18 +71,14 @@ export default function WfhScreen() {
         wfhApi.getMyRequests(),
       ]);
 
-      // If a newer request was dispatched after this one, discard this response
-      if (fetchTimestamp < latestFetchTimestampRef.current) {
-        return;
-      }
+      if (fetchTimestamp < latestFetchTimestampRef.current) return;
 
       setEligibility(eligRes);
       setRequests(myReqsRes.data || []);
     } catch (err) {
-      console.error("Failed to load WFH data", err);
+      console.error('Failed to load WFH data', err);
     } finally {
       if (fetchTimestamp >= latestFetchTimestampRef.current) {
-        setLoading(false);
         setRefreshing(false);
       }
     }
@@ -77,23 +87,21 @@ export default function WfhScreen() {
   useEffect(() => {
     fetchWfhData();
 
-    // 1. Live Socket.IO Updates: Real-time decision events from HR
-    const unsubDecided = subscribeToSocketEvent("wfh.decided", (rawPayload: unknown) => {
+    const unsubDecided = subscribeToSocketEvent('wfh.decided', (rawPayload: unknown) => {
       const payload = rawPayload as {
         requestId?: string;
         dateKey?: string;
-        status?: "APPROVED" | "REJECTED";
+        status?: 'APPROVED' | 'REJECTED';
         reviewerRemarks?: string | null;
       };
 
-      // Optimistically patch UI state immediately on socket packet arrival
       if (payload?.requestId || payload?.dateKey) {
         setRequests((prev) =>
           prev.map((r) => {
             if (r._id === payload.requestId || (r.dateKey || r.date) === payload.dateKey) {
               return {
                 ...r,
-                status: (payload.status as any) || r.status,
+                status: (payload.status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED') || r.status,
                 reviewerRemarks: payload.reviewerRemarks ?? r.reviewerRemarks,
                 reviewerComment: payload.reviewerRemarks ?? r.reviewerComment,
               };
@@ -102,46 +110,31 @@ export default function WfhScreen() {
           })
         );
 
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
         showToast({
-          title: payload.status === "APPROVED" ? "WFH Request Approved!" : "WFH Request Decided",
-          message: `HR has ${payload.status === "APPROVED" ? "approved" : "rejected"} your request for ${payload.dateKey || "remote work"}.`,
-          type: payload.status === "APPROVED" ? "success" : "info",
+          title: payload.status === 'APPROVED' ? 'WFH Request Approved!' : 'WFH Request Decided',
+          message: `HR has ${payload.status === 'APPROVED' ? 'approved' : 'rejected'} your request for ${payload.dateKey || 'remote work'}.`,
+          type: payload.status === 'APPROVED' ? 'success' : 'info',
         });
       }
 
-      // Re-fetch authoritative eligibility and quota in background
       fetchWfhData();
     });
 
-    const unsubStatusUpdated = subscribeToSocketEvent("wfh.status_updated", () => {
-      fetchWfhData();
-    });
+    const unsubStatusUpdated = subscribeToSocketEvent('wfh.status_updated', () => fetchWfhData());
+    const unsubCreated = subscribeToSocketEvent('wfh.created', () => fetchWfhData());
+    const unsubResync = subscribeToResync(() => fetchWfhData());
 
-    const unsubCreated = subscribeToSocketEvent("wfh.created", () => {
-      fetchWfhData();
+    const appStateSub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'active') fetchWfhData();
     });
-
-    // 2. Resync on socket reconnection
-    const unsubResync = subscribeToResync(() => {
-      fetchWfhData();
-    });
-
-    // 3. Resync on app foreground / resume
-    const appStateSubscription = AppState.addEventListener(
-      "change",
-      (nextState: AppStateStatus) => {
-        if (nextState === "active") {
-          fetchWfhData();
-        }
-      }
-    );
 
     return () => {
       unsubDecided();
       unsubStatusUpdated();
       unsubCreated();
       unsubResync();
-      appStateSubscription.remove();
+      appStateSub.remove();
     };
   }, [fetchWfhData, showToast]);
 
@@ -154,31 +147,25 @@ export default function WfhScreen() {
     const cleanDate = requestDate.trim();
     const cleanReason = requestReason.trim();
 
-    // Comprehensive client-side validation
     if (!cleanDate) {
-      setFormError("Please enter a valid date (YYYY-MM-DD).");
+      setFormError('Please enter a valid date (YYYY-MM-DD).');
       return;
     }
 
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(cleanDate)) {
-      setFormError("Date must strictly follow YYYY-MM-DD format (e.g., 2026-10-30).");
+      setFormError('Date must follow YYYY-MM-DD format (e.g. 2026-10-30).');
       return;
     }
 
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split('T')[0];
     if (cleanDate < todayStr) {
-      setFormError("Remote work requests cannot be submitted for past dates.");
+      setFormError('Remote work requests cannot be submitted for past dates.');
       return;
     }
 
     if (!cleanReason || cleanReason.length < 5) {
-      setFormError("Please provide a business justification (at least 5 characters).");
-      return;
-    }
-
-    if (cleanReason.length > 500) {
-      setFormError("Justification reason cannot exceed 500 characters.");
+      setFormError('Please provide a justification (at least 5 characters).');
       return;
     }
 
@@ -187,30 +174,32 @@ export default function WfhScreen() {
 
     try {
       await wfhApi.createRequest(cleanDate, cleanReason);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       showToast({
-        title: "Request Submitted",
+        title: 'Request Submitted',
         message: `WFH request for ${cleanDate} submitted for HR review.`,
-        type: "success",
+        type: 'success',
       });
       setIsFormOpen(false);
-      setRequestReason("");
+      setRequestReason('');
       fetchWfhData();
     } catch (err: unknown) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
       if (err instanceof ApiError) {
-        if (err.code === "ERR_DUPLICATE_WFH_REQUEST") {
-          setFormError("You have already submitted a request for this date.");
-        } else if (err.code === "ERR_QUOTA_EXCEEDED") {
-          setFormError("Monthly WFH quota limit reached. Additional remote days are not allowed.");
+        if (err.code === 'ERR_DUPLICATE_WFH_REQUEST') {
+          setFormError('You have already submitted a request for this date.');
+        } else if (err.code === 'ERR_QUOTA_EXCEEDED') {
+          setFormError('Monthly WFH quota limit reached.');
         } else if (
-          err.code === "ERR_WFH_CURRENTLY_IN_OFFICE" ||
-          err.code === "ERR_WFH_ALREADY_WORKED"
+          err.code === 'ERR_WFH_CURRENTLY_IN_OFFICE' ||
+          err.code === 'ERR_WFH_ALREADY_WORKED'
         ) {
-          setFormError("Cannot apply for WFH: You have already punched into the office for this date.");
+          setFormError('Cannot apply for WFH: You have already punched into the office for this date.');
         } else {
-          setFormError(err.message || "Failed to submit WFH request.");
+          setFormError(err.message || 'Failed to submit WFH request.');
         }
       } else {
-        setFormError("Network error: Unable to connect to attendance server.");
+        setFormError('Unable to connect to attendance server.');
       }
     } finally {
       setSubmitting(false);
@@ -221,40 +210,25 @@ export default function WfhScreen() {
     const doCancel = async () => {
       try {
         await wfhApi.cancelRequest(id);
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
         showToast({
-          title: "Request Cancelled",
-          message: "Your pending WFH request has been cancelled.",
-          type: "info",
+          title: 'Request Cancelled',
+          message: 'Your pending WFH request has been cancelled.',
+          type: 'info',
         });
         fetchWfhData();
       } catch (err: unknown) {
-        const msg = err instanceof ApiError ? err.message : "Failed to cancel request.";
-        Alert.alert("Cancellation Error", msg);
+        const msg = err instanceof ApiError ? err.message : 'Failed to cancel request.';
+        Alert.alert('Cancellation Error', msg);
       }
     };
 
-    if (Platform.OS === "web") {
-      // In web browser or headless automated tests
-      if (typeof window !== "undefined" && typeof window.confirm === "function") {
-        if (window.confirm(`Are you sure you want to cancel your remote request for ${date}?`)) {
-          doCancel();
-        }
-      } else {
-        doCancel();
-      }
-      return;
-    }
-
     Alert.alert(
-      "Cancel WFH Request",
+      'Cancel WFH Request',
       `Are you sure you want to cancel your remote request for ${date}?`,
       [
-        { text: "No", style: "cancel" },
-        {
-          text: "Yes, Cancel",
-          style: "destructive",
-          onPress: doCancel,
-        },
+        { text: 'No', style: 'cancel' },
+        { text: 'Yes, Cancel', style: 'destructive', onPress: doCancel },
       ]
     );
   };
@@ -266,59 +240,71 @@ export default function WfhScreen() {
   const pendingDays = eligibility?.pendingCountThisMonth ?? 0;
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+    <Screen
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
+          colors={[colors.indigoSoft]}
           onRefresh={onRefresh}
-          tintColor={colors.accent.cyan}
-          colors={[colors.accent.cyan]}
+          refreshing={refreshing}
+          tintColor={colors.indigoSoft}
         />
       }
     >
-      {/* 1. WFH Eligibility & Quota Overview Card */}
-      <Card variant="elevated" style={styles.quotaCard}>
-        <View style={styles.quotaHeaderRow}>
-          <View>
-            <Text style={styles.quotaCategoryTag}>REMOTE WORK ENTITLEMENT</Text>
-            <Text style={styles.quotaTitle}>Monthly Remote Policy</Text>
-          </View>
-          <StatusBadge
-            status={isEligible ? "PRESENT" : "ABSENT"}
-            label={isEligible ? "ELIGIBLE" : "INELIGIBLE"}
-          />
-        </View>
+      <PageHeader
+        eyebrow="Remote Work Policy"
+        title="Work From Home"
+        subtitle="Submit remote requests and check your monthly quota balance."
+      />
 
-        <View style={styles.quotaNumbersRow}>
-          <View style={styles.quotaNumberBox}>
-            <Text style={styles.quotaNumberValue}>{remainingDays}</Text>
-            <Text style={styles.quotaNumberLabel}>Days Available</Text>
-          </View>
-
-          <View style={styles.quotaDivider} />
-
-          <View style={styles.quotaNumberBox}>
-            <Text style={[styles.quotaNumberValue, { color: colors.status.wfh }]}>
-              {usedDays}
-            </Text>
-            <Text style={styles.quotaNumberLabel}>Days Approved</Text>
+      <View style={[styles.container, isWide && styles.containerWide]}>
+        {/* 1. WFH Entitlement Quota Card */}
+        <Card variant="raised" padding={20} style={styles.quotaCard}>
+          <View style={styles.quotaHeader}>
+            <View style={styles.quotaTitleWrap}>
+              <Text variant="caption" color={colors.muted}>
+                Entitlement & Policy
+              </Text>
+              <Text variant="title">Monthly WFH Quota</Text>
+            </View>
+            <Badge
+              label={isEligible ? 'Eligible' : 'Ineligible'}
+              tone={isEligible ? 'success' : 'danger'}
+              dot
+            />
           </View>
 
-          <View style={styles.quotaDivider} />
-
-          <View style={styles.quotaNumberBox}>
-            <Text style={[styles.quotaNumberValue, { color: colors.status.late }]}>
-              {pendingDays}
-            </Text>
-            <Text style={styles.quotaNumberLabel}>Pending</Text>
+          {/* Numbers Strip */}
+          <View style={styles.numbersRow}>
+            <View style={styles.numberBox}>
+              <Text variant="number" color={colors.text}>
+                {remainingDays}
+              </Text>
+              <Text variant="small" color={colors.muted}>
+                Available
+              </Text>
+            </View>
+            <View style={styles.vDivider} />
+            <View style={styles.numberBox}>
+              <Text variant="number" color={colors.info}>
+                {usedDays}
+              </Text>
+              <Text variant="small" color={colors.muted}>
+                Approved
+              </Text>
+            </View>
+            <View style={styles.vDivider} />
+            <View style={styles.numberBox}>
+              <Text variant="number" color={colors.warning}>
+                {pendingDays}
+              </Text>
+              <Text variant="small" color={colors.muted}>
+                Pending
+              </Text>
+            </View>
           </View>
-        </View>
 
-        {/* Quota Progress Bar */}
-        {eligibility && (
-          <View style={styles.progressBarWrapper}>
+          {/* Quota Progress Bar */}
+          <View style={styles.progressWrap}>
             <View style={styles.progressBarBg}>
               <View
                 style={[
@@ -329,478 +315,220 @@ export default function WfhScreen() {
                 ]}
               />
             </View>
-            <Text style={styles.progressBarText}>
-              {usedDays} of {totalQuota} monthly quota used ({remainingDays} available)
+            <Text variant="small" color={colors.muted} align="center">
+              {usedDays} of {totalQuota} days used ({remainingDays} available)
             </Text>
           </View>
-        )}
 
-        {/* Toggle Request Form Button */}
-        {isEligible && (
-          <Button
-            title={isFormOpen ? "Close Request Form" : "Request Work From Home"}
-            onPress={() => setIsFormOpen(!isFormOpen)}
-            variant={isFormOpen ? "outline" : "primary"}
-            size="lg"
-            icon={<Icon name={isFormOpen ? "close" : "add"} size={18} color="#FFFFFF" />}
-            accessibilityLabel={isFormOpen ? "Close remote request form" : "Open remote request form"}
-            testID="wfh-toggle-form-btn"
-            style={{ marginTop: spacing.md }}
-          />
-        )}
-      </Card>
-
-      {/* 2. New Request Form Card */}
-      {isFormOpen && (
-        <Card variant="surface" style={styles.formCard} testID="wfh-request-form-card">
-          <View style={styles.formHeader}>
-            <Icon name="calendar-outline" size={20} color={colors.accent.cyan} />
-            <Text style={styles.formTitle}>Submit Remote Work Request</Text>
-          </View>
-
-          <Text style={styles.inputLabel}>Requested Date (YYYY-MM-DD)</Text>
-          <TextInput
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.text.muted}
-            value={requestDate}
-            onChangeText={(val) => {
-              setRequestDate(val);
-              if (formError) setFormError(null);
-            }}
-            style={styles.textInput}
-            accessibilityLabel="Requested remote work date in YYYY-MM-DD format"
-            testID="wfh-date-input"
-          />
-
-          <Text style={styles.inputLabel}>Business Reason / Justification</Text>
-          <TextInput
-            placeholder="Explain why you are requesting remote work..."
-            placeholderTextColor={colors.text.muted}
-            value={requestReason}
-            onChangeText={(val) => {
-              setRequestReason(val);
-              if (formError) setFormError(null);
-            }}
-            multiline
-            numberOfLines={3}
-            style={[styles.textInput, styles.textArea]}
-            accessibilityLabel="Business justification for remote work"
-            testID="wfh-reason-input"
-          />
-
-          {formError && (
-            <View style={styles.formErrorBanner} testID="wfh-form-error-banner">
-              <Icon name="alert-circle" size={16} color={colors.text.danger} />
-              <Text style={styles.formErrorText}>{formError}</Text>
-            </View>
+          {isEligible && (
+            <Button
+              icon={isFormOpen ? <X size={16} color={colors.text} /> : <Plus size={16} color={colors.white} />}
+              label={isFormOpen ? 'Close Form' : 'Request Work From Home'}
+              onPress={() => setIsFormOpen(!isFormOpen)}
+              variant={isFormOpen ? 'secondary' : 'primary'}
+              size="md"
+            />
           )}
-
-          <Button
-            title="Submit for Approval"
-            onPress={handleCreateRequest}
-            isLoading={submitting}
-            variant="primary"
-            size="lg"
-            accessibilityLabel="Submit remote work request for HR approval"
-            testID="wfh-submit-request-btn"
-            style={{ marginTop: spacing.sm }}
-          />
         </Card>
-      )}
 
-      {/* 3. My Submitted Requests Section */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>My Remote Requests</Text>
-        <Text style={styles.sectionSubtitle}>
-          Real-time updates via Socket.IO ({requests.length} total)
-        </Text>
-      </View>
-
-      {/* Skeletons while loading */}
-      {loading && !refreshing && (
-        <View style={{ gap: spacing.sm }}>
-          {[1, 2].map((i) => (
-            <Card key={i} variant="surface" style={{ padding: spacing.lg }}>
-              <Skeleton width="40%" height={18} />
-              <Skeleton width="80%" height={14} style={{ marginTop: spacing.sm }} />
-            </Card>
-          ))}
-        </View>
-      )}
-
-      {/* Requests List */}
-      {!loading && requests.length > 0 ? (
-        requests.map((item) => {
-          const status = item.status;
-          const remarks = item.reviewerRemarks || item.reviewerComment;
-          const dateStr = item.dateKey || item.date || "";
-
-          return (
-            <Card key={item._id} variant="surface" style={styles.requestCard}>
-              <View style={styles.requestHeaderRow}>
-                <View style={styles.requestDateBox}>
-                  <Text style={styles.requestDateText}>
-                    {dateStr
-                      ? new Date(dateStr + "T00:00:00").toLocaleDateString(undefined, {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : "Pending Date"}
-                  </Text>
-                  <Text style={styles.requestCreatedSubtext}>
-                    Requested on {new Date(item.createdAt).toLocaleDateString()}
-                  </Text>
-                </View>
-
-                <StatusBadge
-                  status={
-                    status === "APPROVED"
-                      ? "PRESENT"
-                      : status === "PENDING"
-                        ? "LATE"
-                        : "ABSENT"
-                  }
-                  label={status}
-                />
-              </View>
-
-              <View style={styles.requestReasonBox}>
-                <Text style={styles.requestReasonLabel}>Reason:</Text>
-                <Text style={styles.requestReasonText}>{item.reason}</Text>
-              </View>
-
-              {/* Decision comment from HR */}
-              {remarks ? (
-                <View
-                  style={[
-                    styles.reviewerCommentBox,
-                    status === "APPROVED" && styles.reviewerCommentBoxApproved,
-                    status === "REJECTED" && styles.reviewerCommentBoxRejected,
-                  ]}
-                >
-                  <Icon
-                    name={status === "APPROVED" ? "checkmark-circle" : "information-circle"}
-                    size={16}
-                    color={status === "APPROVED" ? colors.status.present : colors.text.danger}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reviewerCommentTitle}>
-                      HR Decision Note:
-                    </Text>
-                    <Text style={styles.reviewerCommentText}>{remarks}</Text>
-                  </View>
-                </View>
-              ) : null}
-
-              {/* One-tap cancel for pending requests */}
-              {status === "PENDING" && (
-                <View style={styles.cardActionRow}>
-                  <TouchableOpacity
-                    onPress={() => handleCancelRequest(item._id, dateStr)}
-                    style={styles.cancelBtn}
-                    accessibilityLabel={`Cancel remote request for ${dateStr}`}
-                    accessibilityRole="button"
-                    testID={`wfh-cancel-btn-${item._id}`}
-                  >
-                    <Icon name="close-circle-outline" size={18} color={colors.text.danger} />
-                    <Text style={styles.cancelBtnText}>Cancel Request</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </Card>
-          );
-        })
-      ) : (
-        !loading && (
-          <Card variant="surface" style={styles.emptyCard} testID="wfh-empty-state">
-            <View style={styles.emptyIconCircle}>
-              <Icon name="briefcase-outline" size={32} color={colors.text.muted} />
+        {/* 2. New Request Form Card */}
+        {isFormOpen && (
+          <Card variant="glass" padding={20} style={styles.formCard}>
+            <View style={styles.formHeader}>
+              <House size={18} color={colors.indigoSoft} />
+              <Text variant="subheading">Submit Remote Work Request</Text>
             </View>
-            <Text style={styles.emptyTitle}>No Remote Requests</Text>
-            <Text style={styles.emptySubtitle}>
-              You have not submitted any work-from-home requests for this period.
+
+            {formError ? <Notice tone="danger" title="Invalid Request" message={formError} /> : null}
+
+            <Field label="Target Date" required hint="Format: YYYY-MM-DD">
+              <Input
+                placeholder="2026-10-30"
+                value={requestDate}
+                onChangeText={setRequestDate}
+                leftIcon={CalendarIcon}
+              />
+            </Field>
+
+            <Field label="Business Justification" required hint="At least 5 characters">
+              <Input
+                placeholder="Describe reason for remote work..."
+                value={requestReason}
+                onChangeText={setRequestReason}
+                multiline
+                numberOfLines={3}
+              />
+            </Field>
+
+            <Button
+              label={submitting ? 'Submitting...' : 'Submit Request to HR'}
+              loading={submitting}
+              onPress={handleCreateRequest}
+            />
+          </Card>
+        )}
+
+        {/* 3. Requests Feed */}
+        <SectionHeader
+          title="My requests"
+          caption={`${requests.length} applications on record`}
+        />
+
+        {requests.length === 0 ? (
+          <Card variant="soft" padding={24} style={styles.emptyCard}>
+            <House size={28} color={colors.muted} strokeWidth={1.6} />
+            <Text variant="subheading" align="center">
+              No remote requests yet
+            </Text>
+            <Text variant="small" color={colors.muted} align="center">
+              Tap "Request Work From Home" to submit your first remote request.
             </Text>
           </Card>
-        )
-      )}
-    </ScrollView>
+        ) : (
+          <Card padding={0}>
+            {requests.map((item, index) => {
+              const dateVal = item.dateKey || item.date || 'Remote day';
+              const isPending = item.status === 'PENDING';
+
+              return (
+                <View
+                  key={item._id}
+                  style={[styles.requestRow, index > 0 ? styles.rowDivider : null]}
+                >
+                  <View style={styles.requestLeft}>
+                    <View style={styles.requestDateRow}>
+                      <Text variant="bodyMedium" weight="semibold">
+                        {dateVal}
+                      </Text>
+                      <StatusBadge status={item.status} />
+                    </View>
+                    <Text variant="small" color={colors.textSecondary}>
+                      {item.reason}
+                    </Text>
+                    {item.reviewerRemarks || item.reviewerComment ? (
+                      <Text variant="caption" color={colors.indigoSoft} style={styles.remarks}>
+                        HR Note: {item.reviewerRemarks || item.reviewerComment}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  {isPending && (
+                    <TouchableOpacity
+                      onPress={() => handleCancelRequest(item._id, dateVal)}
+                      style={styles.cancelBtn}
+                    >
+                      <Text variant="small" color={colors.danger} weight="medium">
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+          </Card>
+        )}
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: colors.background.base,
+    width: '100%',
+    gap: spacing.lg,
   },
-  contentContainer: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl * 2,
+  containerWide: {
+    maxWidth: 580,
+    alignSelf: 'center',
   },
   quotaCard: {
-    padding: spacing.lg,
-    borderColor: colors.accent.blue,
-    marginBottom: spacing.lg,
+    gap: spacing.lg,
   },
-  quotaHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: spacing.md,
+  quotaHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
-  quotaCategoryTag: {
-    ...typography.xs,
-    fontWeight: "700",
-    color: colors.accent.cyan,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+  quotaTitleWrap: {
+    gap: 3,
   },
-  quotaTitle: {
-    ...typography.lg,
-    fontWeight: "800",
-    color: colors.text.primary,
-    marginTop: 2,
-  },
-  quotaNumbersRow: {
-    flexDirection: "row",
-    backgroundColor: colors.background.base,
+  numbersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
-    padding: spacing.md,
-    alignItems: "center",
-    justifyContent: "space-around",
+    backgroundColor: 'rgba(11, 14, 25, 0.7)',
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: 'rgba(184, 190, 255, 0.08)',
   },
-  quotaNumberBox: {
-    alignItems: "center",
+  numberBox: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
   },
-  quotaNumberValue: {
-    ...typography.xxl,
-    fontWeight: "900",
-    color: colors.text.primary,
-  },
-  quotaNumberLabel: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    marginTop: 2,
-    fontWeight: "600",
-  },
-  quotaDivider: {
+  vDivider: {
     width: 1,
     height: 32,
-    backgroundColor: colors.border.subtle,
+    backgroundColor: colors.border,
   },
-  progressBarWrapper: {
-    marginTop: spacing.md,
+  progressWrap: {
+    gap: spacing.xs,
   },
   progressBarBg: {
+    width: '100%',
     height: 6,
-    backgroundColor: colors.background.base,
-    borderRadius: radii.full,
-    overflow: "hidden",
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    overflow: 'hidden',
   },
   progressBarFill: {
-    height: "100%",
-    backgroundColor: colors.accent.cyan,
-    borderRadius: radii.full,
-  },
-  progressBarText: {
-    ...typography.xs,
-    color: colors.text.muted,
-    marginTop: spacing.xs,
-    textAlign: "right",
+    height: '100%',
+    backgroundColor: colors.indigo,
+    borderRadius: 3,
   },
   formCard: {
-    padding: spacing.lg,
-    borderColor: colors.accent.cyan,
-    marginBottom: spacing.lg,
+    gap: spacing.md,
   },
   formHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  formTitle: {
-    ...typography.md,
-    fontWeight: "800",
-    color: colors.text.primary,
-  },
-  inputLabel: {
-    ...typography.xs,
-    fontWeight: "700",
-    color: colors.text.secondary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  textInput: {
-    backgroundColor: colors.background.base,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    color: colors.text.primary,
-    ...typography.sm,
-    minHeight: 44, // 44px minimum touch target
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: "top",
-    paddingTop: spacing.sm,
-  },
-  formErrorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.status.absentBg,
-    borderRadius: radii.md,
-    padding: spacing.sm,
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.3)",
-  },
-  formErrorText: {
-    ...typography.xs,
-    color: colors.text.danger,
-    fontWeight: "600",
-    flex: 1,
-  },
-  sectionHeader: {
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  sectionTitle: {
-    ...typography.md,
-    fontWeight: "800",
-    color: colors.text.primary,
-  },
-  sectionSubtitle: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    marginTop: 2,
-    marginBottom: spacing.xs,
-  },
-  requestCard: {
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderColor: colors.border.subtle,
-  },
-  requestHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  requestDateBox: {
-    flex: 1,
-  },
-  requestDateText: {
-    ...typography.sm,
-    fontWeight: "800",
-    color: colors.text.primary,
-  },
-  requestCreatedSubtext: {
-    ...typography.xs,
-    color: colors.text.muted,
-    marginTop: 2,
-  },
-  requestReasonBox: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.background.base,
-    padding: spacing.sm,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-  },
-  requestReasonLabel: {
-    ...typography.xs,
-    fontWeight: "700",
-    color: colors.text.muted,
-    marginBottom: 2,
-  },
-  requestReasonText: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    lineHeight: 18,
-  },
-  reviewerCommentBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.xs,
-    backgroundColor: colors.accent.cyanMuted,
-    padding: spacing.sm,
-    borderRadius: radii.sm,
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderColor: "rgba(6, 182, 212, 0.3)",
-  },
-  reviewerCommentBoxApproved: {
-    backgroundColor: colors.status.presentBg,
-    borderColor: "rgba(16, 185, 129, 0.3)",
-  },
-  reviewerCommentBoxRejected: {
-    backgroundColor: colors.status.absentBg,
-    borderColor: "rgba(239, 68, 68, 0.3)",
-  },
-  reviewerCommentTitle: {
-    ...typography.xs,
-    fontWeight: "800",
-    color: colors.text.primary,
-    marginBottom: 2,
-  },
-  reviewerCommentText: {
-    ...typography.xs,
-    color: colors.text.primary,
-    fontWeight: "600",
-  },
-  cardActionRow: {
-    marginTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
-    paddingTop: spacing.xs,
-    alignItems: "flex-end",
-  },
-  cancelBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.xs + 2,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.sm,
-    minHeight: 44, // 44px minimum touch target
-  },
-  cancelBtnText: {
-    ...typography.xs,
-    color: colors.text.danger,
-    fontWeight: "700",
   },
   emptyCard: {
-    padding: spacing.xxl,
-    alignItems: "center",
-    borderColor: colors.border.subtle,
-    marginTop: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.background.base,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
+  requestRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    gap: spacing.md,
   },
-  emptyTitle: {
-    ...typography.md,
-    fontWeight: "800",
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
+  rowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  emptySubtitle: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    textAlign: "center",
-    lineHeight: 18,
-    maxWidth: 240,
+  requestLeft: {
+    flex: 1,
+    gap: 5,
+  },
+  requestDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  remarks: {
+    marginTop: 2,
+  },
+  cancelBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(255, 107, 131, 0.1)',
   },
 });

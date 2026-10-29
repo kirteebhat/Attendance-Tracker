@@ -1,31 +1,79 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  ScrollView,
   RefreshControl,
   TouchableOpacity,
-} from "react-native";
-import { Card, StatusBadge, Skeleton, Button, Icon } from "../../src/components";
-import { colors, spacing, typography, radii } from "../../src/theme";
-import { attendanceApi, AttendanceRecordItem, AttendanceStats } from "../../src/services";
+} from 'react-native';
+import {
+  AlertCircle,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  House,
+  RefreshCw,
+  MapPin,
+  Clock,
+} from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import {
+  Screen,
+  Card,
+  Button,
+  StatusBadge,
+  StatTile,
+  PageHeader,
+  SectionHeader,
+  Calendar,
+  Notice,
+  Text,
+  PressableScale,
+} from '../../src/components';
+import { colors, radii, spacing, type Tone } from '../../src/theme/tokens';
+import { useResponsive } from '../../src/lib/responsive';
+import {
+  attendanceApi,
+  AttendanceRecordItem,
+  AttendanceStats,
+} from '../../src/services';
+
+function formatTime(isoString?: string | null): string {
+  if (!isoString) return '—';
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch {
+    return '—';
+  }
+}
+
+function formatDuration(mins?: number): string {
+  if (!mins || mins <= 0) return '0 hrs';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+type FilterType = 'ALL' | 'PRESENT' | 'LATE' | 'WFH' | 'ABSENT';
 
 export default function HistoryScreen() {
-  const [loading, setLoading] = useState(true);
+  const { isWide } = useResponsive();
+
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Month navigation: current date initialized to current month
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
-  const [activeFilter, setActiveFilter] = useState<"ALL" | "PRESENT" | "LATE" | "WFH" | "ABSENT">(
-    "ALL"
-  );
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date());
+  const [selectedDateKey, setSelectedDateKey] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
 
   const [records, setRecords] = useState<AttendanceRecordItem[]>([]);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
 
-  const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}`;
+  const monthKey = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`;
 
   const fetchHistory = useCallback(async () => {
     setError(null);
@@ -33,10 +81,9 @@ export default function HistoryScreen() {
       const res = await attendanceApi.getMyAttendance({ month: monthKey, limit: 100 });
       setRecords(res.data || []);
       setStats(res.stats || null);
-    } catch (err: unknown) {
-      setError("Failed to load attendance records. Please check your connection.");
+    } catch {
+      setError('Failed to load attendance records. Please check your connection.');
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   }, [monthKey]);
@@ -50,480 +97,366 @@ export default function HistoryScreen() {
     fetchHistory();
   }, [fetchHistory]);
 
-  const handlePrevMonth = () => {
-    setSelectedDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-    setLoading(true);
+  const goToToday = () => {
+    const today = new Date();
+    setSelectedMonth(today);
+    setSelectedDateKey(today.toISOString().split('T')[0]);
+    void Haptics.selectionAsync().catch(() => undefined);
   };
 
-  const handleNextMonth = () => {
-    setSelectedDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-    setLoading(true);
-  };
-
-  // Filter records based on selected filter pill
-  const filteredRecords = records.filter((r) => {
-    if (activeFilter === "ALL") return true;
-    if (activeFilter === "PRESENT") {
-      return (
-        r.status === "PRESENT" ||
-        r.status === "CHECKED_OUT" ||
-        r.status === "CHECKED_IN"
-      );
+  // Build calendar marks
+  const calendarMarks = useMemo(() => {
+    const marks: Record<string, Tone> = {};
+    for (const r of records) {
+      if (r.dateKey) {
+        if (r.isWfh || r.status === 'WFH_APPROVED') marks[r.dateKey] = 'info';
+        else if (r.status === 'ABSENT') marks[r.dateKey] = 'danger';
+        else if (r.isLate || r.status === 'LATE') marks[r.dateKey] = 'warning';
+        else marks[r.dateKey] = 'success';
+      }
     }
-    if (activeFilter === "LATE") return r.isLate || r.status === "LATE";
-    if (activeFilter === "WFH") return r.isWfh || r.status === "WFH_APPROVED";
-    if (activeFilter === "ABSENT") return r.status === "ABSENT";
-    return true;
-  });
+    return marks;
+  }, [records]);
 
-  const formatTime = (isoString?: string | null) => {
-    if (!isoString) return "--:--";
-    try {
-      const d = new Date(isoString);
-      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
-    } catch {
-      return "--:--";
-    }
-  };
+  // Selected date record
+  const selectedRecord = useMemo(() => {
+    return records.find((r) => r.dateKey === selectedDateKey) || null;
+  }, [records, selectedDateKey]);
 
-  const formatDuration = (mins?: number) => {
-    if (!mins || mins <= 0) return "0 hrs";
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    if (h === 0) return `${m}m`;
-    if (m === 0) return `${h}h`;
-    return `${h}h ${m}m`;
-  };
+  // Filtered records
+  const filteredRecords = useMemo(() => {
+    return records.filter((r) => {
+      if (activeFilter === 'ALL') return true;
+      if (activeFilter === 'PRESENT') {
+        return (
+          r.status === 'PRESENT' ||
+          r.status === 'CHECKED_OUT' ||
+          r.status === 'CHECKED_IN'
+        );
+      }
+      if (activeFilter === 'LATE') return r.isLate || r.status === 'LATE';
+      if (activeFilter === 'WFH') return r.isWfh || r.status === 'WFH_APPROVED';
+      if (activeFilter === 'ABSENT') return r.status === 'ABSENT';
+      return true;
+    });
+  }, [records, activeFilter]);
 
-  const monthDisplayName = selectedDate.toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
+  const monthDisplayName = selectedMonth.toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
   });
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+    <Screen
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
+          colors={[colors.indigoSoft]}
           onRefresh={onRefresh}
-          tintColor={colors.accent.cyan}
-          colors={[colors.accent.cyan]}
+          refreshing={refreshing}
+          tintColor={colors.indigoSoft}
         />
       }
     >
-      {/* 1. Month Navigation Stepper */}
-      <Card variant="surface" style={styles.monthStepperCard}>
-        <TouchableOpacity
-          onPress={handlePrevMonth}
-          style={styles.monthNavBtn}
-          testID="history-prev-month-btn"
-        >
-          <Icon name="chevron-back" size={20} color={colors.accent.cyan} />
-        </TouchableOpacity>
+      <PageHeader
+        eyebrow="Monthly Ledger"
+        title="Attendance History"
+        subtitle={monthDisplayName}
+        right={
+          <Button
+            icon={<RefreshCw size={13} color={colors.text} />}
+            label="Today"
+            onPress={goToToday}
+            size="sm"
+            variant="secondary"
+            fullWidth={false}
+          />
+        }
+      />
 
-        <View style={styles.monthDisplayBox}>
-          <Icon name="calendar" size={16} color={colors.accent.cyan} />
-          <Text style={styles.monthDisplayText} testID="history-month-display">
-            {monthDisplayName}
-          </Text>
+      <View style={[styles.container, isWide && styles.containerWide]}>
+        {error ? <Notice tone="danger" title="Load Error" message={error} /> : null}
+
+        {/* 1. Monthly Stats Grid */}
+        <View style={styles.statGrid}>
+          <StatTile
+            hint="this month"
+            icon={CheckCircle2}
+            label="Present"
+            tone="success"
+            value={stats?.presentDays ?? 0}
+          />
+          <StatTile
+            hint="this month"
+            icon={Clock3}
+            label="Late"
+            tone="warning"
+            value={stats?.lateDays ?? 0}
+          />
+          <StatTile
+            hint="this month"
+            icon={AlertCircle}
+            label="Absent"
+            tone="danger"
+            value={stats?.absentDays ?? 0}
+          />
+          <StatTile
+            hint="this month"
+            icon={House}
+            label="WFH"
+            tone="info"
+            value={stats?.wfhDays ?? 0}
+          />
         </View>
 
-        <TouchableOpacity
-          onPress={handleNextMonth}
-          style={styles.monthNavBtn}
-          testID="history-next-month-btn"
-        >
-          <Icon name="chevron-forward" size={20} color={colors.accent.cyan} />
-        </TouchableOpacity>
-      </Card>
-
-      {/* 2. Monthly Summary Stats Strip */}
-      {stats && (
-        <Card variant="surface" style={styles.summaryStripCard}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{stats.presentDays}</Text>
-            <Text style={styles.summaryLabel}>Present</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryValue, { color: colors.status.late }]}>
-              {stats.lateDays}
-            </Text>
-            <Text style={styles.summaryLabel}>Late</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryValue, { color: colors.status.wfh }]}>
-              {stats.wfhDays}
-            </Text>
-            <Text style={styles.summaryLabel}>WFH</Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryValue, { color: colors.accent.cyan }]}>
-              {stats.attendancePercentage}%
-            </Text>
-            <Text style={styles.summaryLabel}>Rate</Text>
-          </View>
-        </Card>
-      )}
-
-      {/* 3. Filter Pills */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterPillsContainer}
-      >
-        {(["ALL", "PRESENT", "LATE", "WFH", "ABSENT"] as const).map((f) => (
-          <TouchableOpacity
-            key={f}
-            onPress={() => setActiveFilter(f)}
-            style={[styles.filterPill, activeFilter === f && styles.filterPillActive]}
-            testID={`history-filter-${f.toLowerCase()}`}
-          >
-            <Text style={[styles.filterPillText, activeFilter === f && styles.filterPillTextActive]}>
-              {f}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* 4. Error State */}
-      {error && (
-        <Card variant="surface" style={styles.errorCard} testID="history-error-state">
-          <Icon name="alert-circle-outline" size={32} color={colors.text.danger} />
-          <Text style={styles.errorText}>{error}</Text>
-          <Button
-            title="Retry"
-            onPress={fetchHistory}
-            variant="outline"
-            size="sm"
-            testID="history-retry-btn"
+        {/* 2. Interactive Calendar Card */}
+        <Card variant="raised" padding={18} style={styles.calendarCard}>
+          <Calendar
+            month={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            selectedDate={selectedDateKey}
+            onSelectDate={(date) => {
+              setSelectedDateKey(date);
+              void Haptics.selectionAsync().catch(() => undefined);
+            }}
+            marks={calendarMarks}
           />
         </Card>
-      )}
 
-      {/* 5. Loading Skeletons */}
-      {loading && !refreshing && (
-        <View style={styles.loadingList}>
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} variant="surface" style={styles.skeletonCard}>
-              <Skeleton width="40%" height={18} borderRadius={radii.sm} />
-              <Skeleton width="70%" height={14} style={{ marginTop: spacing.sm }} />
-            </Card>
-          ))}
+        {/* 3. Selected Day Details */}
+        {selectedRecord ? (
+          <Card variant="glass" padding={18} style={styles.selectedDayCard}>
+            <View style={styles.selectedHeader}>
+              <View style={styles.selectedHeaderLeft}>
+                <Text variant="caption" color={colors.muted}>
+                  Selected Date
+                </Text>
+                <Text variant="subheading" weight="semibold">
+                  {selectedRecord.dateKey}
+                </Text>
+              </View>
+              <StatusBadge status={selectedRecord.status} />
+            </View>
+
+            <View style={styles.timeStrip}>
+              <View style={styles.timeCell}>
+                <Text variant="caption" color={colors.muted}>
+                  Check In
+                </Text>
+                <Text variant="monoSmall" color={colors.text}>
+                  {formatTime(selectedRecord.checkInTime)}
+                </Text>
+              </View>
+              <View style={styles.timeDivider} />
+              <View style={styles.timeCell}>
+                <Text variant="caption" color={colors.muted}>
+                  Check Out
+                </Text>
+                <Text variant="monoSmall" color={colors.text}>
+                  {formatTime(selectedRecord.checkOutTime)}
+                </Text>
+              </View>
+              <View style={styles.timeDivider} />
+              <View style={styles.timeCell}>
+                <Text variant="caption" color={colors.muted}>
+                  Duration
+                </Text>
+                <Text variant="monoSmall" color={colors.indigoSoft}>
+                  {formatDuration(selectedRecord.durationMinutes)}
+                </Text>
+              </View>
+            </View>
+
+            {selectedRecord.isLate && selectedRecord.lateMinutes > 0 ? (
+              <View style={styles.noteRow}>
+                <Clock size={13} color={colors.warning} />
+                <Text variant="small" color={colors.warning}>
+                  Arrived {selectedRecord.lateMinutes} minutes past shift grace period
+                </Text>
+              </View>
+            ) : null}
+
+            {selectedRecord.terminalId ? (
+              <View style={styles.noteRow}>
+                <MapPin size={13} color={colors.muted} />
+                <Text variant="small" color={colors.muted}>
+                  Terminal: {selectedRecord.terminalId}
+                </Text>
+              </View>
+            ) : null}
+          </Card>
+        ) : null}
+
+        {/* 4. Filter Pills */}
+        <View style={styles.filterRow}>
+          {(['ALL', 'PRESENT', 'LATE', 'WFH', 'ABSENT'] as FilterType[]).map((filter) => {
+            const isActive = activeFilter === filter;
+            return (
+              <TouchableOpacity
+                key={filter}
+                onPress={() => {
+                  setActiveFilter(filter);
+                  void Haptics.selectionAsync().catch(() => undefined);
+                }}
+                style={[styles.filterPill, isActive ? styles.filterPillActive : null]}
+              >
+                <Text
+                  variant="caption"
+                  color={isActive ? colors.white : colors.muted}
+                  style={styles.filterText}
+                >
+                  {filter}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-      )}
 
-      {/* 6. Attendance Record List */}
-      {!loading && !error && filteredRecords.length > 0 && (
-        <View style={styles.recordsList} testID="history-records-list">
-          {filteredRecords.map((item) => (
-            <Card key={item._id} variant="surface" style={styles.recordCard}>
-              <View style={styles.recordHeaderRow}>
-                <View style={styles.recordDateBox}>
-                  <Text style={styles.recordDateText}>
-                    {new Date(item.dateKey + "T00:00:00").toLocaleDateString(undefined, {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
+        {/* 5. Records Ledger */}
+        <SectionHeader
+          title="Attendance records"
+          caption={`${filteredRecords.length} records in ${monthDisplayName}`}
+        />
+
+        {filteredRecords.length === 0 ? (
+          <Card variant="soft" padding={22} style={styles.emptyCard}>
+            <CalendarDays size={26} color={colors.muted} strokeWidth={1.6} />
+            <Text variant="subheading" align="center">
+              No records found
+            </Text>
+            <Text variant="small" color={colors.muted} align="center">
+              No punch records match the selected month and filter.
+            </Text>
+          </Card>
+        ) : (
+          <Card padding={0}>
+            {filteredRecords.map((item, index) => (
+              <PressableScale
+                key={item._id}
+                accessibilityRole="button"
+                haptic="selection"
+                onPress={() => {
+                  setSelectedDateKey(item.dateKey);
+                }}
+                style={[
+                  styles.recordItem,
+                  index > 0 ? styles.rowDivider : null,
+                  selectedDateKey === item.dateKey ? styles.recordItemSelected : null,
+                ]}
+              >
+                <View style={styles.recordItemLeft}>
+                  <Text variant="bodyMedium" weight="semibold">
+                    {item.dateKey}
                   </Text>
-                  <Text style={styles.recordKeySubtext}>{item.dateKey}</Text>
+                  <Text variant="small" color={colors.muted}>
+                    {item.checkInTime ? formatTime(item.checkInTime) : '—'} →{' '}
+                    {item.checkOutTime ? formatTime(item.checkOutTime) : '—'} ·{' '}
+                    {formatDuration(item.durationMinutes)}
+                  </Text>
                 </View>
-
-                <StatusBadge
-                  status={item.isWfh ? "WFH" : (item.status as any)}
-                  label={item.isWfh ? "WFH" : item.status}
-                />
-              </View>
-
-              <View style={styles.recordDivider} />
-
-              <View style={styles.recordDetailsRow}>
-                <View style={styles.punchTimeItem}>
-                  <Icon name="log-in-outline" size={16} color={colors.status.present} />
-                  <View>
-                    <Text style={styles.punchTimeLabel}>In</Text>
-                    <Text style={styles.punchTimeValue}>{formatTime(item.checkInTime)}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.punchTimeItem}>
-                  <Icon name="log-out-outline" size={16} color={colors.accent.indigo} />
-                  <View>
-                    <Text style={styles.punchTimeLabel}>Out</Text>
-                    <Text style={styles.punchTimeValue}>{formatTime(item.checkOutTime)}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.punchTimeItem}>
-                  <Icon name="time-outline" size={16} color={colors.accent.cyan} />
-                  <View>
-                    <Text style={styles.punchTimeLabel}>Duration</Text>
-                    <Text style={styles.durationValueText}>
-                      {formatDuration(item.durationMinutes)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Late or Correction Notice Badges */}
-              {(item.isLate || item.isManuallyCorrected) && (
-                <View style={styles.metaRow}>
-                  {item.isLate && (
-                    <View style={styles.lateTag}>
-                      <Icon name="warning-outline" size={12} color={colors.status.late} />
-                      <Text style={styles.lateTagText}>Late (+{item.lateMinutes}m)</Text>
-                    </View>
-                  )}
-                  {item.isManuallyCorrected && (
-                    <View style={styles.correctedTag}>
-                      <Icon name="create-outline" size={12} color={colors.accent.cyan} />
-                      <Text style={styles.correctedTagText}>HR Corrected</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </Card>
-          ))}
-        </View>
-      )}
-
-      {/* 7. Empty State */}
-      {!loading && !error && filteredRecords.length === 0 && (
-        <Card variant="surface" style={styles.emptyCard} testID="history-empty-state">
-          <View style={styles.emptyIconBox}>
-            <Icon name="calendar-outline" size={36} color={colors.text.muted} />
-          </View>
-          <Text style={styles.emptyTitle}>No Attendance Records</Text>
-          <Text style={styles.emptySubtitle}>
-            No punch records were found for {monthDisplayName} with the selected &quot;{activeFilter}&quot;
-            filter.
-          </Text>
-        </Card>
-      )}
-    </ScrollView>
+                <StatusBadge status={item.status} />
+              </PressableScale>
+            ))}
+          </Card>
+        )}
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: colors.background.base,
+    width: '100%',
+    gap: spacing.lg,
   },
-  contentContainer: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl * 2,
+  containerWide: {
+    maxWidth: 620,
+    alignSelf: 'center',
   },
-  monthStepperCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: spacing.md,
-    marginBottom: spacing.md,
+  statGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  monthNavBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: radii.md,
-    backgroundColor: "rgba(6, 182, 212, 0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  monthDisplayBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  monthDisplayText: {
-    ...typography.md,
-    fontWeight: "800",
-    color: colors.text.primary,
-  },
-  summaryStripCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  summaryItem: {
-    alignItems: "center",
-  },
-  summaryValue: {
-    ...typography.lg,
-    fontWeight: "900",
-    color: colors.text.primary,
-  },
-  summaryLabel: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    marginTop: 2,
-  },
-  summaryDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: colors.border.subtle,
-  },
-  filterPillsContainer: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  filterPill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radii.full,
-    backgroundColor: colors.background.surface,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-  },
-  filterPillActive: {
-    backgroundColor: "rgba(6, 182, 212, 0.2)",
-    borderColor: colors.accent.cyan,
-  },
-  filterPillText: {
-    ...typography.xs,
-    fontWeight: "700",
-    color: colors.text.secondary,
-  },
-  filterPillTextActive: {
-    color: colors.accent.cyan,
-  },
-  loadingList: {
+  calendarCard: {
     gap: spacing.sm,
   },
-  skeletonCard: {
-    padding: spacing.lg,
+  selectedDayCard: {
+    gap: spacing.md,
   },
-  recordsList: {
-    gap: spacing.sm,
+  selectedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  recordCard: {
-    padding: spacing.md,
-  },
-  recordHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  recordDateBox: {
+  selectedHeaderLeft: {
     gap: 2,
   },
-  recordDateText: {
-    ...typography.sm,
-    fontWeight: "800",
-    color: colors.text.primary,
+  timeStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(11, 14, 25, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(184, 190, 255, 0.08)',
   },
-  recordKeySubtext: {
-    ...typography.xs,
-    color: colors.text.muted,
+  timeCell: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
   },
-  recordDivider: {
-    height: 1,
-    backgroundColor: colors.border.subtle,
-    marginVertical: spacing.sm,
+  timeDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: colors.border,
   },
-  recordDetailsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  punchTimeItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
   },
-  punchTimeLabel: {
-    ...typography.xs,
-    color: colors.text.muted,
-    fontSize: 10,
+  filterPill: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  punchTimeValue: {
-    ...typography.xs,
-    fontWeight: "700",
-    color: colors.text.primary,
+  filterPillActive: {
+    backgroundColor: colors.indigo,
+    borderColor: colors.indigo,
   },
-  durationValueText: {
-    ...typography.xs,
-    fontWeight: "800",
-    color: colors.accent.cyan,
-  },
-  metaRow: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  lateTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(245, 158, 11, 0.12)",
-    paddingHorizontal: spacing.xs + 2,
-    paddingVertical: 2,
-    borderRadius: radii.sm,
-  },
-  lateTagText: {
-    ...typography.xs,
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.status.late,
-  },
-  correctedTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(6, 182, 212, 0.12)",
-    paddingHorizontal: spacing.xs + 2,
-    paddingVertical: 2,
-    borderRadius: radii.sm,
-  },
-  correctedTagText: {
-    ...typography.xs,
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.accent.cyan,
+  filterText: {
+    letterSpacing: 0.6,
   },
   emptyCard: {
-    padding: spacing.xxl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyIconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: radii.full,
-    backgroundColor: "rgba(148, 163, 184, 0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    ...typography.md,
-    fontWeight: "800",
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  emptySubtitle: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    textAlign: "center",
-    lineHeight: 18,
-    maxWidth: 260,
-  },
-  errorCard: {
-    padding: spacing.xl,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
   },
-  errorText: {
-    ...typography.sm,
-    color: colors.text.danger,
-    textAlign: "center",
+  recordItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+  },
+  recordItemSelected: {
+    backgroundColor: 'rgba(89, 101, 242, 0.08)',
+  },
+  rowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  recordItemLeft: {
+    flex: 1,
+    gap: 3,
   },
 });
-

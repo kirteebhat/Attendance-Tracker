@@ -1,746 +1,546 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
-  Platform,
-} from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
-import * as Linking from "expo-linking";
-import { useRouter } from "expo-router";
-import { Card, Button, StatusBadge, Icon } from "../../src/components";
-import { colors, spacing, typography, radii } from "../../src/theme";
-import { attendanceApi, ScanAttendanceResult, ApiError } from "../../src/services";
+  ActivityIndicator,
+  Animated,
+} from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Linking from 'expo-linking';
+import { useRouter } from 'expo-router';
+import {
+  AlertCircle,
+  ArrowRight,
+  Camera,
+  CheckCircle2,
+  Clock3,
+  QrCode,
+  RotateCcw,
+  ScanLine,
+  Sparkles,
+  Zap,
+  ZapOff,
+} from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import {
+  Screen,
+  Card,
+  Button,
+  PageHeader,
+  Input,
+  Text,
+  PressableScale,
+} from '../../src/components';
+import { colors, radii, spacing, tones, type Tone } from '../../src/theme/tokens';
+import { useResponsive } from '../../src/lib/responsive';
+import { attendanceApi, ApiError } from '../../src/services';
+
+const FRAME_SIZE = 218;
+
+function ScannerOverlay({ paused }: { paused: boolean }) {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (paused) return;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(progress, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(progress, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [paused, progress]);
+
+  const translateY = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, FRAME_SIZE - 6],
+  });
+
+  return (
+    <View pointerEvents="none" style={styles.scanFrame}>
+      <View style={[styles.corner, styles.cornerTopLeft]} />
+      <View style={[styles.corner, styles.cornerTopRight]} />
+      <View style={[styles.corner, styles.cornerBottomLeft]} />
+      <View style={[styles.corner, styles.cornerBottomRight]} />
+      <Animated.View style={[styles.scanLine, { transform: [{ translateY }] }]} />
+    </View>
+  );
+}
 
 export default function ScanScreen() {
   const router = useRouter();
+  const { isWide } = useResponsive();
   const [permission, requestPermission] = useCameraPermissions();
 
   const [torch, setTorch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [manualToken, setManualToken] = useState("");
+  const [manualToken, setManualToken] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
 
-  // Result view state
-  const [scanResult, setScanResult] = useState<ScanAttendanceResult | null>(null);
-  const [scanError, setScanError] = useState<{
-    code: string;
-    message: string;
+  const [scanResult, setScanResult] = useState<{
+    tone: Tone;
     title: string;
-    type: "expired" | "invalid" | "duplicate" | "checked_out" | "unauthorized" | "network";
+    message: string;
   } | null>(null);
 
-  // Debounce flag to ensure a scan triggers only once
   const isProcessingRef = useRef(false);
 
   const resetScanner = () => {
     isProcessingRef.current = false;
     setIsSubmitting(false);
     setScanResult(null);
-    setScanError(null);
-    setManualToken("");
+    setManualToken('');
   };
 
   /**
    * Submits ONLY the token to the backend.
    * STRICT SECURITY REQUIREMENT: Never sends a client timestamp!
    */
-  const processToken = useCallback(async (rawToken: string) => {
-    let cleanToken = rawToken.trim();
-    if (!cleanToken) return;
+  const processToken = useCallback(
+    async (rawToken: string) => {
+      let cleanToken = rawToken.trim();
+      if (!cleanToken) return;
 
-    // Support extracting token if display app rendered JSON string
-    if (cleanToken.startsWith("{") && cleanToken.includes("token")) {
-      try {
-        const parsed = JSON.parse(cleanToken);
-        if (parsed.token) cleanToken = parsed.token;
-      } catch {
-        // Use raw token if parsing fails
+      if (cleanToken.startsWith('{') && cleanToken.includes('token')) {
+        try {
+          const parsed = JSON.parse(cleanToken);
+          if (parsed.token) cleanToken = parsed.token;
+        } catch {
+          // Use raw token if parsing fails
+        }
       }
-    }
 
-    setIsSubmitting(true);
-    setScanResult(null);
-    setScanError(null);
+      setIsSubmitting(true);
+      setScanResult(null);
 
-    try {
-      const res = await attendanceApi.scanAttendance(cleanToken);
-      setScanResult(res);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        const code = err.code || "ERR_REQUEST_FAILED";
+      try {
+        const res = await attendanceApi.scanAttendance(cleanToken);
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
 
-        if (code === "ERR_QR_EXPIRED") {
-          setScanError({
-            code,
-            title: "QR Code Expired",
-            message:
-              "The rotating challenge code has expired (kiosks refresh every 30s). Please aim at the current code on the display.",
-            type: "expired",
-          });
-        } else if (code === "ERR_INVALID_QR_TOKEN" || code === "ERR_INVALID_QR_SIGNATURE") {
-          setScanError({
-            code,
-            title: "Invalid QR Code",
-            message:
-              "The scanned QR code is not a valid cryptographic VorldX attendance token.",
-            type: "invalid",
-          });
-        } else if (code === "ERR_ALREADY_CHECKED_IN" || code === "ERR_PUNCH_COOLDOWN_ACTIVE") {
-          setScanError({
-            code,
-            title: "Duplicate Punch / Cooldown Active",
-            message:
-              err.message ||
-              "You have already checked in for this shift or must wait for the punch cooldown period.",
-            type: "duplicate",
-          });
-        } else if (
-          code === "ERR_ALREADY_CHECKED_OUT" ||
-          code === "ERR_ATTENDANCE_WINDOW_CLOSED" ||
-          code === "ERR_NO_ACTIVE_CHECKIN"
-        ) {
-          setScanError({
-            code,
-            title: "Already Checked Out",
-            message:
-              err.message ||
-              "Daily attendance is already completed or no active check-in session was found.",
-            type: "checked_out",
-          });
-        } else if (
-          code === "ERR_TERMINAL_UNAUTHORIZED" ||
-          code === "ERR_TERMINAL_DISABLED" ||
-          code === "ERR_TERMINAL_REVOKED" ||
-          code === "ERR_DISPLAY_NOT_FOUND"
-        ) {
-          setScanError({
-            code,
-            title: "Unauthorized Display Kiosk",
-            message:
-              "This display terminal has been revoked or disabled by HR. Attendance cannot be recorded here.",
-            type: "unauthorized",
-          });
+        const isOut = res.punchType === 'CHECK_OUT';
+        setScanResult({
+          tone: 'success',
+          title: isOut ? 'Checked Out' : 'Checked In',
+          message:
+            res.message ||
+            (isOut
+              ? `Shift completed with ${res.durationMinutes}m duration.`
+              : 'Attendance punch successfully registered at terminal.'),
+        });
+      } catch (err: unknown) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
+        if (err instanceof ApiError) {
+          const code = err.code || 'ERR_REQUEST_FAILED';
+          if (code === 'ERR_QR_EXPIRED') {
+            setScanResult({
+              tone: 'warning',
+              title: 'QR Code Expired',
+              message: 'The rotating challenge has expired (kiosks refresh every 30s). Please aim at the current code on the display.',
+            });
+          } else if (code === 'ERR_ALREADY_CHECKED_IN' || code === 'ERR_PUNCH_COOLDOWN_ACTIVE') {
+            setScanResult({
+              tone: 'warning',
+              title: 'Duplicate Punch / Cooldown',
+              message: err.message || 'You have already checked in or must wait for the punch cooldown period.',
+            });
+          } else {
+            setScanResult({
+              tone: 'danger',
+              title: 'Attendance Error',
+              message: err.message || 'Failed to record attendance punch.',
+            });
+          }
         } else {
-          setScanError({
-            code,
-            title: "Punch Rejected",
-            message: err.message || "Failed to record attendance.",
-            type: "invalid",
+          setScanResult({
+            tone: 'danger',
+            title: 'Connection Error',
+            message: 'Unable to connect to attendance server. Please check your connection.',
           });
         }
-      } else {
-        // Network or connection failure
-        setScanError({
-          code: "ERR_NETWORK_FAILURE",
-          title: "Network Connection Failed",
-          message:
-            "Unable to communicate with the VorldX attendance server. Please check your network connection.",
-          type: "network",
-        });
+      } finally {
+        setIsSubmitting(false);
       }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   const handleBarcodeScanned = useCallback(
     ({ data }: { data: string }) => {
-      if (isProcessingRef.current || isSubmitting || scanResult || scanError) {
-        return;
-      }
+      if (isProcessingRef.current || !data || isSubmitting) return;
       isProcessingRef.current = true;
       processToken(data);
     },
-    [isSubmitting, scanResult, scanError, processToken]
+    [isSubmitting, processToken]
   );
 
-  const handleManualSubmit = () => {
-    if (!manualToken.trim()) return;
-    isProcessingRef.current = true;
-    processToken(manualToken.trim());
-  };
+  return (
+    <Screen edges={['top', 'bottom']}>
+      <PageHeader
+        eyebrow="Dynamic Token"
+        title="Office QR Punch"
+        subtitle="Aim your camera at the office lobby display kiosk to check in or out."
+      />
 
-  // =========================================================================
-  // RESULT VIEW 1: SUCCESS RESULT SCREEN (Server authoritative timestamp)
-  // =========================================================================
-  if (scanResult) {
-    const isCheckIn = scanResult.punchType === "CHECK_IN";
-    const record = scanResult.record;
-    const serverTimestamp = isCheckIn ? record?.checkInTime : record?.checkOutTime;
-
-    const formattedServerTime = serverTimestamp
-      ? new Date(serverTimestamp).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: true,
-        })
-      : "Recorded";
-
-    return (
-      <View style={styles.resultContainer} testID="scan-result-success">
-        <Card variant="elevated" style={styles.resultCard}>
-          <View style={[styles.resultIconCircle, { backgroundColor: colors.status.presentBg }]}>
-            <Icon name="checkmark-circle" size={48} color={colors.status.present} />
-          </View>
-
-          <Text style={styles.resultTitle}>
-            {isCheckIn ? "Check-In Recorded!" : "Check-Out Recorded!"}
-          </Text>
-
-          <Text style={styles.resultSubtitle}>{scanResult.message}</Text>
-
-          {/* Server Timestamp Box */}
-          <View style={styles.serverTimeBox}>
-            <Icon name="time" size={16} color={colors.accent.cyan} />
-            <Text style={styles.serverTimeText}>Server Time: {formattedServerTime}</Text>
-          </View>
-
-          {/* Details Row */}
-          <View style={styles.resultDetailsGrid}>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Status</Text>
-              <StatusBadge status={scanResult.status as any} label={scanResult.status} />
+      <View style={[styles.container, isWide && styles.containerWide]}>
+        {/* Camera Viewport Frame */}
+        <View style={styles.viewfinderCard}>
+          {!permission ? (
+            <View style={styles.permissionState}>
+              <ActivityIndicator color={colors.indigoSoft} />
             </View>
-
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Punctuality</Text>
-              <Text
-                style={[
-                  styles.detailValue,
-                  { color: scanResult.isLate ? colors.status.late : colors.status.present },
-                ]}
-              >
-                {scanResult.isLate ? `Late (+${scanResult.lateMinutes}m)` : "On-Time"}
-              </Text>
-            </View>
-
-            {!isCheckIn && (
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Duration</Text>
-                <Text style={styles.detailValue}>
-                  {Math.floor(scanResult.durationMinutes / 60)}h {scanResult.durationMinutes % 60}m
-                </Text>
+          ) : !permission.granted ? (
+            <View style={styles.permissionState}>
+              <View style={styles.permissionIcon}>
+                <Camera size={26} color={colors.indigoSoft} strokeWidth={1.8} />
               </View>
-            )}
-          </View>
-
-          <Button
-            title="Scan Again"
-            onPress={resetScanner}
-            variant="outline"
-            size="lg"
-            testID="scan-success-again-btn"
-            style={styles.actionBtn}
-          />
-
-          <Button
-            title="Done / View Dashboard"
-            onPress={() => router.push("/(tabs)/home")}
-            variant="primary"
-            size="lg"
-            testID="scan-success-done-btn"
-            style={[styles.actionBtn, { marginTop: spacing.sm }]}
-          />
-        </Card>
-      </View>
-    );
-  }
-
-  // =========================================================================
-  // RESULT VIEW 2: ERROR RESULT SCREENS
-  // =========================================================================
-  if (scanError) {
-    let iconName = "alert-circle";
-    let iconColor: string = colors.status.absent;
-    let iconBg: string = colors.status.absentBg;
-
-    if (scanError.type === "expired") {
-      iconName = "time";
-      iconColor = colors.status.late;
-      iconBg = colors.status.lateBg;
-    } else if (scanError.type === "duplicate" || scanError.type === "checked_out") {
-      iconName = "information-circle";
-      iconColor = colors.accent.indigo;
-      iconBg = colors.accent.indigoMuted;
-    } else if (scanError.type === "unauthorized") {
-      iconName = "shield";
-      iconColor = colors.text.danger;
-      iconBg = colors.status.absentBg;
-    } else if (scanError.type === "network") {
-      iconName = "cloud-offline";
-      iconColor = colors.text.muted;
-      iconBg = "rgba(148, 163, 184, 0.1)";
-    }
-
-    return (
-      <View style={styles.resultContainer} testID="scan-result-error">
-        <Card variant="elevated" style={styles.resultCard}>
-          <View style={[styles.resultIconCircle, { backgroundColor: iconBg }]}>
-            <Icon name={iconName} size={48} color={iconColor} />
-          </View>
-
-          <StatusBadge status="ABSENT" label={scanError.code} style={{ marginBottom: spacing.sm }} />
-
-          <Text style={styles.resultTitle}>{scanError.title}</Text>
-          <Text style={styles.resultSubtitle}>{scanError.message}</Text>
-
-          <Button
-            title="Scan Again"
-            onPress={resetScanner}
-            variant="primary"
-            size="lg"
-            testID="scan-error-retry-btn"
-            style={styles.actionBtn}
-          />
-
-          <Button
-            title="Return to Home"
-            onPress={() => router.push("/(tabs)/home")}
-            variant="ghost"
-            size="md"
-            testID="scan-error-home-btn"
-            style={{ marginTop: spacing.xs }}
-          />
-        </Card>
-      </View>
-    );
-  }
-
-  // =========================================================================
-  // PERMISSION STATES: Denied / Permanently Blocked
-  // =========================================================================
-  if (permission && !permission.granted) {
-    const isPermanentlyBlocked = !permission.canAskAgain;
-
-    return (
-      <View style={styles.permissionContainer} testID="scan-permission-denied-view">
-        <Card variant="surface" style={styles.permissionCard}>
-          <View style={[styles.resultIconCircle, { backgroundColor: colors.status.lateBg }]}>
-            <Icon name="camera-outline" size={44} color={colors.status.late} />
-          </View>
-
-          <Text style={styles.permissionTitle}>
-            {isPermanentlyBlocked ? "Camera Permission Blocked" : "Camera Access Required"}
-          </Text>
-
-          <Text style={styles.permissionText}>
-            {isPermanentlyBlocked
-              ? "Camera access was permanently disabled in your device permissions. To scan attendance QR codes, please enable the camera in device settings."
-              : "VorldX requires camera permission to scan the rotating attendance QR codes on lobby display kiosks."}
-          </Text>
-
-          {isPermanentlyBlocked ? (
-            <Button
-              title="Open Device Settings"
-              onPress={() => Linking.openSettings()}
-              variant="primary"
-              size="lg"
-              testID="scan-open-settings-btn"
-              style={styles.actionBtn}
-            />
+              <Text variant="subheading" align="center">
+                Camera access needed
+              </Text>
+              <Text variant="small" color={colors.muted} align="center" style={styles.permText}>
+                VorldX uses the camera strictly to read dynamic HMAC QR attendance tokens.
+              </Text>
+              <Button
+                label={permission.canAskAgain ? 'Allow Camera' : 'Open Settings'}
+                onPress={() => {
+                  if (permission.canAskAgain) void requestPermission();
+                  else void Linking.openSettings();
+                }}
+                size="sm"
+                fullWidth={false}
+              />
+            </View>
           ) : (
-            <Button
-              title="Grant Camera Permission"
-              onPress={requestPermission}
-              variant="primary"
-              size="lg"
-              testID="scan-grant-permission-btn"
-              style={styles.actionBtn}
-            />
+            <>
+              <CameraView
+                barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                enableTorch={torch}
+                facing="back"
+                onBarcodeScanned={isProcessingRef.current ? undefined : handleBarcodeScanned}
+                style={StyleSheet.absoluteFill}
+              />
+              <View pointerEvents="none" style={styles.cameraShade} />
+              <ScannerOverlay paused={Boolean(scanResult || isSubmitting)} />
+            </>
           )}
 
-          {/* Manual Entry Fallback Toggle */}
+          {/* Top Bar Controls */}
+          <View style={styles.cameraTop}>
+            <View style={styles.cameraBadge}>
+              <QrCode size={13} color={colors.indigoSoft} strokeWidth={2} />
+              <Text variant="caption" color={colors.indigoSoft}>
+                VorldX Office Kiosk
+              </Text>
+            </View>
+            {permission?.granted ? (
+              <PressableScale
+                accessibilityRole="button"
+                haptic="selection"
+                onPress={() => setTorch((v) => !v)}
+                style={styles.torchBtn}
+              >
+                {torch ? (
+                  <ZapOff size={16} color={colors.text} />
+                ) : (
+                  <Zap size={16} color={colors.text} />
+                )}
+              </PressableScale>
+            ) : null}
+          </View>
+
+          {/* Submitting Pill */}
+          {isSubmitting ? (
+            <View style={styles.submittingOverlay}>
+              <View style={styles.submittingPill}>
+                <ActivityIndicator color={colors.indigoSoft} size="small" />
+                <Text variant="small" color={colors.text} weight="medium">
+                  Validating dynamic token...
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          {/* Result Card Modal */}
+          {scanResult ? (
+            <View style={styles.resultOverlay}>
+              <Card padding={18} tone={scanResult.tone} variant="raised">
+                <View style={styles.resultHeader}>
+                  <View
+                    style={[
+                      styles.resultIconWrap,
+                      { backgroundColor: tones[scanResult.tone].bg },
+                    ]}
+                  >
+                    {scanResult.tone === 'success' ? (
+                      <CheckCircle2 size={20} color={colors.success} strokeWidth={2} />
+                    ) : (
+                      <AlertCircle size={20} color={colors.danger} strokeWidth={2} />
+                    )}
+                  </View>
+                  <View style={styles.resultCopy}>
+                    <Text variant="subheading">{scanResult.title}</Text>
+                    <Text variant="small" color={colors.textSecondary}>
+                      {scanResult.message}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.resultActions}>
+                  <Button
+                    icon={<RotateCcw size={14} color={colors.text} />}
+                    label="Scan again"
+                    onPress={resetScanner}
+                    size="sm"
+                    variant="secondary"
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    icon={<ArrowRight size={14} color={colors.white} />}
+                    label="View history"
+                    onPress={() => router.navigate('/(tabs)/history')}
+                    size="sm"
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </Card>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Hints Footer */}
+        <View style={styles.footerHints}>
+          <View style={styles.hintItem}>
+            <ScanLine size={14} color={colors.muted} />
+            <Text variant="small" color={colors.muted}>
+              Hold steady inside the frame
+            </Text>
+          </View>
+          <View style={styles.hintItem}>
+            <Clock3 size={14} color={colors.muted} />
+            <Text variant="small" color={colors.muted}>
+              QR challenge rotates every 30s
+            </Text>
+          </View>
+        </View>
+
+        {/* Demo Token Manual Input Fallback */}
+        <Card variant="soft" padding={14} style={styles.demoCard}>
           <TouchableOpacity
             onPress={() => setShowManualInput(!showManualInput)}
-            style={styles.toggleManualBtn}
-            testID="scan-toggle-manual-entry-btn"
+            style={styles.demoToggle}
           >
-            <Text style={styles.toggleManualText}>
-              {showManualInput ? "Hide Manual Entry" : "Use Manual Token Entry (Demo / Testing)"}
-            </Text>
+            <View style={styles.demoToggleLeft}>
+              <Sparkles size={15} color={colors.indigoSoft} />
+              <Text variant="small" color={colors.indigoSoft} weight="semibold">
+                No lobby display screen? Use Instant Demo Punch
+              </Text>
+            </View>
           </TouchableOpacity>
 
           {showManualInput && (
-            <View style={styles.manualEntryBox}>
-              <TextInput
-                placeholder="Paste rotating QR token here"
-                placeholderTextColor={colors.text.muted}
+            <View style={styles.demoInputWrap}>
+              <Input
+                placeholder="Paste token or payload"
                 value={manualToken}
                 onChangeText={setManualToken}
-                style={styles.manualInput}
-                testID="scan-manual-token-input"
+                leftIcon={QrCode}
               />
               <Button
-                title="Submit Punch"
-                onPress={handleManualSubmit}
-                isLoading={isSubmitting}
-                size="md"
-                testID="scan-submit-manual-token-btn"
+                label="Submit Challenge Token"
+                size="sm"
+                onPress={() => processToken(manualToken)}
+                loading={isSubmitting}
               />
             </View>
           )}
         </Card>
       </View>
-    );
-  }
-
-  // =========================================================================
-  // ACTIVE SCANNER VIEW with Guidance Frame
-  // =========================================================================
-  return (
-    <View style={styles.scannerContainer}>
-      {/* Native Camera View or Web Fallback */}
-      {Platform.OS !== "web" ? (
-        <CameraView
-          style={StyleSheet.absoluteFillObject}
-          facing="back"
-          enableTorch={torch}
-          barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-          onBarcodeScanned={handleBarcodeScanned}
-        />
-      ) : (
-        <View style={styles.webCameraPlaceholder}>
-          <Icon name="camera-outline" size={64} color={colors.accent.cyan} />
-          <Text style={styles.webCameraText}>Camera View Active (Mobile Web / Native Emulator)</Text>
-        </View>
-      )}
-
-      {/* Dark Translucent Mask with Cutout Scan Frame */}
-      <View style={styles.overlay}>
-        <View style={styles.overlayTop} />
-
-        <View style={styles.overlayCenterRow}>
-          <View style={styles.overlaySide} />
-
-          {/* Central Scan Target Box */}
-          <View style={styles.scanTargetBox} testID="scan-target-frame">
-            {/* Corner Bracket Guides */}
-            <View style={[styles.cornerBracket, styles.topLeftBracket]} />
-            <View style={[styles.cornerBracket, styles.topRightBracket]} />
-            <View style={[styles.cornerBracket, styles.bottomLeftBracket]} />
-            <View style={[styles.cornerBracket, styles.bottomRightBracket]} />
-          </View>
-
-          <View style={styles.overlaySide} />
-        </View>
-
-        <View style={styles.overlayBottom}>
-          <Text style={styles.guidanceText}>
-            Align the 30-second rotating QR code from the office display within the frame
-          </Text>
-
-          {/* Controls Bar */}
-          <View style={styles.controlsRow}>
-            {Platform.OS !== "web" && (
-              <TouchableOpacity
-                onPress={() => setTorch(!torch)}
-                style={[styles.controlBtn, torch && styles.controlBtnActive]}
-                testID="scan-toggle-torch-btn"
-              >
-                <Icon
-                  name={torch ? "flashlight" : "flashlight-outline"}
-                  size={20}
-                  color={torch ? colors.accent.cyan : "#FFFFFF"}
-                />
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              onPress={() => setShowManualInput(!showManualInput)}
-              style={styles.manualEntryPill}
-              testID="scan-toggle-manual-entry-btn"
-            >
-              <Icon name="key-outline" size={16} color={colors.accent.cyan} />
-              <Text style={styles.manualEntryPillText}>
-                {showManualInput ? "Hide Code Entry" : "Manual Token"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Manual Input Drawer (for Web, Testing & Simulators) */}
-          {showManualInput && (
-            <Card variant="surface" style={styles.manualDrawer}>
-              <Text style={styles.manualDrawerTitle}>Test or Manual QR Token Punch</Text>
-              <TextInput
-                placeholder="Enter or paste token from office display"
-                placeholderTextColor={colors.text.muted}
-                value={manualToken}
-                onChangeText={setManualToken}
-                style={styles.manualInput}
-                testID="scan-manual-token-input"
-              />
-              <Button
-                title="Submit Attendance Punch"
-                onPress={handleManualSubmit}
-                isLoading={isSubmitting}
-                size="md"
-                testID="scan-submit-manual-token-btn"
-                style={{ marginTop: spacing.sm }}
-              />
-            </Card>
-          )}
-        </View>
-      </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scannerContainer: {
-    flex: 1,
-    backgroundColor: "#000000",
-  },
-  webCameraPlaceholder: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#0B1120",
-    alignItems: "center",
-    justifyContent: "center",
+  container: {
+    width: '100%',
     gap: spacing.md,
   },
-  webCameraText: {
-    ...typography.sm,
-    color: colors.text.secondary,
+  containerWide: {
+    maxWidth: 520,
+    alignSelf: 'center',
   },
-  overlay: {
+  viewfinderCard: {
+    width: '100%',
+    height: 380,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  cameraShade: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(7, 8, 14, 0.42)',
   },
-  overlayTop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.65)",
+  scanFrame: {
+    width: FRAME_SIZE,
+    height: FRAME_SIZE,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(89, 101, 242, 0.25)',
+    position: 'relative',
+    overflow: 'hidden',
   },
-  overlayCenterRow: {
-    flexDirection: "row",
-    height: 260,
+  corner: {
+    position: 'absolute',
+    width: 22,
+    height: 22,
+    borderColor: colors.indigo,
   },
-  overlaySide: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.65)",
+  cornerTopLeft: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 10 },
+  cornerTopRight: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 10 },
+  cornerBottomLeft: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 10 },
+  cornerBottomRight: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 10 },
+  scanLine: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    height: 2,
+    backgroundColor: colors.indigoSoft,
+    shadowColor: colors.indigo,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  scanTargetBox: {
-    width: 260,
-    height: 260,
-    position: "relative",
-    backgroundColor: "transparent",
+  cameraTop: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
+    right: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  cornerBracket: {
-    position: "absolute",
-    width: 32,
-    height: 32,
-    borderColor: colors.accent.cyan,
+  cameraBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(7, 8, 14, 0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(89, 101, 242, 0.3)',
   },
-  topLeftBracket: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 4,
-    borderLeftWidth: 4,
-    borderTopLeftRadius: radii.md,
+  torchBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(7, 8, 14, 0.72)',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  topRightBracket: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 4,
-    borderRightWidth: 4,
-    borderTopRightRadius: radii.md,
+  submittingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(7, 8, 14, 0.65)',
   },
-  bottomLeftBracket: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 4,
-    borderLeftWidth: 4,
-    borderBottomLeftRadius: radii.md,
+  submittingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(17, 20, 34, 0.95)',
+    borderWidth: 1,
+    borderColor: colors.borderActive,
   },
-  bottomRightBracket: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 4,
-    borderRightWidth: 4,
-    borderBottomRightRadius: radii.md,
+  resultOverlay: {
+    position: 'absolute',
+    bottom: spacing.md,
+    left: spacing.md,
+    right: spacing.md,
   },
-  overlayBottom: {
-    flex: 1.5,
-    backgroundColor: "rgba(0,0,0,0.65)",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-  },
-  guidanceText: {
-    ...typography.sm,
-    color: "#FFFFFF",
-    textAlign: "center",
-    maxWidth: 280,
-    lineHeight: 20,
-    marginBottom: spacing.lg,
-  },
-  controlsRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  resultHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: spacing.md,
-  },
-  controlBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.full,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  controlBtnActive: {
-    backgroundColor: "rgba(6, 182, 212, 0.25)",
-  },
-  manualEntryPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: "rgba(6, 182, 212, 0.15)",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: colors.accent.cyan,
-  },
-  manualEntryPillText: {
-    ...typography.xs,
-    fontWeight: "700",
-    color: colors.accent.cyan,
-  },
-  manualDrawer: {
-    marginTop: spacing.md,
-    width: "100%",
-    padding: spacing.md,
-  },
-  manualDrawerTitle: {
-    ...typography.xs,
-    fontWeight: "700",
-    color: colors.text.secondary,
-    marginBottom: spacing.xs,
-  },
-  manualInput: {
-    backgroundColor: colors.background.base,
-    color: colors.text.primary,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 13,
-  },
-  resultContainer: {
-    flex: 1,
-    backgroundColor: colors.background.base,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.lg,
-  },
-  resultCard: {
-    width: "100%",
-    maxWidth: 400,
-    alignItems: "center",
-    padding: spacing.xl,
-  },
-  resultIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: radii.full,
-    alignItems: "center",
-    justifyContent: "center",
     marginBottom: spacing.md,
   },
-  resultTitle: {
-    ...typography.xl,
-    fontWeight: "800",
-    color: colors.text.primary,
-    textAlign: "center",
-    marginBottom: spacing.xs,
+  resultIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  resultSubtitle: {
-    ...typography.sm,
-    color: colors.text.secondary,
-    textAlign: "center",
-    marginBottom: spacing.lg,
-  },
-  serverTimeBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: "rgba(6, 182, 212, 0.1)",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radii.full,
-    marginBottom: spacing.lg,
-  },
-  serverTimeText: {
-    ...typography.xs,
-    fontWeight: "700",
-    color: colors.accent.cyan,
-  },
-  resultDetailsGrid: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: colors.background.base,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  detailItem: {
-    alignItems: "center",
-    gap: 4,
-  },
-  detailLabel: {
-    ...typography.xs,
-    color: colors.text.muted,
-  },
-  detailValue: {
-    ...typography.sm,
-    fontWeight: "800",
-    color: colors.text.primary,
-  },
-  actionBtn: {
-    width: "100%",
-  },
-  permissionContainer: {
+  resultCopy: {
     flex: 1,
-    backgroundColor: colors.background.base,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.lg,
+    gap: 2,
   },
-  permissionCard: {
-    width: "100%",
-    maxWidth: 380,
-    alignItems: "center",
+  resultActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  permissionState: {
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: spacing.xl,
+    gap: spacing.sm,
   },
-  permissionTitle: {
-    ...typography.lg,
-    fontWeight: "800",
-    color: colors.text.primary,
-    textAlign: "center",
+  permissionIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(89, 101, 242, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.xs,
   },
-  permissionText: {
-    ...typography.sm,
-    color: colors.text.secondary,
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: spacing.lg,
+  permText: {
+    maxWidth: 280,
+    marginBottom: spacing.sm,
   },
-  toggleManualBtn: {
-    marginTop: spacing.md,
-    padding: spacing.xs,
+  footerHints: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: spacing.xs,
   },
-  toggleManualText: {
-    ...typography.xs,
-    color: colors.accent.cyan,
-    textAlign: "center",
+  hintItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  manualEntryBox: {
-    width: "100%",
-    marginTop: spacing.sm,
+  demoCard: {
     gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  demoToggle: {
+    paddingVertical: 2,
+  },
+  demoToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  demoInputWrap: {
+    gap: spacing.sm,
+    paddingTop: spacing.xs,
   },
 });

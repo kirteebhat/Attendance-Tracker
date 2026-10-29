@@ -1,113 +1,170 @@
-import React from "react";
-import { Pressable } from "react-native";
-import { Tabs } from "expo-router";
-import { Icon } from "../../src/components/Icon";
-import { colors, typography } from "../../src/theme";
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Tabs, Redirect } from 'expo-router';
+import {
+  CalendarDays,
+  House,
+  LayoutDashboard,
+  QrCode,
+  UserRound,
+  type LucideIcon,
+} from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, fonts, layout, radii } from '../../src/theme/tokens';
+import { useResponsive } from '../../src/lib/responsive';
+import { useAuth } from '../../src/context/AuthContext';
+
+function TabIcon({
+  icon: Icon,
+  color,
+  focused,
+}: {
+  icon: LucideIcon;
+  color: string;
+  focused: boolean;
+}) {
+  return (
+    <View style={[styles.iconWrap, focused ? styles.iconWrapActive : null]}>
+      <Icon size={21} color={color} strokeWidth={focused ? 2.2 : 1.8} />
+    </View>
+  );
+}
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const { isWide } = useResponsive();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (!isLoading && !isAuthenticated) {
+    return <Redirect href="/" />;
+  }
+
   return (
     <Tabs
+      initialRouteName="home"
       screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.background.surface,
-          borderBottomColor: colors.border.subtle,
-          borderBottomWidth: 1,
-        },
-        headerTintColor: colors.text.primary,
-        headerTitleStyle: {
-          ...typography.md,
-          fontWeight: "800",
-        },
-        headerShadowVisible: false,
-        tabBarStyle: {
-          backgroundColor: colors.background.surface,
-          borderTopColor: colors.border.subtle,
-          borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarActiveTintColor: colors.accent.cyan,
-        tabBarInactiveTintColor: colors.text.muted,
-        tabBarLabelStyle: {
-          ...typography.xs,
-          fontWeight: "700",
-          marginTop: 2,
-        },
+        headerShown: false,
+        tabBarPosition: 'bottom',
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarHideOnKeyboard: true,
+        tabBarActiveBackgroundColor: isWide ? 'rgba(89, 101, 242, 0.12)' : 'transparent',
+        tabBarStyle: isWide
+          ? [
+              styles.sideBar,
+              {
+                paddingTop: Math.max(insets.top, 16),
+                paddingBottom: Math.max(insets.bottom, 16),
+              },
+            ]
+          : [
+              styles.bottomBar,
+              {
+                height: 58 + Math.max(insets.bottom, 8),
+                paddingBottom: Math.max(insets.bottom, 8),
+              },
+            ],
+        tabBarItemStyle: isWide ? styles.sideItem : styles.bottomItem,
+        tabBarLabelStyle: styles.label,
+        sceneStyle: { backgroundColor: colors.bg },
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
         name="home"
         options={{
-          title: "Home",
-          headerTitle: "VorldX Attendance",
+          title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <Icon name={focused ? "home" : "home-outline"} size={22} color={color} />
+            <TabIcon color={String(color)} focused={focused} icon={LayoutDashboard} />
           ),
-          tabBarAccessibilityLabel: "tab-home",
-          tabBarButton: (props) => <Pressable {...(props as any)} testID="tab-home" />,
+          tabBarAccessibilityLabel: 'tab-home',
         }}
       />
 
       <Tabs.Screen
         name="scan"
         options={{
-          title: "Scan",
-          headerTitle: "QR Punch Terminal",
+          title: 'Scan',
           tabBarIcon: ({ color, focused }) => (
-            <Icon name={focused ? "qr-code" : "qr-code-outline"} size={22} color={color} />
+            <TabIcon color={String(color)} focused={focused} icon={QrCode} />
           ),
-          tabBarAccessibilityLabel: "tab-scan",
-          tabBarButton: (props) => <Pressable {...(props as any)} testID="tab-scan" />,
+          tabBarAccessibilityLabel: 'tab-scan',
         }}
       />
 
       <Tabs.Screen
         name="history"
         options={{
-          title: "History",
-          headerTitle: "Attendance History",
+          title: 'History',
           tabBarIcon: ({ color, focused }) => (
-            <Icon name={focused ? "calendar" : "calendar-outline"} size={22} color={color} />
+            <TabIcon color={String(color)} focused={focused} icon={CalendarDays} />
           ),
-          tabBarAccessibilityLabel: "tab-history",
-          tabBarButton: (props) => <Pressable {...(props as any)} testID="tab-history" />,
+          tabBarAccessibilityLabel: 'tab-history',
         }}
       />
 
       <Tabs.Screen
         name="wfh"
         options={{
-          title: "WFH",
-          headerTitle: "Work From Home",
+          title: 'WFH',
           tabBarIcon: ({ color, focused }) => (
-            <Icon name={focused ? "briefcase" : "briefcase-outline"} size={22} color={color} />
+            <TabIcon color={String(color)} focused={focused} icon={House} />
           ),
-          tabBarAccessibilityLabel: "tab-wfh",
-          tabBarButton: (props) => <Pressable {...(props as any)} testID="tab-wfh" />,
+          tabBarAccessibilityLabel: 'tab-wfh',
         }}
       />
 
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
-          headerTitle: "My Profile",
+          title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <Icon name={focused ? "person" : "person-outline"} size={22} color={color} />
+            <TabIcon color={String(color)} focused={focused} icon={UserRound} />
           ),
-          tabBarAccessibilityLabel: "tab-profile",
-          tabBarButton: (props) => <Pressable {...(props as any)} testID="tab-profile" />,
+          tabBarAccessibilityLabel: 'tab-profile',
         }}
       />
     </Tabs>
   );
 }
 
+const styles = StyleSheet.create({
+  bottomBar: {
+    backgroundColor: 'rgba(10, 12, 21, 0.98)',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 7,
+    paddingHorizontal: 6,
+  },
+  sideBar: {
+    backgroundColor: colors.sidebar,
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
+    width: layout.sidebarWidth,
+    paddingHorizontal: 10,
+  },
+  bottomItem: {
+    borderRadius: radii.sm,
+    paddingVertical: 1,
+  },
+  sideItem: {
+    borderRadius: radii.md,
+    marginVertical: 4,
+    marginHorizontal: 0,
+    height: 62,
+  },
+  label: {
+    fontFamily: fonts.medium,
+    fontSize: 10,
+    lineHeight: 13,
+  },
+  iconWrap: {
+    width: 38,
+    height: 28,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconWrapActive: {
+    backgroundColor: 'rgba(89, 101, 242, 0.14)',
+  },
+});

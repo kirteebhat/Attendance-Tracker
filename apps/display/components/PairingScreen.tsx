@@ -39,7 +39,7 @@ export const PairingScreen: React.FC<PairingScreenProps> = ({ onPaired, initialC
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanCode = code.trim().toUpperCase();
+    const cleanCode = code.replace(/\s+/g, '').toUpperCase();
 
     if (!cleanCode) {
       setError("Please enter the pairing code from the HR dashboard.");

@@ -1675,17 +1675,17 @@ export const CalendarPage: React.FC = () => {
           {(() => {
             const previewItems = previewData?.items || (previewData as any)?.data?.items || [];
             const toImportCount =
-              previewData?.toImportCount ??
+              (previewData as any)?.toImportCount ??
               (previewData as any)?.toImport ??
               previewItems.filter((i: any) => i.action === "create").length;
             const alreadyImportedCount =
-              previewData?.alreadyImportedCount ??
+              (previewData as any)?.alreadyImportedCount ??
               (previewData as any)?.alreadyImported ??
               previewItems.filter(
                 (i: any) => i.action === "already_exists" || i.action === "skip_already_imported"
               ).length;
             const manualConflictCount =
-              previewData?.manualConflictCount ??
+              (previewData as any)?.manualConflictCount ??
               (previewData as any)?.conflicts ??
               previewItems.filter((i: any) => i.action === "skip_manual_conflict").length;
 

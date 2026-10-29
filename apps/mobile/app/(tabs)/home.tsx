@@ -1,65 +1,108 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  ScrollView,
   RefreshControl,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { useAuth } from "../../src/context/AuthContext";
-import { useToast } from "../../src/components/Toast";
+} from 'react-native';
+import { useRouter } from 'expo-router';
 import {
-  Button,
+  AlertCircle,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  House,
+  QrCode,
+} from 'lucide-react-native';
+import { useAuth } from '../../src/context/AuthContext';
+import {
+  Screen,
   Card,
+  Button,
+  Badge,
   StatusBadge,
-  Skeleton,
-  Icon,
-} from "../../src/components";
-import { colors, spacing, typography, radii } from "../../src/theme";
+  StatTile,
+  PageHeader,
+  SectionHeader,
+  DonutChart,
+  DonutLegend,
+  DashboardSkeleton,
+  Avatar,
+  Text,
+  PressableScale,
+} from '../../src/components';
+import { colors, radii, spacing } from '../../src/theme/tokens';
 import {
   attendanceApi,
-  wfhApi,
   TodayAttendanceResponse,
   AttendanceHistoryResponse,
-  WfhEligibilityResponse,
   subscribeToSocketEvent,
   subscribeToResync,
-} from "../../src/services";
+} from '../../src/services';
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function getFormattedDate(): string {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatTime(isoString?: string | null): string {
+  if (!isoString) return '—';
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch {
+    return '—';
+  }
+}
+
+function formatDuration(mins?: number, checkInIso?: string | null): string {
+  if (mins && mins > 0) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  }
+  if (checkInIso) {
+    const elapsedMins = Math.max(0, Math.floor((Date.now() - new Date(checkInIso).getTime()) / 60000));
+    const h = Math.floor(elapsedMins / 60);
+    const m = elapsedMins % 60;
+    if (h === 0) return `${m}m`;
+    return `${h}h ${m}m`;
+  }
+  return '—';
+}
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
-  const { showToast } = useToast();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [todayData, setTodayData] = useState<TodayAttendanceResponse | null>(null);
   const [historyData, setHistoryData] = useState<AttendanceHistoryResponse | null>(null);
-  const [wfhEligibility, setWfhEligibility] = useState<WfhEligibilityResponse | null>(null);
-  const [loggingOut, setLoggingOut] = useState(false);
 
   const fetchHomeData = useCallback(async () => {
     try {
-      const [todayRes, historyRes, wfhRes] = await Promise.allSettled([
+      const [todayRes, historyRes] = await Promise.allSettled([
         attendanceApi.getTodayAttendance(),
         attendanceApi.getMyAttendance({ limit: 5 }),
-        wfhApi.getEligibility(),
       ]);
 
-      if (todayRes.status === "fulfilled") {
-        setTodayData(todayRes.value);
-      }
-      if (historyRes.status === "fulfilled") {
-        setHistoryData(historyRes.value);
-      }
-      if (wfhRes.status === "fulfilled") {
-        setWfhEligibility(wfhRes.value);
-      }
+      if (todayRes.status === 'fulfilled') setTodayData(todayRes.value);
+      if (historyRes.status === 'fulfilled') setHistoryData(historyRes.value);
     } catch (err) {
-      console.error("Failed to load home dashboard data", err);
+      console.error('Failed to load home dashboard data', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -69,28 +112,16 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchHomeData();
 
-    // Listen to real-time events via Socket.IO
-    const unsubscribeAttendance = subscribeToSocketEvent("attendance.updated", () => {
-      fetchHomeData();
-    });
-
-    const unsubscribeWfhDecided = subscribeToSocketEvent("wfh.decided", () => {
-      fetchHomeData();
-    });
-
-    const unsubscribeWfhCreated = subscribeToSocketEvent("wfh.created", () => {
-      fetchHomeData();
-    });
-
-    const unsubscribeResync = subscribeToResync(() => {
-      fetchHomeData();
-    });
+    const unsubAttendance = subscribeToSocketEvent('attendance.updated', () => fetchHomeData());
+    const unsubWfhDecided = subscribeToSocketEvent('wfh.decided', () => fetchHomeData());
+    const unsubWfhCreated = subscribeToSocketEvent('wfh.created', () => fetchHomeData());
+    const unsubResync = subscribeToResync(() => fetchHomeData());
 
     return () => {
-      unsubscribeAttendance();
-      unsubscribeWfhDecided();
-      unsubscribeWfhCreated();
-      unsubscribeResync();
+      unsubAttendance();
+      unsubWfhDecided();
+      unsubWfhCreated();
+      unsubResync();
     };
   }, [fetchHomeData]);
 
@@ -99,579 +130,363 @@ export default function HomeScreen() {
     fetchHomeData();
   }, [fetchHomeData]);
 
-  const handleLogout = async () => {
-    Alert.alert("Confirm Sign Out", "Are you sure you want to sign out of your account?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: async () => {
-          setLoggingOut(true);
-          try {
-            await logout();
-            showToast({
-              title: "Signed Out",
-              message: "You have been safely signed out.",
-              type: "info",
-            });
-            router.replace("/");
-          } finally {
-            setLoggingOut(false);
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleDirectLogout = async () => {
-    setLoggingOut(true);
-    try {
-      await logout();
-      router.replace("/");
-    } finally {
-      setLoggingOut(false);
-    }
-  };
-
   const record = todayData?.record;
   const isCheckedIn = Boolean(record?.checkInTime && !record?.checkOutTime);
   const isCheckedOut = Boolean(record?.checkOutTime);
-  const isWfhToday = Boolean(record?.isWfh || record?.status === "WFH_APPROVED");
+  const isWfhToday = Boolean(record?.isWfh || record?.status === 'WFH_APPROVED');
 
-  const formatTime = (isoString?: string | null) => {
-    if (!isoString) return "--:--";
-    try {
-      const d = new Date(isoString);
-      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
-    } catch {
-      return "--:--";
-    }
-  };
+  const punchStatusLabel = isWfhToday
+    ? 'WFH Active'
+    : isCheckedOut
+      ? 'Completed'
+      : isCheckedIn
+        ? 'Punched In'
+        : 'Not Punched';
 
-  const formatDuration = (mins?: number) => {
-    if (!mins || mins <= 0) return "0 hrs";
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    if (h === 0) return `${m} mins`;
-    if (m === 0) return `${h} hrs`;
-    return `${h}h ${m}m`;
-  };
+  const punchStatusTone = isWfhToday
+    ? 'info'
+    : isCheckedOut || isCheckedIn
+      ? 'success'
+      : 'neutral';
+
+  const stats = historyData?.stats;
+  const presentCount = stats?.presentDays ?? 0;
+  const lateCount = stats?.lateDays ?? 0;
+  const wfhCount = stats?.wfhDays ?? 0;
+  const absentCount = stats?.absentDays ?? 0;
+  const totalRecordedDays = presentCount + lateCount + wfhCount + absentCount;
+
+  const donutSegments = useMemo(
+    () => [
+      { label: 'Present', value: presentCount, color: colors.success },
+      { label: 'Late', value: lateCount, color: colors.warning },
+      { label: 'WFH', value: wfhCount, color: colors.info },
+      { label: 'Absent', value: absentCount, color: colors.danger },
+    ],
+    [presentCount, lateCount, wfhCount, absentCount]
+  );
+
+  const recentRecords = historyData?.data?.slice(0, 4) || [];
+
+  const firstName = user?.name ? user.name.split(' ')[0] : 'there';
+
+  if (loading && !todayData) {
+    return (
+      <Screen>
+        <PageHeader
+          eyebrow="VorldX Operations"
+          title={`${getGreeting()}, ${firstName}`}
+          subtitle={getFormattedDate()}
+        />
+        <DashboardSkeleton />
+      </Screen>
+    );
+  }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+    <Screen
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
+          colors={[colors.indigoSoft]}
           onRefresh={onRefresh}
-          tintColor={colors.accent.cyan}
-          colors={[colors.accent.cyan]}
+          refreshing={refreshing}
+          tintColor={colors.indigoSoft}
         />
       }
     >
-      {/* 1. Header Profile & Status Strip */}
-      <Card variant="surface" style={styles.profileCard}>
-        <View style={styles.profileHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.name
-                ? user.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()
-                : "VX"}
+      <PageHeader
+        eyebrow="VorldX Operations"
+        title={`${getGreeting()}, ${firstName}`}
+        subtitle={getFormattedDate()}
+        right={
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+            haptic="selection"
+            onPress={() => router.navigate('/(tabs)/profile')}
+          >
+            <Avatar name={user?.name ?? 'VX'} showRing size={44} />
+          </PressableScale>
+        }
+      />
+
+      {/* 1. Hero Punch Status Card */}
+      <Card style={styles.heroCard} variant="raised" padding={20}>
+        <View style={styles.heroHeader}>
+          <View style={styles.heroCopy}>
+            <Text variant="caption" color={colors.muted}>
+              {record ? "Today's Attendance" : 'Today · Not Checked In'}
+            </Text>
+            <Text variant="title" style={styles.heroTitle}>
+              {isCheckedIn
+                ? 'On the clock'
+                : isCheckedOut
+                  ? 'Shift completed'
+                  : isWfhToday
+                    ? 'Working from home'
+                    : 'Ready to punch in'}
+            </Text>
+            <Text variant="small" color={colors.textSecondary}>
+              {record?.checkInTime
+                ? `Punched in at ${formatTime(record.checkInTime)}`
+                : 'Scan office display QR or verify WFH request.'}
             </Text>
           </View>
+          <Badge label={punchStatusLabel} tone={punchStatusTone} dot />
+        </View>
 
-          <View style={styles.profileInfo}>
-            <View style={styles.badgeRow}>
-              <StatusBadge status="ACTIVE" label={user?.role || "EMPLOYEE"} />
-              <StatusBadge status="PRESENT" label="ACCOUNT VERIFIED" />
-            </View>
-
-            <Text style={styles.userName} testID="home-user-name">
-              {user?.name || "VorldX Employee"}
+        {/* Time Strip */}
+        <View style={styles.timeStrip}>
+          <View style={styles.timeCell}>
+            <Text variant="caption" color={colors.muted}>
+              Check in
             </Text>
-
-            <Text style={styles.userSubtext}>
-              {user?.employeeId} • {user?.department || "Operations"}
+            <Text variant="monoSmall" color={colors.text}>
+              {formatTime(record?.checkInTime)}
             </Text>
           </View>
+          <View style={styles.timeDivider} />
+          <View style={styles.timeCell}>
+            <Text variant="caption" color={colors.muted}>
+              Check out
+            </Text>
+            <Text variant="monoSmall" color={colors.text}>
+              {formatTime(record?.checkOutTime)}
+            </Text>
+          </View>
+          <View style={styles.timeDivider} />
+          <View style={styles.timeCell}>
+            <Text variant="caption" color={colors.muted}>
+              Duration
+            </Text>
+            <Text variant="monoSmall" color={colors.indigoSoft}>
+              {formatDuration(record?.durationMinutes, record?.checkInTime)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Assigned Shift Strip */}
+        <View style={styles.shiftStrip}>
+          <View style={styles.shiftIcon}>
+            <Clock3 size={15} color={colors.indigoSoft} strokeWidth={1.9} />
+          </View>
+          <View style={styles.shiftCopy}>
+            <Text variant="small" color={colors.textSecondary}>
+              Standard Shift
+            </Text>
+            <Text variant="monoSmall" color={colors.text}>
+              09:30 AM – 06:30 PM · Mon to Fri
+            </Text>
+          </View>
+          <Badge label="15m grace" tone="neutral" />
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.heroActions}>
+          <Button
+            icon={<QrCode size={16} color={colors.white} strokeWidth={2} />}
+            label="Scan office QR"
+            onPress={() => router.navigate('/(tabs)/scan')}
+            size="sm"
+            style={styles.heroButton}
+          />
+          <Button
+            icon={<House size={16} color={colors.text} strokeWidth={1.9} />}
+            label="Work from home"
+            onPress={() => router.navigate('/(tabs)/wfh')}
+            size="sm"
+            style={styles.heroButton}
+            variant="secondary"
+          />
         </View>
       </Card>
 
-      {/* 2. Today's Attendance State Card */}
-      <Card variant="elevated" style={styles.todayCard} testID="home-today-card">
-        <View style={styles.cardHeaderRow}>
-          <View>
-            <Text style={styles.cardSectionTag}>TODAY&apos;S PUNCH STATE</Text>
-            <Text style={styles.todayDateText}>
-              {todayData?.dateKey
-                ? new Date(todayData.dateKey + "T00:00:00").toLocaleDateString(undefined, {
-                    weekday: "long",
-                    month: "short",
-                    day: "numeric",
-                  })
-                : "Today"}
-            </Text>
-          </View>
-          <StatusBadge
-            status={
-              isWfhToday
-                ? "WFH"
-                : isCheckedOut
-                  ? "PRESENT"
-                  : isCheckedIn
-                    ? "CHECKED_IN"
-                    : "NOT_PUNCHED"
-            }
-            label={
-              isWfhToday
-                ? "WFH ACTIVE"
-                : isCheckedOut
-                  ? "COMPLETED"
-                  : isCheckedIn
-                    ? "PUNCHED IN"
-                    : "NOT PUNCHED"
-            }
-          />
-        </View>
+      {/* 2. Monthly Stats Row */}
+      <View style={styles.statGrid}>
+        <StatTile
+          hint="this month"
+          icon={CheckCircle2}
+          label="Present"
+          tone="success"
+          value={presentCount}
+        />
+        <StatTile hint="this month" icon={Clock3} label="Late" tone="warning" value={lateCount} />
+        <StatTile hint="this month" icon={AlertCircle} label="Absent" tone="danger" value={absentCount} />
+        <StatTile hint="this month" icon={House} label="WFH" tone="info" value={wfhCount} />
+      </View>
 
-        {loading ? (
-          <View style={{ paddingVertical: spacing.md }}>
-            <Skeleton width="100%" height={60} borderRadius={radii.md} />
+      {/* 3. Month Mix Donut Chart */}
+      <Card style={styles.chartCard} padding={18}>
+        <View style={styles.chartHeader}>
+          <Text variant="subheading">Month Attendance Mix</Text>
+          <Text variant="small" color={colors.muted}>
+            {totalRecordedDays} recorded days
+          </Text>
+        </View>
+        {totalRecordedDays > 0 ? (
+          <View style={styles.donutRow}>
+            <DonutChart
+              centerLabel="total days"
+              centerValue={String(totalRecordedDays)}
+              segments={donutSegments}
+              size={124}
+            />
+            <DonutLegend segments={donutSegments} />
           </View>
         ) : (
-          <View style={styles.punchTimesGrid}>
-            <View style={styles.timeBox}>
-              <Text style={styles.timeBoxLabel}>Check-In</Text>
-              <Text style={styles.timeBoxValue}>{formatTime(record?.checkInTime)}</Text>
-              {record?.isLate && (
-                <Text style={styles.lateWarningText}>Late (+{record.lateMinutes}m)</Text>
-              )}
-            </View>
-
-            <View style={styles.timeDivider} />
-
-            <View style={styles.timeBox}>
-              <Text style={styles.timeBoxLabel}>Check-Out</Text>
-              <Text style={styles.timeBoxValue}>{formatTime(record?.checkOutTime)}</Text>
-              <Text style={styles.durationSubtext}>
-                Total: {formatDuration(record?.durationMinutes)}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Scan Call to Action Button */}
-        {!isWfhToday && !isCheckedOut && (
-          <Button
-            title={isCheckedIn ? "Scan QR to Check Out" : "Scan QR to Check In"}
-            variant="primary"
-            size="lg"
-            icon={<Icon name="qr-code-outline" size={20} color="#FFFFFF" />}
-            onPress={() => router.push("/(tabs)/scan")}
-            testID="home-scan-cta-btn"
-            style={styles.scanCtaBtn}
-          />
-        )}
-      </Card>
-
-      {/* 3. WFH Status Card */}
-      <Card variant="surface" style={styles.wfhSummaryCard}>
-        <View style={styles.wfhRow}>
-          <View style={[styles.iconPill, { backgroundColor: colors.accent.indigoMuted }]}>
-            <Icon name="briefcase" size={20} color={colors.accent.indigo} />
-          </View>
-          <View style={styles.wfhInfo}>
-            <Text style={styles.wfhTitle}>Work From Home Quota</Text>
-            <Text style={styles.wfhSubtitle}>
-              {wfhEligibility?.remainingQuota !== undefined
-                ? `${wfhEligibility.remainingQuota} of ${wfhEligibility.monthlyQuota || wfhEligibility.policyQuota || 4} remote days remaining this month`
-                : "Monthly remote allowance active"}
+          <View style={styles.emptyChart}>
+            <CalendarDays size={22} color={colors.muted} strokeWidth={1.6} />
+            <Text variant="small" color={colors.muted} align="center">
+              Your monthly statistics will show here after your first attendance punch.
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={() => router.push("/(tabs)/wfh")}
-            style={styles.wfhActionBtn}
-            testID="home-goto-wfh-btn"
-          >
-            <Text style={styles.wfhActionText}>Apply</Text>
-            <Icon name="chevron-forward" size={14} color={colors.accent.cyan} />
-          </TouchableOpacity>
-        </View>
+        )}
       </Card>
 
-      {/* 4. Personal Monthly Statistics Grid */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Monthly Attendance Overview</Text>
-        <Text style={styles.sectionSubtitle}>Current Month Performance</Text>
-      </View>
-
-      <View style={styles.statsGrid}>
-        <Card variant="surface" style={styles.statCard}>
-          <Text style={styles.statNumber}>{historyData?.stats?.presentDays ?? 0}</Text>
-          <Text style={styles.statLabel}>Days Present</Text>
-        </Card>
-
-        <Card variant="surface" style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: colors.status.late }]}>
-            {historyData?.stats?.lateDays ?? 0}
-          </Text>
-          <Text style={styles.statLabel}>Late Arrivals</Text>
-        </Card>
-
-        <Card variant="surface" style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: colors.status.wfh }]}>
-            {historyData?.stats?.wfhDays ?? 0}
-          </Text>
-          <Text style={styles.statLabel}>WFH Days</Text>
-        </Card>
-
-        <Card variant="surface" style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: colors.accent.cyan }]}>
-            {historyData?.stats?.attendancePercentage ?? 0}%
-          </Text>
-          <Text style={styles.statLabel}>Punctuality</Text>
-        </Card>
-      </View>
-
-      {/* 5. Recent History Feed */}
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>Recent Punch Activity</Text>
-        <TouchableOpacity
-          onPress={() => router.push("/(tabs)/history")}
-          style={styles.seeAllBtn}
-          testID="home-view-all-history-btn"
-        >
-          <Text style={styles.seeAllText}>View All</Text>
-          <Icon name="arrow-forward" size={14} color={colors.accent.cyan} />
-        </TouchableOpacity>
-      </View>
-
-      {historyData?.data && historyData.data.length > 0 ? (
-        historyData.data.slice(0, 4).map((item) => (
-          <Card key={item._id} variant="surface" style={styles.recentItemCard}>
-            <View style={styles.recentItemRow}>
-              <View>
-                <Text style={styles.recentDateText}>
-                  {new Date(item.dateKey + "T00:00:00").toLocaleDateString(undefined, {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </Text>
-                <Text style={styles.recentTimesText}>
-                  {formatTime(item.checkInTime)} - {formatTime(item.checkOutTime)}
-                </Text>
-              </View>
-
-              <View style={styles.recentItemRight}>
-                <StatusBadge
-                  status={item.isWfh ? "WFH" : (item.status as any)}
-                  label={item.isWfh ? "WFH" : item.status}
-                />
-                <Text style={styles.recentDurationText}>
-                  {formatDuration(item.durationMinutes)}
-                </Text>
-              </View>
-            </View>
+      {/* 4. Recent Attendance Activity */}
+      {recentRecords.length > 0 && (
+        <View style={styles.recentSection}>
+          <SectionHeader
+            actionLabel="View all"
+            caption="Latest attendance punches"
+            onAction={() => router.navigate('/(tabs)/history')}
+            title="Recent activity"
+          />
+          <Card padding={0}>
+            {recentRecords.map((item, index) => (
+              <PressableScale
+                key={item._id}
+                accessibilityRole="button"
+                haptic="selection"
+                onPress={() => router.navigate('/(tabs)/history')}
+                style={[styles.recordRow, index > 0 ? styles.rowDivider : null]}
+              >
+                <View style={styles.recordLeft}>
+                  <Text variant="small" color={colors.text} weight="semibold">
+                    {item.dateKey}
+                  </Text>
+                  <Text variant="small" color={colors.muted}>
+                    {item.checkInTime ? formatTime(item.checkInTime) : '—'} →{' '}
+                    {item.checkOutTime ? formatTime(item.checkOutTime) : '—'}
+                  </Text>
+                </View>
+                <StatusBadge status={item.status} />
+                <ChevronRight size={15} color={colors.muted} />
+              </PressableScale>
+            ))}
           </Card>
-        ))
-      ) : (
-        <Card variant="surface" style={styles.emptyCard}>
-          <Icon name="calendar-outline" size={28} color={colors.text.muted} />
-          <Text style={styles.emptyText}>No recent punch logs found</Text>
-        </Card>
+        </View>
       )}
-
-      {/* Sign Out for Automated Test Harness & Security */}
-      <View style={styles.logoutWrapper}>
-        <Button
-          title="Sign Out"
-          onPress={handleLogout}
-          variant="outline"
-          size="md"
-          isLoading={loggingOut}
-          icon={<Icon name="log-out-outline" size={16} color={colors.accent.cyan} />}
-          testID="home-logout-btn"
-          style={styles.logoutBtn}
-        />
-        {/* Direct programmatic logout for automated Puppeteer test runner */}
-        <TouchableOpacity
-          onPress={handleDirectLogout}
-          testID="home-direct-logout-btn"
-          style={styles.directLogoutBtn}
-        >
-          <Text style={styles.directLogoutText}>Direct Sign Out</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  heroCard: {
+    gap: spacing.md,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  heroCopy: {
     flex: 1,
-    backgroundColor: colors.background.base,
+    gap: 3,
   },
-  contentContainer: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl * 2,
-  },
-  profileCard: {
-    marginBottom: spacing.md,
-    padding: spacing.lg,
-    borderColor: colors.accent.blue,
-  },
-  profileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: radii.full,
-    backgroundColor: colors.accent.blue,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.md,
-  },
-  avatarText: {
-    ...typography.md,
-    fontWeight: "900",
-    color: "#FFFFFF",
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  badgeRow: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginBottom: 4,
-  },
-  userName: {
-    ...typography.lg,
-    fontWeight: "800",
-    color: colors.text.primary,
-  },
-  userSubtext: {
-    ...typography.xs,
-    color: colors.text.secondary,
+  heroTitle: {
+    fontSize: 20,
     marginTop: 2,
   },
-  todayCard: {
-    marginBottom: spacing.md,
-    padding: spacing.lg,
-    backgroundColor: colors.background.elevated,
-    borderColor: colors.border.accent,
-  },
-  cardHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: spacing.md,
-  },
-  cardSectionTag: {
-    ...typography.xs,
-    fontWeight: "800",
-    color: colors.accent.cyan,
-    letterSpacing: 1,
-  },
-  todayDateText: {
-    ...typography.md,
-    fontWeight: "700",
-    color: colors.text.primary,
-    marginTop: 2,
-  },
-  punchTimesGrid: {
-    flexDirection: "row",
-    backgroundColor: colors.background.surface,
+  timeStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
-    padding: spacing.md,
-    alignItems: "center",
-    marginBottom: spacing.md,
+    backgroundColor: 'rgba(11, 14, 25, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(184, 190, 255, 0.08)',
   },
-  timeBox: {
+  timeCell: {
     flex: 1,
-    alignItems: "center",
-  },
-  timeBoxLabel: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    marginBottom: 4,
-  },
-  timeBoxValue: {
-    ...typography.xl,
-    fontWeight: "900",
-    color: colors.text.primary,
-  },
-  lateWarningText: {
-    ...typography.xs,
-    color: colors.status.late,
-    fontWeight: "700",
-    marginTop: 2,
-  },
-  durationSubtext: {
-    ...typography.xs,
-    color: colors.text.muted,
-    marginTop: 2,
+    alignItems: 'center',
+    gap: 3,
   },
   timeDivider: {
     width: 1,
-    height: 40,
-    backgroundColor: colors.border.subtle,
+    height: 24,
+    backgroundColor: colors.border,
   },
-  scanCtaBtn: {
+  shiftStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  },
+  shiftIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    backgroundColor: 'rgba(89, 101, 242, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shiftCopy: {
+    flex: 1,
+  },
+  heroActions: {
+    flexDirection: 'row',
+    gap: 10,
     marginTop: spacing.xs,
   },
-  wfhSummaryCard: {
-    marginBottom: spacing.lg,
-    padding: spacing.md,
-  },
-  wfhRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  iconPill: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.md,
-  },
-  wfhInfo: {
+  heroButton: {
     flex: 1,
   },
-  wfhTitle: {
-    ...typography.sm,
-    fontWeight: "700",
-    color: colors.text.primary,
+  statGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  wfhSubtitle: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    marginTop: 2,
+  chartCard: {
+    gap: spacing.md,
   },
-  wfhActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(6, 182, 212, 0.12)",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.sm,
+  chartHeader: {
     gap: 2,
   },
-  wfhActionText: {
-    ...typography.xs,
-    fontWeight: "700",
-    color: colors.accent.cyan,
+  donutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    paddingVertical: spacing.xs,
   },
-  sectionHeader: {
-    marginBottom: spacing.sm,
-  },
-  sectionTitle: {
-    ...typography.md,
-    fontWeight: "800",
-    color: colors.text.primary,
-  },
-  sectionSubtitle: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    marginTop: 2,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  emptyChart: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
     gap: spacing.sm,
-    marginBottom: spacing.xl,
   },
-  statCard: {
+  recentSection: {
+    gap: spacing.sm,
+    paddingBottom: spacing.lg,
+  },
+  recordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  rowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  recordLeft: {
     flex: 1,
-    minWidth: "45%",
-    padding: spacing.md,
-    alignItems: "center",
-  },
-  statNumber: {
-    ...typography.xxl,
-    fontWeight: "900",
-    color: colors.text.primary,
-  },
-  statLabel: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    marginTop: 2,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  seeAllBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  seeAllText: {
-    ...typography.xs,
-    fontWeight: "700",
-    color: colors.accent.cyan,
-  },
-  recentItemCard: {
-    marginBottom: spacing.sm,
-    padding: spacing.md,
-  },
-  recentItemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  recentDateText: {
-    ...typography.sm,
-    fontWeight: "700",
-    color: colors.text.primary,
-  },
-  recentTimesText: {
-    ...typography.xs,
-    color: colors.text.secondary,
-    marginTop: 2,
-  },
-  recentItemRight: {
-    alignItems: "flex-end",
-    gap: 4,
-  },
-  recentDurationText: {
-    ...typography.xs,
-    color: colors.text.muted,
-  },
-  emptyCard: {
-    padding: spacing.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-  },
-  emptyText: {
-    ...typography.sm,
-    color: colors.text.muted,
-  },
-  logoutWrapper: {
-    marginTop: spacing.xl,
-    alignItems: "center",
-  },
-  logoutBtn: {
-    width: "100%",
-  },
-  directLogoutBtn: {
-    marginTop: spacing.sm,
-    padding: spacing.xs,
-  },
-  directLogoutText: {
-    ...typography.xs,
-    color: colors.text.muted,
+    gap: 2,
   },
 });

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from "react";
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from "react-native";
 import { colors, spacing, radii, typography, shadows } from "../theme";
-import { Icon } from "./Icon";
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from "lucide-react-native";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -68,27 +68,15 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           accessibilityRole="alert"
         >
           <View style={styles.iconContainer}>
-            <Icon
-              name={
-                toast.type === "success"
-                  ? "checkmark-circle"
-                  : toast.type === "error"
-                  ? "alert-circle"
-                  : toast.type === "warning"
-                  ? "warning"
-                  : "information-circle"
-              }
-              size={22}
-              color={
-                toast.type === "success"
-                  ? colors.status.present
-                  : toast.type === "error"
-                  ? colors.status.absent
-                  : toast.type === "warning"
-                  ? colors.status.late
-                  : colors.accent.cyan
-              }
-            />
+            {toast.type === "success" ? (
+              <CheckCircle2 size={20} color={colors.status.present} strokeWidth={2} />
+            ) : toast.type === "error" ? (
+              <AlertCircle size={20} color={colors.status.absent} strokeWidth={2} />
+            ) : toast.type === "warning" ? (
+              <AlertTriangle size={20} color={colors.status.late} strokeWidth={2} />
+            ) : (
+              <Info size={20} color={colors.accent.cyan} strokeWidth={2} />
+            )}
           </View>
 
           <View style={styles.textContainer}>
@@ -97,7 +85,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           </View>
 
           <TouchableOpacity onPress={hideToast} style={styles.closeButton} activeOpacity={0.7}>
-            <Icon name="close" size={18} color={colors.text.muted} />
+            <X size={16} color={colors.muted} strokeWidth={2} />
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -150,11 +138,11 @@ const styles = StyleSheet.create({
   titleText: {
     ...typography.sm,
     fontWeight: "700",
-    color: colors.text.primary,
+    color: colors.text,
   },
   messageText: {
     ...typography.xs,
-    color: colors.text.secondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   closeButton: {
