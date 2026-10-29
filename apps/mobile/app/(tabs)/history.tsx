@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ export default function HistoryScreen() {
 
   // Month navigation: current date initialized to current month
   const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<"ALL" | "PRESENT" | "LATE" | "WFH" | "ABSENT">(
     "ALL"
   );
@@ -26,6 +27,93 @@ export default function HistoryScreen() {
   const [stats, setStats] = useState<AttendanceStats | null>(null);
 
   const monthKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}`;
+
+  const recordsByDateKey = useMemo(() => {
+    const map = new Map<string, AttendanceRecordItem>();
+    records.forEach((r) => {
+      if (r.dateKey) {
+        map.set(r.dateKey, r);
+      }
+    });
+    return map;
+  }, [records]);
+
+  const calendarDays = useMemo(() => {
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    // Monday = 0, Sunday = 6
+    const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7;
+
+    const days: Array<{
+      key: string;
+      dayNumber?: number;
+      dateKey?: string;
+      record?: AttendanceRecordItem;
+      isWeekend?: boolean;
+      isToday?: boolean;
+      isBlank: boolean;
+      statusColor?: string;
+      statusLabel?: string;
+    }> = [];
+
+    // Blank cells before month starts
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push({ key: `blank-${i}`, isBlank: true });
+    }
+
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const rec = recordsByDateKey.get(dateKey);
+      const dayOfWeek = (firstDayIndex + d - 1) % 7;
+      const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+      const isToday = dateKey === todayStr;
+
+      let statusColor: string = colors.border.subtle;
+      let statusLabel = isWeekend ? "Weekend" : "Not Logged";
+
+      if (rec) {
+        if (rec.isWfh || rec.status === "WFH_APPROVED") {
+          statusColor = colors.status.wfh;
+          statusLabel = "WFH";
+        } else if (rec.isLate || rec.status === "LATE") {
+          statusColor = colors.status.late;
+          statusLabel = "Late";
+        } else if (
+          rec.status === "PRESENT" ||
+          rec.status === "CHECKED_OUT" ||
+          rec.status === "CHECKED_IN"
+        ) {
+          statusColor = colors.status.present;
+          statusLabel = "Present";
+        } else if (rec.status === "ABSENT") {
+          statusColor = colors.status.absent;
+          statusLabel = "Absent";
+        } else {
+          statusColor = colors.accent.cyan;
+          statusLabel = rec.status;
+        }
+      }
+
+      days.push({
+        key: dateKey,
+        dayNumber: d,
+        dateKey,
+        record: rec,
+        isWeekend,
+        isToday,
+        isBlank: false,
+        statusColor,
+        statusLabel,
+      });
+    }
+
+    return days;
+  }, [selectedDate, recordsByDateKey]);
+
+  const selectedDayRecord = selectedDayKey ? recordsByDateKey.get(selectedDayKey) : null;
 
   const fetchHistory = useCallback(async () => {
     setError(null);
@@ -119,6 +207,9 @@ export default function HistoryScreen() {
           onPress={handlePrevMonth}
           style={styles.monthNavBtn}
           testID="history-prev-month-btn"
+          accessibilityRole="button"
+          accessibilityLabel="Previous month"
+          accessibilityHint="Navigates to the previous month's attendance records"
         >
           <Icon name="chevron-back" size={20} color={colors.accent.cyan} />
         </TouchableOpacity>
@@ -134,6 +225,9 @@ export default function HistoryScreen() {
           onPress={handleNextMonth}
           style={styles.monthNavBtn}
           testID="history-next-month-btn"
+          accessibilityRole="button"
+          accessibilityLabel="Next month"
+          accessibilityHint="Navigates to the next month's attendance records"
         >
           <Icon name="chevron-forward" size={20} color={colors.accent.cyan} />
         </TouchableOpacity>
@@ -170,6 +264,134 @@ export default function HistoryScreen() {
         </Card>
       )}
 
+      {/* 2.5 Monthly Calendar Matrix */}
+      <Card variant="surface" style={styles.calendarCard} testID="history-calendar-card">
+        <View style={styles.calendarHeaderRow}>
+          <Text style={styles.calendarTitle}>Month at a Glance</Text>
+          <View style={styles.calendarLegendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.status.present }]} />
+              <Text style={styles.legendText}>Present</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.status.late }]} />
+              <Text style={styles.legendText}>Late</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.status.wfh }]} />
+              <Text style={styles.legendText}>WFH</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.status.absent }]} />
+              <Text style={styles.legendText}>Absent</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Days of Week Header */}
+        <View style={styles.weekDaysRow}>
+          {["M", "T", "W", "T", "F", "S", "S"].map((dayName, idx) => (
+            <View key={`weekday-${idx}`} style={styles.weekDayHeaderCell}>
+              <Text style={[styles.weekDayHeaderText, (idx === 5 || idx === 6) && styles.weekendHeaderText]}>
+                {dayName}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Calendar Day Grid */}
+        <View style={styles.calendarGrid}>
+          {calendarDays.map((item) => {
+            if (item.isBlank) {
+              return <View key={item.key} style={styles.calendarCellBlank} />;
+            }
+
+            const isSelected = selectedDayKey === item.dateKey;
+
+            return (
+              <TouchableOpacity
+                key={item.key}
+                onPress={() => setSelectedDayKey(isSelected ? null : (item.dateKey || null))}
+                style={[
+                  styles.calendarCell,
+                  isSelected && styles.calendarCellSelected,
+                  item.isToday && styles.calendarCellToday,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Day ${item.dayNumber}, ${item.statusLabel}${item.isToday ? ", Today" : ""}`}
+                accessibilityHint="Tap to inspect punch details for this day"
+                testID={`calendar-day-${item.dayNumber}`}
+              >
+                <Text
+                  style={[
+                    styles.dayNumberText,
+                    item.isWeekend && styles.weekendDayNumberText,
+                    isSelected && styles.selectedDayNumberText,
+                  ]}
+                >
+                  {item.dayNumber}
+                </Text>
+
+                {/* Status Dot / Marker */}
+                {item.record ? (
+                  <View style={[styles.dayStatusMarker, { backgroundColor: item.statusColor }]} />
+                ) : (
+                  <View style={styles.dayStatusMarkerEmpty} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Selected Day Inspection Banner */}
+        {selectedDayKey && (
+          <View style={styles.selectedDayDetailBox} testID="history-selected-day-preview">
+            <View style={styles.selectedDayHeader}>
+              <View>
+                <Text style={styles.selectedDayDateText}>
+                  {new Date(selectedDayKey + "T00:00:00").toLocaleDateString(undefined, {
+                    weekday: "long",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </Text>
+                <Text style={styles.selectedDaySubtext}>{selectedDayKey}</Text>
+              </View>
+              {selectedDayRecord ? (
+                <StatusBadge
+                  status={selectedDayRecord.isWfh ? "WFH" : (selectedDayRecord.status as any)}
+                  label={selectedDayRecord.isWfh ? "WFH" : selectedDayRecord.status}
+                />
+              ) : (
+                <Text style={styles.noPunchText}>No Punch Logged</Text>
+              )}
+            </View>
+
+            {selectedDayRecord && (
+              <View style={styles.selectedDayPunchRow}>
+                <View style={styles.punchTimeMiniBox}>
+                  <Text style={styles.punchMiniLabel}>In</Text>
+                  <Text style={styles.punchMiniValue}>{formatTime(selectedDayRecord.checkInTime)}</Text>
+                </View>
+                <View style={styles.punchTimeMiniBox}>
+                  <Text style={styles.punchMiniLabel}>Out</Text>
+                  <Text style={styles.punchMiniValue}>{formatTime(selectedDayRecord.checkOutTime)}</Text>
+                </View>
+                <View style={styles.punchTimeMiniBox}>
+                  <Text style={styles.punchMiniLabel}>Duration</Text>
+                  <Text style={styles.punchMiniValue}>{formatDuration(selectedDayRecord.durationMinutes)}</Text>
+                </View>
+                {selectedDayRecord.isLate && (
+                  <View style={styles.lateMiniTag}>
+                    <Text style={styles.lateMiniText}>+{selectedDayRecord.lateMinutes}m</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+      </Card>
+
       {/* 3. Filter Pills */}
       <ScrollView
         horizontal
@@ -182,6 +404,8 @@ export default function HistoryScreen() {
             onPress={() => setActiveFilter(f)}
             style={[styles.filterPill, activeFilter === f && styles.filterPillActive]}
             testID={`history-filter-${f.toLowerCase()}`}
+            accessibilityRole="button"
+            accessibilityLabel={`Filter by ${f}`}
           >
             <Text style={[styles.filterPillText, activeFilter === f && styles.filterPillTextActive]}>
               {f}
@@ -326,8 +550,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   monthNavBtn: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: radii.md,
     backgroundColor: "rgba(6, 182, 212, 0.12)",
     alignItems: "center",
@@ -368,6 +594,174 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: colors.border.subtle,
   },
+  calendarCard: {
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  calendarHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  calendarTitle: {
+    ...typography.sm,
+    fontWeight: "800",
+    color: colors.text.primary,
+  },
+  calendarLegendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  legendDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  legendText: {
+    fontSize: 10,
+    color: colors.text.muted,
+    fontWeight: "600",
+  },
+  weekDaysRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+    paddingBottom: 6,
+    marginBottom: 6,
+  },
+  weekDayHeaderCell: {
+    flex: 1,
+    alignItems: "center",
+  },
+  weekDayHeaderText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.text.muted,
+  },
+  weekendHeaderText: {
+    color: colors.status.late,
+  },
+  calendarGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+  },
+  calendarCellBlank: {
+    width: "14.285%",
+    height: 44,
+  },
+  calendarCell: {
+    width: "14.285%",
+    height: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: "transparent",
+    position: "relative",
+  },
+  calendarCellSelected: {
+    borderColor: colors.accent.cyan,
+    backgroundColor: "rgba(6, 182, 212, 0.15)",
+  },
+  calendarCellToday: {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+  },
+  dayNumberText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text.primary,
+  },
+  weekendDayNumberText: {
+    color: colors.text.muted,
+  },
+  selectedDayNumberText: {
+    color: colors.accent.cyan,
+    fontWeight: "900",
+  },
+  dayStatusMarker: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    marginTop: 2,
+  },
+  dayStatusMarkerEmpty: {
+    width: 5,
+    height: 5,
+    marginTop: 2,
+  },
+  selectedDayDetailBox: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.background.elevated,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  selectedDayHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  selectedDayDateText: {
+    ...typography.sm,
+    fontWeight: "800",
+    color: colors.text.primary,
+  },
+  selectedDaySubtext: {
+    ...typography.xs,
+    color: colors.text.muted,
+    marginTop: 2,
+  },
+  noPunchText: {
+    ...typography.xs,
+    color: colors.text.muted,
+    fontStyle: "italic",
+  },
+  selectedDayPunchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
+  },
+  punchTimeMiniBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  punchMiniLabel: {
+    fontSize: 10,
+    color: colors.text.muted,
+    textTransform: "uppercase",
+  },
+  punchMiniValue: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text.primary,
+  },
+  lateMiniTag: {
+    backgroundColor: colors.status.lateBg,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radii.xs,
+  },
+  lateMiniText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: colors.status.late,
+  },
   filterPillsContainer: {
     flexDirection: "row",
     gap: spacing.xs,
@@ -375,7 +769,9 @@ const styles = StyleSheet.create({
   },
   filterPill: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+    justifyContent: "center",
     borderRadius: radii.full,
     backgroundColor: colors.background.surface,
     borderWidth: 1,

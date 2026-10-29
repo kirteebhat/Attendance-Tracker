@@ -26,6 +26,7 @@ interface ButtonProps {
   textStyle?: TextStyle;
   testID?: string;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -40,6 +41,7 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   testID,
   accessibilityLabel,
+  accessibilityHint,
 }) => {
   const isDisabled = disabled || isLoading;
 
@@ -68,6 +70,7 @@ export const Button: React.FC<ButtonProps> = ({
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || title}
+      accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: isDisabled, busy: isLoading }}
     >
       {isLoading ? (
@@ -155,16 +158,19 @@ const styles = StyleSheet.create({
   },
   // Sizes
   size_sm: {
+    minHeight: 44,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radii.md,
   },
   size_md: {
+    minHeight: 48,
     paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.xl,
     borderRadius: radii.lg,
   },
   size_lg: {
+    minHeight: 54,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xxl,
     borderRadius: radii.xl,

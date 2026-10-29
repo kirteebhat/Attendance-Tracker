@@ -338,39 +338,39 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
         <div className="flex items-center gap-3 sm:gap-5">
           {/* Live Clock */}
           <div className="hidden sm:flex flex-col text-right">
-            <span className="text-base sm:text-lg font-mono font-bold text-white tracking-wide">
+            <span className="text-base sm:text-lg font-mono font-bold text-slate-200 tracking-wider tabular-nums">
               {currentTime}
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">{currentDate}</span>
+            <span className="text-[11px] text-slate-400 font-medium tracking-wide">{currentDate}</span>
           </div>
 
           {/* Connection Status Pill */}
           <div
             id="connection-status-pill"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-semibold transition-all ${
               isConnected
                 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
                 : isReconnecting
-                ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-300"
+                : "bg-slate-800/80 border-slate-700/80 text-slate-400"
             }`}
           >
             {isConnected ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <Wifi className="w-3.5 h-3.5" />
-                <span>Connected</span>
+                <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Live Synced</span>
               </>
             ) : isReconnecting ? (
               <>
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                <RotateCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
                 <span>Reconnecting...</span>
               </>
             ) : (
               <>
-                <span className="w-2 h-2 rounded-full bg-rose-400" />
-                <WifiOff className="w-3.5 h-3.5" />
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                <WifiOff className="w-3.5 h-3.5 text-slate-400" />
                 <span>Offline</span>
               </>
             )}
@@ -409,19 +409,19 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
               {/* Very Large High-Contrast QR Code Card */}
               <div
                 id="active-qr-container"
-                className={`p-5 sm:p-7 bg-white rounded-3xl shadow-2xl transition-all duration-300 glow-cyan ${
+                className={`p-6 sm:p-8 bg-white rounded-3xl shadow-2xl transition-all duration-300 border-4 border-slate-100 glow-cyan ${
                   isRotating ? "scale-[0.98] opacity-80" : "scale-100 opacity-100"
                 }`}
               >
                 <QRCodeSVG
                   id="vorldx-dynamic-qr-code"
                   value={tokenData.qrPayload}
-                  size={300}
+                  size={360}
                   level="Q" // 25% Error Correction for screen scanning
                   includeMargin={false}
                   bgColor="#FFFFFF"
                   fgColor="#000000"
-                  className="w-[240px] h-[240px] sm:w-[280px] sm:h-[280px] md:w-[320px] md:h-[320px] transition-transform"
+                  className="w-[260px] h-[260px] sm:w-[320px] sm:h-[320px] md:w-[380px] md:h-[380px] lg:w-[420px] lg:h-[420px] transition-transform"
                 />
               </div>
 
@@ -520,14 +520,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
 
         {/* STATE 4: EXPIRED / RECONNECTING */}
         {(terminalState === "EXPIRED" || terminalState === "INITIALIZING") && (
-          <div className="flex flex-col items-center space-y-4 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+          <div className="flex flex-col items-center space-y-4 text-center max-w-md p-8 rounded-3xl bg-brand-900/60 border border-slate-800/80 backdrop-blur-md">
+            <div className="w-16 h-16 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-lg">
               <RotateCw className="w-8 h-8 animate-spin" />
             </div>
-            <div className="space-y-1">
-              <h3 className="text-xl font-bold text-white">Refreshing Attendance Challenge</h3>
-              <p className="text-xs text-slate-400">
-                Fetching next cryptographic rotating token from attendance cluster...
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-bold text-white tracking-tight">Syncing Attendance Challenge</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Reconnecting securely to attendance cluster. Authentication keys and rotating challenges remain safe.
               </p>
             </div>
           </div>

@@ -16,7 +16,13 @@ export const OfflineBanner: React.FC = () => {
   if (isOnline) return null;
 
   return (
-    <View style={styles.banner} testID="offline-banner" accessibilityRole="alert">
+    <View
+      style={styles.banner}
+      testID="offline-banner"
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+      accessibilityLabel="Offline Mode: Attempting to reconnect to VorldX attendance server"
+    >
       <Icon name="cloud-offline" size={16} color={colors.status.late} />
       <Text style={styles.text}>Offline Mode • Attempting to reconnect to VorldX...</Text>
     </View>

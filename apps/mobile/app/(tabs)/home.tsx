@@ -45,6 +45,7 @@ export default function HomeScreen() {
   const [topAnnouncement, setTopAnnouncement] = useState<MobileAnnouncementItem | null>(null);
   const [unreadAnnouncementsCount, setUnreadAnnouncementsCount] = useState<number>(0);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [liveElapsed, setLiveElapsed] = useState<string>("00:00:00");
 
   const fetchHomeData = useCallback(async () => {
     try {
@@ -161,6 +162,29 @@ export default function HomeScreen() {
   const isCheckedOut = Boolean(record?.checkOutTime);
   const isWfhToday = Boolean(record?.isWfh || record?.status === "WFH_APPROVED");
 
+  useEffect(() => {
+    if (!record?.checkInTime || record?.checkOutTime) {
+      setLiveElapsed("00:00:00");
+      return;
+    }
+
+    const updateTimer = () => {
+      const checkInMs = new Date(record.checkInTime!).getTime();
+      const nowMs = Date.now();
+      const diffSecs = Math.max(0, Math.floor((nowMs - checkInMs) / 1000));
+      const hours = Math.floor(diffSecs / 3600);
+      const minutes = Math.floor((diffSecs % 3600) / 60);
+      const seconds = diffSecs % 60;
+      setLiveElapsed(
+        `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+      );
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [record?.checkInTime, record?.checkOutTime]);
+
   const formatTime = (isoString?: string | null) => {
     if (!isoString) return "--:--";
     try {
@@ -238,7 +262,9 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.bellButton}
               onPress={() => router.push("/enquiries" as any)}
+              accessibilityRole="button"
               accessibilityLabel="Contact HR & Enquiries"
+              accessibilityHint="Opens HR enquiries and support desk"
             >
               <Icon name="chatbubbles-outline" size={20} color={colors.accent.cyan} />
             </TouchableOpacity>
@@ -247,7 +273,9 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.bellButton}
               onPress={() => router.push("/announcements" as any)}
-              accessibilityLabel="View Announcements"
+              accessibilityRole="button"
+              accessibilityLabel={`View Announcements${unreadAnnouncementsCount > 0 ? `, ${unreadAnnouncementsCount} unread` : ""}`}
+              accessibilityHint="Navigates to company announcements feed"
             >
               <Icon name="megaphone-outline" size={20} color={colors.accent.cyan} />
               {unreadAnnouncementsCount > 0 && (
@@ -299,6 +327,21 @@ export default function HomeScreen() {
           />
         </View>
 
+        {/* Live Active Shift Elapsed Timer */}
+        {isCheckedIn && (
+          <View
+            style={styles.liveTimerContainer}
+            accessibilityRole="timer"
+            accessibilityLabel={`Active shift elapsed time: ${liveElapsed}`}
+          >
+            <View style={styles.livePulseIndicator}>
+              <View style={styles.livePulseDot} />
+              <Text style={styles.livePulseText}>ACTIVE SHIFT IN PROGRESS</Text>
+            </View>
+            <Text style={styles.liveElapsedText}>{liveElapsed}</Text>
+          </View>
+        )}
+
         {loading ? (
           <View style={{ paddingVertical: spacing.md }}>
             <Skeleton width="100%" height={60} borderRadius={radii.md} />
@@ -335,6 +378,8 @@ export default function HomeScreen() {
             onPress={() => router.push("/(tabs)/scan")}
             testID="home-scan-cta-btn"
             style={styles.scanCtaBtn}
+            accessibilityLabel={isCheckedIn ? "Scan QR to Check Out" : "Scan QR to Check In"}
+            accessibilityHint="Opens camera scanner to read office display QR code"
           />
         )}
       </Card>
@@ -357,6 +402,9 @@ export default function HomeScreen() {
             onPress={() => router.push("/(tabs)/wfh")}
             style={styles.wfhActionBtn}
             testID="home-goto-wfh-btn"
+            accessibilityRole="button"
+            accessibilityLabel="Apply for Work From Home"
+            accessibilityHint="Navigates to WFH request screen"
           >
             <Text style={styles.wfhActionText}>Apply</Text>
             <Icon name="chevron-forward" size={14} color={colors.accent.cyan} />
@@ -380,6 +428,9 @@ export default function HomeScreen() {
             onPress={() => router.push("/enquiries" as any)}
             style={styles.wfhActionBtn}
             testID="home-goto-enquiries-btn"
+            accessibilityRole="button"
+            accessibilityLabel="Contact HR Helpdesk"
+            accessibilityHint="Navigates to enquiries and dispute form"
           >
             <Text style={styles.wfhActionText}>Help</Text>
             <Icon name="chevron-forward" size={14} color={colors.accent.cyan} />
@@ -428,6 +479,9 @@ export default function HomeScreen() {
           onPress={() => router.push("/(tabs)/history")}
           style={styles.seeAllBtn}
           testID="home-view-all-history-btn"
+          accessibilityRole="button"
+          accessibilityLabel="View all attendance records"
+          accessibilityHint="Navigates to calendar history tab"
         >
           <Text style={styles.seeAllText}>View All</Text>
           <Icon name="arrow-forward" size={14} color={colors.accent.cyan} />
@@ -531,9 +585,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bellButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    minWidth: 44,
+    minHeight: 44,
     backgroundColor: "rgba(6, 182, 212, 0.12)",
     alignItems: "center",
     justifyContent: "center",
@@ -597,6 +653,40 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.text.primary,
     marginTop: 2,
+  },
+  liveTimerContainer: {
+    backgroundColor: "rgba(6, 182, 212, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(6, 182, 212, 0.3)",
+    borderRadius: radii.md,
+    padding: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  livePulseIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginBottom: 4,
+  },
+  livePulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.status.present,
+  },
+  livePulseText: {
+    ...typography.xs,
+    fontWeight: "800",
+    color: colors.status.present,
+    letterSpacing: 1,
+  },
+  liveElapsedText: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: colors.text.primary,
+    letterSpacing: 1.5,
   },
   punchTimesGrid: {
     flexDirection: "row",
@@ -672,10 +762,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(6, 182, 212, 0.12)",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
     borderRadius: radii.sm,
-    gap: 2,
+    gap: 4,
+    justifyContent: "center",
   },
   wfhActionText: {
     ...typography.xs,
@@ -727,6 +819,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    minHeight: 44,
+    paddingHorizontal: spacing.xs,
+    justifyContent: "center",
   },
   seeAllText: {
     ...typography.xs,
@@ -779,7 +874,10 @@ const styles = StyleSheet.create({
   },
   directLogoutBtn: {
     marginTop: spacing.sm,
-    padding: spacing.xs,
+    padding: spacing.sm,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
   },
   directLogoutText: {
     ...typography.xs,

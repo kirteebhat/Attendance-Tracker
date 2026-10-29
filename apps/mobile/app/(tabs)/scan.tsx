@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
+  Vibration,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Linking from "expo-linking";
@@ -68,7 +69,17 @@ export default function ScanScreen() {
     try {
       const res = await attendanceApi.scanAttendance(cleanToken);
       setScanResult(res);
+      try {
+        Vibration.vibrate([0, 60, 40, 60]);
+      } catch (_e) {
+        // Ignore vibration failure on unsupported devices
+      }
     } catch (err: unknown) {
+      try {
+        Vibration.vibrate([0, 100, 50, 100]);
+      } catch (_e) {
+        // Ignore vibration failure on unsupported devices
+      }
       if (err instanceof ApiError) {
         const code = err.code || "ERR_REQUEST_FAILED";
 
@@ -146,10 +157,24 @@ export default function ScanScreen() {
     }
   }, []);
 
+  const handleToggleTorch = () => {
+    try {
+      Vibration.vibrate(25);
+    } catch (_e) {
+      // Ignore vibration failure on unsupported devices
+    }
+    setTorch((prev) => !prev);
+  };
+
   const handleBarcodeScanned = useCallback(
     ({ data }: { data: string }) => {
       if (isProcessingRef.current || isSubmitting || scanResult || scanError) {
         return;
+      }
+      try {
+        Vibration.vibrate(40);
+      } catch (_e) {
+        // Ignore vibration failure on unsupported devices
       }
       isProcessingRef.current = true;
       processToken(data);
@@ -423,6 +448,8 @@ export default function ScanScreen() {
             <View style={[styles.cornerBracket, styles.topRightBracket]} />
             <View style={[styles.cornerBracket, styles.bottomLeftBracket]} />
             <View style={[styles.cornerBracket, styles.bottomRightBracket]} />
+            {/* Subtle Alignment Laser Guideline */}
+            <View style={styles.scanLaserLine} />
           </View>
 
           <View style={styles.overlaySide} />
@@ -430,20 +457,23 @@ export default function ScanScreen() {
 
         <View style={styles.overlayBottom}>
           <Text style={styles.guidanceText}>
-            Align the 30-second rotating QR code from the office display within the frame
+            Align the 30-second rotating QR code from the office display within the frame • Hold steady
           </Text>
 
           {/* Controls Bar */}
           <View style={styles.controlsRow}>
             {Platform.OS !== "web" && (
               <TouchableOpacity
-                onPress={() => setTorch(!torch)}
+                onPress={handleToggleTorch}
                 style={[styles.controlBtn, torch && styles.controlBtnActive]}
                 testID="scan-toggle-torch-btn"
+                accessibilityRole="button"
+                accessibilityLabel={torch ? "Turn Flashlight Off" : "Turn Flashlight On"}
+                accessibilityHint="Toggles device camera torch to help scanning in low-light environments"
               >
                 <Icon
                   name={torch ? "flashlight" : "flashlight-outline"}
-                  size={20}
+                  size={22}
                   color={torch ? colors.accent.cyan : "#FFFFFF"}
                 />
               </TouchableOpacity>
@@ -453,6 +483,9 @@ export default function ScanScreen() {
               onPress={() => setShowManualInput(!showManualInput)}
               style={styles.manualEntryPill}
               testID="scan-toggle-manual-entry-btn"
+              accessibilityRole="button"
+              accessibilityLabel={showManualInput ? "Hide Code Entry" : "Manual Token Entry"}
+              accessibilityHint="Opens or hides manual QR token text entry drawer"
             >
               <Icon name="key-outline" size={16} color={colors.accent.cyan} />
               <Text style={styles.manualEntryPillText}>
@@ -560,6 +593,19 @@ const styles = StyleSheet.create({
     borderRightWidth: 4,
     borderBottomRightRadius: radii.md,
   },
+  scanLaserLine: {
+    position: "absolute",
+    top: "50%",
+    left: 16,
+    right: 16,
+    height: 2,
+    backgroundColor: "rgba(6, 182, 212, 0.65)",
+    borderRadius: 1,
+    shadowColor: colors.accent.cyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
   overlayBottom: {
     flex: 1.5,
     backgroundColor: "rgba(0,0,0,0.65)",
@@ -581,8 +627,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   controlBtn: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: radii.full,
     backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
@@ -590,14 +638,18 @@ const styles = StyleSheet.create({
   },
   controlBtnActive: {
     backgroundColor: "rgba(6, 182, 212, 0.25)",
+    borderColor: colors.accent.cyan,
+    borderWidth: 1.5,
   },
   manualEntryPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
     backgroundColor: "rgba(6, 182, 212, 0.15)",
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+    minHeight: 48,
+    justifyContent: "center",
     borderRadius: radii.full,
     borderWidth: 1,
     borderColor: colors.accent.cyan,
