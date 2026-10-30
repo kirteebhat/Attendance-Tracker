@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, RefreshCw, X, AlertTriangle, ArrowUpCircle } from "lucide-react";
+import { Sparkles, RefreshCw, X, AlertTriangle } from "lucide-react";
 import { useCheckAppUpdate } from "../../api/queries";
 import { useSocket } from "../../context/SocketContext";
 import { Button } from "./Button";

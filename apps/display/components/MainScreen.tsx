@@ -5,11 +5,10 @@ import { QRCodeSVG } from "qrcode.react";
 import { io, Socket } from "socket.io-client";
 import { StoredDisplayCredentials, clearStoredCredentials } from "../lib/storage";
 import { fetchRotatingChallenge, DisplayApiError, QrTokenResponse, checkDisplayUpdate } from "../lib/api";
-import { CountdownRing } from "./CountdownRing";
 import { AnnouncementTicker } from "./AnnouncementTicker";
+import { VORLDX_LOGO_URI } from "../lib/logo";
 import {
   Wifi,
-  WifiOff,
   ShieldAlert,
   Clock,
   RotateCw,
@@ -18,6 +17,7 @@ import {
   AlertTriangle,
   QrCode,
   ShieldCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { SocketEvent, TerminalStatus } from "@vorldx/shared";
 
@@ -26,15 +26,19 @@ interface MainScreenProps {
   onUnpair: () => void;
 }
 
-type TerminalState = "ACTIVE" | "DISABLED" | "REVOKED" | "EXPIRED" | "INITIALIZING";
+type TerminalState = "ACTIVE" | "DISABLED" | "REVOKED" | "INITIALIZING";
+
+// 15-second rotation cadence for opaque dynamic challenge issuance
+const ROTATION_CADENCE_SECONDS = 15;
 
 export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
   const [tokenData, setTokenData] = useState<QrTokenResponse | null>(null);
   const [terminalState, setTerminalState] = useState<TerminalState>("INITIALIZING");
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [showUnpairConfirm, setShowUnpairConfirm] = useState<boolean>(false);
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(30);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(ROTATION_CADENCE_SECONDS);
   const [isRotating, setIsRotating] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>("");
   const [currentDate, setCurrentDate] = useState<string>("");
@@ -45,9 +49,42 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
   const isFetchingRef = useRef<boolean>(false);
   const tokenDataRef = useRef<QrTokenResponse | null>(null);
   const lastPunchRef = useRef<number>(Date.now());
+  const cycleStartRef = useRef<number>(Date.now());
   tokenDataRef.current = tokenData;
 
-  // Live wall-clock updater
+  // 1. Screen Wake Lock API (keeps kiosk screen awake without screensaver or dimming)
+  useEffect(() => {
+    let wakeLockSentinel: any = null;
+
+    const requestWakeLock = async () => {
+      try {
+        if (typeof navigator !== "undefined" && "wakeLock" in navigator) {
+          wakeLockSentinel = await (navigator as any).wakeLock.request("screen");
+        }
+      } catch {
+        // Wake lock might be unavailable or denied in non-secure local previews
+      }
+    };
+
+    requestWakeLock();
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (wakeLockSentinel && typeof wakeLockSentinel.release === "function") {
+        wakeLockSentinel.release().catch(() => {});
+      }
+    };
+  }, []);
+
+  // 2. Live wall-clock updater (Subtle clock & date)
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -61,7 +98,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
       );
       setCurrentDate(
         now.toLocaleDateString("en-US", {
-          weekday: "long",
+          weekday: "short",
           month: "short",
           day: "numeric",
           year: "numeric",
@@ -73,7 +110,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch rotating challenge from backend
+  // 3. Challenge Fetcher (15-second rotation cadence)
   const requestNewChallenge = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
@@ -85,9 +122,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
       setTokenData(response);
       setTerminalState("ACTIVE");
       setStatusMessage("");
+      cycleStartRef.current = Date.now();
+      setRemainingSeconds(ROTATION_CADENCE_SECONDS);
 
-      // Smooth rotation animation reset
-      setTimeout(() => setIsRotating(false), 500);
+      // Smooth visual rotation transition
+      setTimeout(() => setIsRotating(false), 300);
     } catch (err: unknown) {
       if (err instanceof DisplayApiError) {
         if (
@@ -96,49 +135,47 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
           err.status === 401
         ) {
           clearStoredCredentials();
-          setTokenData(null);
+          setTokenData(null); // Blank QR immediately
           setTerminalState("REVOKED");
           setStatusMessage("This display terminal has been revoked by an administrator.");
         } else if (err.code === "ERR_DISPLAY_DISABLED") {
-          setTokenData(null);
+          setTokenData(null); // Blank QR immediately
           setTerminalState("DISABLED");
           setStatusMessage("This display terminal is currently disabled by HR.");
         }
       } else {
-        // Network error: will retry
-        console.warn("Challenge fetch network error:", err);
+        // Network failure during challenge fetch: triggers calm reconnecting state
+        setIsReconnecting(true);
       }
     } finally {
       isFetchingRef.current = false;
     }
   }, [creds]);
 
-  // Proactive countdown and refresh loop
+  // 4. Proactive 15-second rotation cadence loop (ring is invisible; process is encrypted & opaque)
   useEffect(() => {
     const timer = setInterval(() => {
-      if (!tokenDataRef.current?.expiresAt) return;
-
-      const expiresTime = new Date(tokenDataRef.current.expiresAt).getTime();
-      const diffMs = expiresTime - Date.now();
-      const secondsLeft = Math.max(0, diffMs / 1000);
-
+      const elapsedMs = Date.now() - cycleStartRef.current;
+      const secondsLeft = Math.max(0, ROTATION_CADENCE_SECONDS - elapsedMs / 1000);
       setRemainingSeconds(secondsLeft);
 
-      // Proactively fetch next challenge 5 seconds before current one expires
-      if (secondsLeft <= 5 && !isFetchingRef.current && terminalState === "ACTIVE") {
+      // Proactively fetch next challenge 3s before current 15s epoch ends
+      if (secondsLeft <= 3 && !isFetchingRef.current && isConnected && terminalState === "ACTIVE") {
         requestNewChallenge();
       }
 
-      // If token expired and no replacement arrived yet
+      // If epoch expires while active, refresh immediately
       if (secondsLeft <= 0 && terminalState === "ACTIVE") {
-        setTerminalState("EXPIRED");
+        if (isConnected && !isFetchingRef.current) {
+          requestNewChallenge();
+        }
       }
     }, 150);
 
     return () => clearInterval(timer);
-  }, [requestNewChallenge, terminalState]);
+  }, [requestNewChallenge, terminalState, isConnected]);
 
-  // Socket.IO Integration
+  // 5. Socket.IO Integration with auto-reconnection and event isolation
   useEffect(() => {
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:4000";
 
@@ -152,7 +189,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
       transports: ["websocket", "polling"],
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      reconnectionDelayMax: 4000,
     });
 
     socketRef.current = socket;
@@ -161,13 +198,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
       setIsConnected(true);
       setIsReconnecting(false);
 
-      // Resync on connection/reconnection
+      // Resync and retrieve clean challenge on reconnection
       socket.emit(SocketEvent.RESYNC, { type: "display" });
       requestNewChallenge();
     });
 
     socket.on("disconnect", (reason) => {
       setIsConnected(false);
+      setIsReconnecting(true);
       if (reason === "io server disconnect") {
         socket.connect();
       }
@@ -178,14 +216,16 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
       setIsReconnecting(true);
     });
 
-    // Handle token rotation broadcast
+    // Handle token rotation broadcast from backend
     const handleQrRotated = (data: QrTokenResponse) => {
       if (data && (data.token || data.qrPayload)) {
         setIsRotating(true);
         setTokenData(data);
         setTerminalState("ACTIVE");
         setStatusMessage("");
-        setTimeout(() => setIsRotating(false), 500);
+        cycleStartRef.current = Date.now();
+        setRemainingSeconds(ROTATION_CADENCE_SECONDS);
+        setTimeout(() => setIsRotating(false), 300);
       }
     };
 
@@ -193,6 +233,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
     socket.on(SocketEvent.QR_TOKEN_ROTATE, handleQrRotated);
 
     // Handle display status changes (Disabled / Revoked / Activated)
+    // RULE: Revoked or disabled state blanks the QR immediately
     const handleDisplayStatus = (data: {
       terminalId: string;
       isActive: boolean;
@@ -205,11 +246,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
 
       if (data.status === TerminalStatus.REVOKED || data.status === "REVOKED") {
         clearStoredCredentials();
-        setTokenData(null);
+        setTokenData(null); // Blanks QR immediately
         setTerminalState("REVOKED");
-        setStatusMessage(data.message || "Display terminal revoked. All tokens invalidated.");
+        setStatusMessage(data.message || "Display terminal revoked. All issued challenges invalidated.");
       } else if (!data.isActive || data.status === TerminalStatus.DISABLED || data.status === "DISABLED") {
-        setTokenData(null);
+        setTokenData(null); // Blanks QR immediately
         setTerminalState("DISABLED");
         setStatusMessage(
           data.message || "Display temporarily disabled by administrator. Contact HR to re-enable."
@@ -237,12 +278,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
       lastPunchRef.current = Date.now();
     });
 
-    // Heartbeat every 30s
+    // Heartbeat every 25s
     const heartbeatInterval = setInterval(() => {
       if (socket.connected) {
         socket.emit(SocketEvent.DISPLAY_HEARTBEAT, { terminalId: creds.terminalId });
       }
-    }, 30000);
+    }, 25000);
 
     return () => {
       clearInterval(heartbeatInterval);
@@ -250,7 +291,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
     };
   }, [creds, requestNewChallenge]);
 
-  // Periodic Display Version Poll
+  // 6. Periodic Display Version Poll
   useEffect(() => {
     let isMounted = true;
     const checkVersion = async () => {
@@ -267,13 +308,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
     };
   }, []);
 
-  // Safe Quiet-Moment Auto-Reload Evaluator
+  // 7. Safe Quiet-Moment Auto-Reload (reloads only when idle >= 30s with zero punch activity)
   useEffect(() => {
     if (!pendingUpdate || isQuietUpdating) return;
 
     const quietInterval = setInterval(() => {
       const idleSeconds = (Date.now() - lastPunchRef.current) / 1000;
-      // Quiet moment: terminal is ACTIVE and idle without any punch for at least 30s
       if (idleSeconds >= 30 && terminalState === "ACTIVE") {
         setIsQuietUpdating(true);
         setTimeout(() => {
@@ -285,99 +325,110 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
     return () => clearInterval(quietInterval);
   }, [pendingUpdate, isQuietUpdating, terminalState]);
 
-  // Initial fetch on mount
+  // Initial challenge fetch
   useEffect(() => {
     requestNewChallenge();
   }, [requestNewChallenge]);
 
   const handleManualUnpair = () => {
-    if (confirm("Are you sure you want to unpair this display monitor?")) {
-      clearStoredCredentials();
-      onUnpair();
-    }
+    setShowUnpairConfirm(true);
   };
+
+  const confirmUnpair = () => {
+    setShowUnpairConfirm(false);
+    clearStoredCredentials();
+    onUnpair();
+  };
+
+  // Calm Reconnecting State Logic:
+  // - If disconnected, keep the last valid QR visible until remainingSeconds reaches 0.
+  // - Once expired while still disconnected, blur the QR and show a gentle animated message.
+  const isDisconnected = !isConnected || isReconnecting;
+  const isTokenExpired = remainingSeconds <= 0;
+  const showCalmReconnectingOverlay = isDisconnected && isTokenExpired && terminalState !== "REVOKED" && terminalState !== "DISABLED";
+  const shouldRenderQR = Boolean(tokenData?.qrPayload && terminalState !== "REVOKED" && terminalState !== "DISABLED");
+
+  // Optional slim announcement ticker flag (defaults to true unless explicitly disabled)
+  const isAnnouncementTickerEnabled = process.env.NEXT_PUBLIC_ENABLE_ANNOUNCEMENT_TICKER !== "false";
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col justify-between p-4 sm:p-8 md:p-10 bg-brand-950 text-slate-100 select-none overflow-hidden relative"
+      className="min-h-screen w-full flex flex-col justify-between p-4 sm:p-6 md:p-8 bg-brand-950 text-slate-100 select-none overflow-hidden relative"
       role="region"
       aria-label="VorldX Attendance Kiosk"
     >
       {/* Background Ambience Glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-gradient-to-tr from-cyan-600/10 via-blue-600/10 to-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* TOP TELEMETRY BAR */}
-      <header className="relative z-10 flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
-        {/* Left: Branding & Terminal Info */}
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/25">
-            <QrCode className="w-6 h-6 text-white" />
+      {/* TOP TELEMETRY BAR: Display Name, Subtle Clock, Small Authorization Badge & Live Connection */}
+      <header className="relative z-10 flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800/80">
+        {/* Left: Branding & Display Name */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/25">
+            <QrCode className="w-5 h-5 text-white" />
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
+              <span className="text-xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
                 VORLDX
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-400 text-[10px] font-bold tracking-widest uppercase">
-                KIOSK
+              {/* Small Authorization Badge */}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold tracking-wide uppercase">
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                <span>Authorized Kiosk</span>
               </span>
             </div>
 
-            <p id="display-terminal-name" className="text-xs sm:text-sm text-slate-400 font-medium truncate max-w-xs sm:max-w-md">
-              {creds.name} • <span className="text-slate-500">{creds.location}</span>
+            <p id="display-terminal-name" className="text-xs text-slate-400 font-medium truncate max-w-xs sm:max-w-md mt-0.5">
+              {creds.name || "Office Display"} • <span className="text-slate-500">{creds.location || "Office Lobby"}</span>
             </p>
           </div>
         </div>
 
-        {/* Right: Live Clock & Network Indicator */}
-        <div className="flex items-center gap-3 sm:gap-5">
-          {/* Live Clock */}
+        {/* Right: Subtle Clock, Date & Calm Network Status Indicator */}
+        <div className="flex items-center gap-4">
+          {/* Subtle Clock and Date */}
           <div className="hidden sm:flex flex-col text-right">
-            <span className="text-base sm:text-lg font-mono font-bold text-white tracking-wide">
+            <span className="text-sm font-mono font-bold text-slate-300 tracking-wider tabular-nums">
               {currentTime}
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">{currentDate}</span>
+            <span className="text-[11px] text-slate-500 font-medium tracking-wide">
+              {currentDate}
+            </span>
           </div>
 
           {/* Connection Status Pill */}
           <div
             id="connection-status-pill"
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${
-              isConnected
+              isConnected && !isReconnecting
                 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                : isReconnecting
-                ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                : "bg-cyan-500/10 border-cyan-500/30 text-cyan-300"
             }`}
           >
-            {isConnected ? (
+            {isConnected && !isReconnecting ? (
               <>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <Wifi className="w-3.5 h-3.5" />
-                <span>Connected</span>
-              </>
-            ) : isReconnecting ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Reconnecting...</span>
+                <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Online</span>
               </>
             ) : (
               <>
-                <span className="w-2 h-2 rounded-full bg-rose-400" />
-                <WifiOff className="w-3.5 h-3.5" />
-                <span>Offline</span>
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                <RotateCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                <span>Syncing</span>
               </>
             )}
           </div>
 
-          {/* Unpair / Settings Button */}
+          {/* Unpair Trigger Button */}
           <button
             type="button"
             id="unpair-kiosk-btn"
             onClick={handleManualUnpair}
             title="Unpair Display Terminal"
+            aria-label="Unpair this terminal"
             className="p-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors"
           >
             <LogOut className="w-4 h-4" />
@@ -385,78 +436,101 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
         </div>
       </header>
 
-      {/* CENTER STAGE */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center my-6 sm:my-8 text-center">
-        {/* STATE 1: ACTIVE (Normal Operation) */}
-        {terminalState === "ACTIVE" && tokenData?.qrPayload ? (
-          <div className="flex flex-col items-center space-y-6 sm:space-y-8 animate-fade-in">
-            {/* Primary Instruction Header */}
-            <div className="space-y-1.5">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white">
+      {/* CENTER STAGE: Very Large High-Contrast QR Code with Centered Company Logo */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center my-4 sm:my-6 text-center">
+        {/* STATE 1: ACTIVE OR CALM RECONNECTING (QR is kept mounted) */}
+        {shouldRenderQR && (
+          <div className="flex flex-col items-center space-y-4 sm:space-y-6 animate-fade-in">
+            {/* Header Instructions */}
+            <div className="space-y-1">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white">
                 Scan to Record Attendance
-              </h2>
-              <p className="text-xs sm:text-sm md:text-base text-slate-400 max-w-lg">
-                Hold phone camera steadily in front of the screen using the VorldX Mobile App
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
+                Hold phone camera steadily in front of the QR code using the VorldX Mobile App
               </p>
             </div>
 
-            {/* QR Card & Countdown Ring Container */}
-            <div className="flex flex-col md:flex-row items-center justify-center gap-6 sm:gap-10">
-              {/* Very Large High-Contrast QR Code Card */}
+            {/* VERY LARGE HIGH-CONTRAST QR CODE WITH CENTERED VORLDX LOGO */}
+            {/* Error correction level H allows 30% recovery; logo is 16.8% (64px on 380px) on white padded cutout */}
+            <div className="relative group">
               <div
                 id="active-qr-container"
-                className={`p-5 sm:p-7 bg-white rounded-3xl shadow-2xl transition-all duration-300 glow-cyan ${
-                  isRotating ? "scale-[0.98] opacity-80" : "scale-100 opacity-100"
-                }`}
+                className={`p-6 sm:p-7 md:p-8 bg-white rounded-3xl shadow-2xl transition-all duration-300 border-4 border-slate-100 glow-cyan ${
+                  isRotating ? "scale-[0.99] opacity-90" : "scale-100 opacity-100"
+                } ${showCalmReconnectingOverlay ? "filter blur-md opacity-25 select-none pointer-events-none" : ""}`}
               >
                 <QRCodeSVG
                   id="vorldx-dynamic-qr-code"
-                  value={tokenData.qrPayload}
-                  size={300}
-                  level="Q" // 25% Error Correction for screen scanning
+                  value={tokenData?.qrPayload || ""}
+                  size={380}
+                  level="H" // High error correction level (30% recovery)
                   includeMargin={false}
                   bgColor="#FFFFFF"
                   fgColor="#000000"
-                  className="w-[240px] h-[240px] sm:w-[280px] sm:h-[280px] md:w-[320px] md:h-[320px] transition-transform"
+                  imageSettings={{
+                    src: VORLDX_LOGO_URI,
+                    height: 60, // 15.8% of QR size on 380px canvas (optimal within 15-18% range)
+                    width: 60,
+                    excavate: true, // Clean white padded cutout ensuring finder patterns and modules are preserved
+                  }}
+                  className="w-[260px] h-[260px] sm:w-[320px] sm:h-[320px] md:w-[380px] md:h-[380px] lg:w-[420px] lg:h-[420px] transition-transform"
                 />
               </div>
 
-              {/* Side Countdown Ring & Instructions */}
-              <div className="flex flex-col items-center md:items-start space-y-4">
-                <CountdownRing
-                  ttlSeconds={tokenData.ttlSeconds || 30}
-                  remainingSeconds={remainingSeconds}
-                  size={120}
-                  strokeWidth={8}
-                />
-
-                <div className="text-center md:text-left space-y-1">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700 text-[11px] text-slate-300 font-medium">
-                    <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Cryptographic Dynamic Challenge</span>
+              {/* CALM RECONNECTING OVERLAY: Gently blurs expired QR, no harsh error screen, silent recovery */}
+              {showCalmReconnectingOverlay && (
+                <div
+                  id="calm-reconnecting-overlay"
+                  className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-brand-950/70 rounded-3xl backdrop-blur-sm animate-fade-in text-center space-y-3 z-20 border border-slate-700/60 shadow-2xl"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-md">
+                    <RotateCw className="w-7 h-7 animate-spin text-cyan-400" />
                   </div>
-                  <p className="text-[11px] text-slate-500 font-mono">
-                    Nonce Epoch #{tokenData.ttlSeconds}s • Replay Protected
-                  </p>
+                  <div className="space-y-1.5">
+                    <h2 className="text-lg font-bold text-white tracking-tight">Syncing Terminal</h2>
+                    <p className="text-xs text-slate-300 max-w-xs leading-relaxed mx-auto">
+                      Reconnecting securely to the attendance network. A fresh challenge will appear automatically once synced.
+                    </p>
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    <span>Auto-recovering...</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Instruction Pills */}
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2 text-xs font-semibold text-slate-300">
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                Auto-Toggles Check-In / Check-Out
+            {/* Subtle Sub-Badge & Information */}
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-xs text-slate-400">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Auto Check-In & Check-Out</span>
               </span>
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 font-medium">
                 <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                Server-Controlled Timestamps
+                <span>Server-Controlled Timestamps</span>
               </span>
             </div>
           </div>
-        ) : null}
+        )}
 
-        {/* STATE 2: DISABLED BY HR */}
+        {/* INITIALIZING STATE */}
+        {!shouldRenderQR && terminalState === "INITIALIZING" && (
+          <div className="flex flex-col items-center space-y-4 text-center max-w-md p-8 rounded-3xl bg-brand-900/60 border border-slate-800/80 backdrop-blur-md animate-fade-in">
+            <div className="w-16 h-16 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-lg">
+              <RotateCw className="w-8 h-8 animate-spin" />
+            </div>
+            <div className="space-y-1.5">
+              <h2 className="text-xl font-bold text-white tracking-tight">Starting Kiosk Feed</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Initializing cryptographic challenge generator and synchronizing with attendance cluster...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* STATE 2: DISABLED BY HR (QR is immediately blanked) */}
         {terminalState === "DISABLED" && (
           <div
             id="display-disabled-screen"
@@ -484,7 +558,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
           </div>
         )}
 
-        {/* STATE 3: REVOKED */}
+        {/* STATE 3: REVOKED BY HR (QR is immediately blanked) */}
         {terminalState === "REVOKED" && (
           <div
             id="display-revoked-screen"
@@ -513,28 +587,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
             </button>
           </div>
         )}
-
-        {/* STATE 4: EXPIRED / RECONNECTING */}
-        {(terminalState === "EXPIRED" || terminalState === "INITIALIZING") && (
-          <div className="flex flex-col items-center space-y-4 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <RotateCw className="w-8 h-8 animate-spin" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-xl font-bold text-white">Refreshing Attendance Challenge</h3>
-              <p className="text-xs text-slate-400">
-                Fetching next cryptographic rotating token from attendance cluster...
-              </p>
-            </div>
-          </div>
-        )}
       </main>
 
-      {/* Optional Slim Announcement Ticker at the Bottom */}
-      <AnnouncementTicker />
+      {/* Optional Slim Announcement Ticker at the Bottom (flagged) */}
+      {isAnnouncementTickerEnabled && <AnnouncementTicker />}
 
       {/* BOTTOM TELEMETRY & PRIVACY GUARANTEE */}
-      <footer className="relative z-10 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+      <footer className="relative z-10 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
           <span className="font-medium text-slate-400">
@@ -544,7 +603,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
 
         <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
           <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span>VorldX High-Contrast Display Engine v1.0.0</span>
+          <span>VorldX High-Contrast Display Engine v1.1.0</span>
           {pendingUpdate && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[10px] animate-pulse">
               <RotateCw className="w-2.5 h-2.5 animate-spin" />
@@ -568,7 +627,59 @@ export const MainScreen: React.FC<MainScreenProps> = ({ creds, onUnpair }) => {
           </div>
         </div>
       )}
+
+      {/* ACCESSIBLE UNPAIR CONFIRMATION DIALOG */}
+      {showUnpairConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="region"
+          aria-label="Confirmation overlay"
+        >
+          <div
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowUnpairConfirm(false)}
+            aria-hidden="true"
+          />
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="unpair-dialog-title"
+            aria-describedby="unpair-dialog-desc"
+            className="relative w-full max-w-md rounded-2xl bg-brand-900 border border-slate-700/80 p-6 shadow-2xl z-10 text-slate-100"
+          >
+            <div className="flex items-start gap-4">
+              <div className="rounded-xl p-3 bg-rose-500/15 border border-rose-500/30 text-rose-400 shrink-0">
+                <AlertTriangle className="w-6 h-6" aria-hidden="true" />
+              </div>
+              <div>
+                <h3 id="unpair-dialog-title" className="text-lg font-bold text-white tracking-tight">
+                  Unpair Display Terminal?
+                </h3>
+                <p id="unpair-dialog-desc" className="mt-2 text-sm text-slate-300 leading-relaxed">
+                  This will disconnect the kiosk monitor from the active challenge feed. To reconnect, the display will need to be re-paired with an admin registration code.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowUnpairConfirm(false)}
+                className="px-4 py-2 text-sm font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+              >
+                Keep Paired
+              </button>
+              <button
+                type="button"
+                onClick={confirmUnpair}
+                className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-500 active:bg-rose-700 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 shadow-sm"
+              >
+                Unpair Monitor
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-

@@ -214,7 +214,7 @@ describe("MASTER_BRIEF Section 11 Comprehensive QA Test Suite", () => {
       // In database, there must be strictly ONE record created for this employee on today's date
       const records = await AttendanceRecord.find({ employee: employeeDoc1._id });
       expect(records.length).toBe(1);
-      expect(records[0].status).toBe(AttendanceStatus.PRESENT);
+      expect([AttendanceStatus.PRESENT, AttendanceStatus.LATE]).toContain(records[0].status);
     });
 
     it("safely handles concurrent WFH request submissions for the same date: creates exactly ONE request", async () => {

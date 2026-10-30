@@ -11,12 +11,10 @@ import {
   Bell,
   Sparkles,
   ChevronRight,
-  ExternalLink,
 } from "lucide-react";
 import {
   useAnnouncements,
   useMarkAnnouncementRead,
-  AnnouncementItem,
 } from "../../api/queries";
 import { useSocket } from "../../context/SocketContext";
 import { Skeleton } from "../ui/Skeleton";
@@ -85,7 +83,7 @@ export const AnnouncementDashboardBlock: React.FC = () => {
     );
   }
 
-  const allAnnouncements = response?.data || [];
+  const allAnnouncements = Array.isArray(response?.data) ? response.data : [];
   // Filter out dismissed announcements
   const visibleAnnouncements = allAnnouncements.filter(
     (item) => !dismissedIds.includes(item._id)

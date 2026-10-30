@@ -13,6 +13,12 @@ body {
   overflow: hidden;
   user-select: none;
   -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+
+/* Allow visible pointer cursor strictly on interactive administrator buttons */
+button, a, input, select {
+  cursor: pointer;
 }
 
 /* Custom glow effects */
@@ -32,6 +38,12 @@ body {
   box-shadow: 0 0 50px -10px rgba(239, 68, 68, 0.25);
 }
 
+
+/* Accessible High-Contrast Focus Ring */
+:focus-visible {
+  outline: 2px solid #06b6d4 !important;
+  outline-offset: 2px !important;
+}
 
 /* Reduced motion compliance */
 @media (prefers-reduced-motion: reduce) {

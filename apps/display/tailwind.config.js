@@ -23,6 +23,18 @@ module.exports = {
           amber: "#F59E0B",
           rose: "#EF4444",
         },
+        status: {
+          present: "#10B981",
+          late: "#F59E0B",
+          absent: "#EF4444",
+          wfh: "#6366F1",
+          leave: "#06B6D4",
+          holiday: "#8B5CF6",
+          incomplete: "#F97316",
+          pending: "#F59E0B",
+          approved: "#10B981",
+          rejected: "#EF4444",
+        },
       },
       fontFamily: {
         sans: [

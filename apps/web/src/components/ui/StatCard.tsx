@@ -7,7 +7,7 @@ import { clsx } from "clsx";
 
 export interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
   label: string;
-  value: number;
+  value: number | string;
   suffix?: string;
   prefix?: string;
   decimals?: number;
@@ -19,7 +19,7 @@ export interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
     label?: string;
   };
   live?: boolean;
-  color?: "default" | "emerald" | "blue" | "amber" | "rose" | "purple";
+  color?: "default" | "emerald" | "blue" | "amber" | "rose" | "purple" | "indigo";
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -37,12 +37,14 @@ export const StatCard: React.FC<StatCardProps> = ({
   ...props
 }) => {
   const { prefersReducedMotion } = useTheme();
-  const [displayValue, setDisplayValue] = useState<number>(prefersReducedMotion ? value : 0);
+  const isNumeric = typeof value === "number";
+  const numValue = isNumeric ? value : 0;
+  const [displayValue, setDisplayValue] = useState<number>(prefersReducedMotion || !isNumeric ? numValue : 0);
   const frameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (prefersReducedMotion) {
-      setDisplayValue(value);
+    if (!isNumeric || prefersReducedMotion) {
+      setDisplayValue(numValue);
       return;
     }
 
@@ -54,13 +56,13 @@ export const StatCard: React.FC<StatCardProps> = ({
       const progress = Math.min(elapsed / durationMs, 1);
       // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
-      const current = startValue + (value - startValue) * eased;
+      const current = startValue + (numValue - startValue) * eased;
       setDisplayValue(current);
 
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(animate);
       } else {
-        setDisplayValue(value);
+        setDisplayValue(numValue);
       }
     };
 
@@ -71,7 +73,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         cancelAnimationFrame(frameRef.current);
       }
     };
-  }, [value, durationMs, prefersReducedMotion]);
+  }, [value, durationMs, prefersReducedMotion, isNumeric, numValue]);
 
   const colorStyles = {
     default: "text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800",
@@ -80,6 +82,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     amber: "text-amber-950 dark:text-amber-100 bg-white dark:bg-slate-900 border-amber-200 dark:border-amber-900/50",
     rose: "text-rose-950 dark:text-rose-100 bg-white dark:bg-slate-900 border-rose-200 dark:border-rose-900/50",
     purple: "text-purple-950 dark:text-purple-100 bg-white dark:bg-slate-900 border-purple-200 dark:border-purple-900/50",
+    indigo: "text-indigo-950 dark:text-indigo-100 bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900/50",
   }[color];
 
   const iconColorStyles = {
@@ -89,12 +92,14 @@ export const StatCard: React.FC<StatCardProps> = ({
     amber: "text-amber-600 bg-amber-50 dark:bg-amber-950/60 dark:text-amber-400",
     rose: "text-rose-600 bg-rose-50 dark:bg-rose-950/60 dark:text-rose-400",
     purple: "text-purple-600 bg-purple-50 dark:bg-purple-950/60 dark:text-purple-400",
+    indigo: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 dark:text-indigo-400",
   }[color];
 
-  const formattedNumber =
-    decimals > 0
+  const formattedNumber = isNumeric
+    ? decimals > 0
       ? displayValue.toFixed(decimals)
-      : Math.round(displayValue).toLocaleString();
+      : Math.round(displayValue).toLocaleString()
+    : String(value);
 
   return (
     <div

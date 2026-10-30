@@ -2,18 +2,13 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   LifeBuoy,
   Search,
-  Filter,
   CheckCircle2,
   Clock,
-  AlertCircle,
   Paperclip,
   Send,
   UserCheck,
-  UserPlus,
   RefreshCw,
   X,
-  MessageSquare,
-  ShieldAlert,
   ArrowRight,
   ExternalLink,
 } from "lucide-react";
@@ -27,7 +22,6 @@ import {
   useUpdateEnquiryStatus,
   useAssignEnquiry,
   useEmployees,
-  EnquiryItem,
   EnquiryAttachment,
 } from "../api/queries";
 import { Card } from "../components/ui/Card";
@@ -76,7 +70,7 @@ export const EnquiriesPage: React.FC = () => {
   const [quickReplyAttachment, setQuickReplyAttachment] = useState<EnquiryAttachment | null>(null);
   const [statusNote, setStatusNote] = useState<string>("");
   const [isEmployeeTyping, setIsEmployeeTyping] = useState<boolean>(false);
-  const employeeTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const employeeTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Lightbox
@@ -145,7 +139,13 @@ export const EnquiriesPage: React.FC = () => {
   // HR Staff list for assignment
   const hrStaffMembers = useMemo(() => {
     return (employeesData?.data || []).filter(
-      (emp) => emp.department?.toLowerCase().includes("hr") || emp.department?.toLowerCase().includes("human") || emp.role === "HR" || emp.role === "ADMIN"
+      (emp) =>
+        emp.department?.toLowerCase().includes("hr") ||
+        emp.department?.toLowerCase().includes("human") ||
+        (emp as any).role === "HR" ||
+        (emp as any).role === "ADMIN" ||
+        emp.userId?.role === "HR" ||
+        emp.userId?.role === "ADMIN"
     );
   }, [employeesData]);
 
@@ -457,6 +457,7 @@ export const EnquiriesPage: React.FC = () => {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
+              aria-label="Filter tickets by category"
               className="h-9 px-3 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
             >
               <option value="ALL">All Categories</option>
@@ -471,6 +472,7 @@ export const EnquiriesPage: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Filter tickets by status"
               className="h-9 px-3 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
             >
               <option value="ALL">All Statuses</option>
@@ -483,6 +485,7 @@ export const EnquiriesPage: React.FC = () => {
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
+              aria-label="Filter tickets by priority"
               className="h-9 px-3 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
             >
               <option value="ALL">All Priorities</option>
@@ -542,15 +545,21 @@ export const EnquiriesPage: React.FC = () => {
       ) : enquiries.length === 0 ? (
         <EmptyState
           title="No Enquiries Found"
-          message="No support tickets match the current filter criteria."
-          actionLabel="Clear Filters"
-          onAction={() => {
-            setActiveView("ALL");
-            setStatusFilter("ALL");
-            setCategoryFilter("ALL");
-            setPriorityFilter("ALL");
-            setSearchQuery("");
-          }}
+          description="No support tickets match the current filter criteria."
+          action={
+            <Button
+              size="sm"
+              onClick={() => {
+                setActiveView("ALL");
+                setStatusFilter("ALL");
+                setCategoryFilter("ALL");
+                setPriorityFilter("ALL");
+                setSearchQuery("");
+              }}
+            >
+              Clear Filters
+            </Button>
+          }
         />
       ) : (
         <Card className="overflow-hidden border border-slate-200 dark:border-slate-800">
@@ -563,6 +572,7 @@ export const EnquiriesPage: React.FC = () => {
                       type="checkbox"
                       checked={selectedTicketIds.length === enquiries.length && enquiries.length > 0}
                       onChange={handleToggleSelectAll}
+                      aria-label="Select all tickets"
                       className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                   </th>
@@ -603,6 +613,7 @@ export const EnquiriesPage: React.FC = () => {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleToggleSelect(ticket._id)}
+                          aria-label={`Select ticket ${ticket.ticketNumber}`}
                           className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                         />
                       </td>
@@ -755,6 +766,7 @@ export const EnquiriesPage: React.FC = () => {
                     onChange={(e) =>
                       handleStatusChange(e.target.value as "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED")
                     }
+                    aria-label="Change Status"
                     className="w-full h-8 px-2 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-semibold"
                   >
                     <option value="OPEN">OPEN</option>
@@ -789,6 +801,7 @@ export const EnquiriesPage: React.FC = () => {
                         });
                       }
                     }}
+                    aria-label="Assignee"
                     className="w-full h-8 px-2 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
                   >
                     <option value="UNASSIGNED">Unassigned</option>
@@ -798,7 +811,7 @@ export const EnquiriesPage: React.FC = () => {
                       </option>
                     )}
                     {hrStaffMembers.map((hr) => (
-                      <option key={hr._id} value={hr.userId || hr._id}>
+                      <option key={hr._id} value={typeof hr.userId === "string" ? hr.userId : hr.userId?._id || hr._id}>
                         {hr.name} ({hr.department})
                       </option>
                     ))}

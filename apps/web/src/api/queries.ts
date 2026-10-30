@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, tokenStorage, getFullApiUrl } from "./client";
-import { AttendanceStatus, WorkType, LiveAttendanceAnalyticsResponse, LiveAnalyticsQuery } from "@vorldx/shared";
+import { AttendanceStatus, WorkType, LiveAttendanceAnalyticsResponse } from "@vorldx/shared";
 
 export interface DashboardDayTrend {
   dateKey: string;

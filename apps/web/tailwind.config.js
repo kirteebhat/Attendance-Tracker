@@ -22,7 +22,12 @@ export default {
           late: "#F59E0B", // Amber
           absent: "#EF4444", // Rose
           wfh: "#6366F1", // Indigo
-          incomplete: "#8B5CF6", // Purple
+          leave: "#06B6D4", // Cyan
+          holiday: "#8B5CF6", // Purple
+          incomplete: "#F97316", // Orange
+          pending: "#F59E0B", // Amber
+          approved: "#10B981", // Emerald
+          rejected: "#EF4444", // Rose
         },
       },
       fontFamily: {

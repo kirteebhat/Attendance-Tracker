@@ -194,17 +194,17 @@ export const DisplaysPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Office QR Display Terminals
             </h1>
             <Badge variant="primary" className="text-xs font-semibold px-2.5 py-0.5">
               Live Monitor
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Manage physical office kiosk pairing, dynamic rotating QR challenge generation, and remote deactivation
           </p>
         </div>
@@ -260,12 +260,12 @@ export const DisplaysPage: React.FC = () => {
             return (
               <Card
                 key={display.terminalId || display.id}
-                className={`p-5 flex flex-col justify-between border-slate-200 shadow-sm transition-all hover:border-slate-300 ${
+                className={`p-5 flex flex-col justify-between border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:border-slate-300 dark:hover:border-slate-700 ${
                   isRevoked
-                    ? "bg-red-50/20 border-red-200"
+                    ? "bg-red-50/20 dark:bg-red-950/20 border-red-200 dark:border-red-900"
                     : isDisabled
-                    ? "bg-slate-50/60 opacity-80"
-                    : "bg-white"
+                    ? "bg-slate-50/60 dark:bg-slate-800/60 opacity-80"
+                    : "bg-white dark:bg-slate-900"
                 }`}
               >
                 <div className="space-y-3">
@@ -274,17 +274,17 @@ export const DisplaysPage: React.FC = () => {
                       <div
                         className={`p-2 rounded-lg ${
                           isRevoked
-                            ? "bg-red-100 text-red-700"
+                            ? "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400"
                             : online
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-slate-100 text-slate-600"
+                            ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
                         }`}
                       >
                         <Tv className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm">{display.name}</h3>
-                        <p className="text-[11px] font-mono text-slate-500">
+                        <h3 className="font-bold text-slate-900 dark:text-white text-sm">{display.name}</h3>
+                        <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                           {display.terminalId}
                         </p>
                       </div>
@@ -299,38 +299,38 @@ export const DisplaysPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="space-y-1.5 text-xs text-slate-600 pt-1">
+                  <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 pt-1">
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span className="truncate">{display.location}</span>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
                       <div className="flex items-center gap-1.5">
                         {online ? (
-                          <div className="flex items-center gap-1 text-emerald-600 font-semibold text-[11px]">
+                          <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
                             <Wifi className="w-3.5 h-3.5" />
                             <span>Online</span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1 text-slate-400 text-[11px]">
+                          <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 text-[11px]">
                             <WifiOff className="w-3.5 h-3.5" />
                             <span>Offline</span>
                           </div>
                         )}
                       </div>
 
-                      <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
                         <Clock className="w-3 h-3 text-slate-400" />
                         <span>Last seen: {formatLastSeen(display.lastSeen)}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                       <span>Token Epoch: {display.tokenEpoch}</span>
                       <span>
                         Pairing:{" "}
-                        <strong className={display.isPaired ? "text-emerald-600" : "text-amber-600"}>
+                        <strong className={display.isPaired ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}>
                           {display.isPaired ? "Paired" : "Unpaired"}
                         </strong>
                       </span>
@@ -339,7 +339,7 @@ export const DisplaysPage: React.FC = () => {
                 </div>
 
                 {/* Card Action Buttons */}
-                <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-1.5">
                     {!isRevoked && (
                       <Button

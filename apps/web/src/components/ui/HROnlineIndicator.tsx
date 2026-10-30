@@ -131,7 +131,7 @@ export const HROnlineIndicator: React.FC<HROnlineIndicatorProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         onBlur={() => setTimeout(() => setIsOpen(false), 200)}
         className="flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/40 transition-colors shadow-2xs focus:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500"
-        aria-label={`${onlineCount} HR personnel currently active`}
+        aria-label={`${onlineCount} HR Online - personnel currently active`}
         aria-expanded={isOpen}
       >
         {/* Pulsing Beacon Indicator */}

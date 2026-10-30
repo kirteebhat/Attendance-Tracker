@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Radio, Pause, Play, Filter, ArrowDownRight, ArrowUpRight, Clock, AlertTriangle } from "lucide-react";
+import { Radio, Pause, Play, ArrowDownRight, ArrowUpRight, Clock, AlertTriangle } from "lucide-react";
 import { LiveScanFeedItem, AttendanceStatus } from "@vorldx/shared";
 import { Card } from "../ui/Card";
 import { Badge } from "../ui/Badge";
@@ -85,7 +85,7 @@ export const LiveScanFeed: React.FC<LiveScanFeedProps> = ({ scans = [], isLive =
                   STREAMING
                 </span>
               ) : (
-                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full">
                   PAUSED
                 </span>
               )}
@@ -168,13 +168,13 @@ export const LiveScanFeed: React.FC<LiveScanFeedProps> = ({ scans = [], isLive =
       <div
         className="flex-1 overflow-y-auto max-h-[380px] divide-y divide-slate-100 dark:divide-slate-800/80 pr-1 mt-1"
         aria-live="polite"
-        role="feed"
+        role="log"
         aria-label="Live stream of attendance scans"
       >
         {filteredScans.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 dark:text-slate-500">
-            <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-xs font-medium">No recent scans match the current filter.</p>
+          <div className="py-12 text-center text-slate-500 dark:text-slate-400">
+            <Clock className="w-8 h-8 mx-auto mb-2 opacity-60" />
+            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">No recent scans match the current filter.</p>
           </div>
         ) : (
           filteredScans.map((item, index) => {

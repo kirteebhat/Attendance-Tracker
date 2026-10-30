@@ -77,7 +77,9 @@ const ToastItem: React.FC<{
     <div
       role="status"
       aria-live="polite"
-      className={`relative overflow-hidden pointer-events-auto flex flex-col rounded-xl border shadow-lg backdrop-blur-md transition-all duration-200 ${styleConfig}`}
+      className={`relative overflow-hidden pointer-events-auto flex flex-col rounded-xl border shadow-lg backdrop-blur-md transition-all duration-200 ${
+        prefersReducedMotion ? "" : "animate-in slide-in-from-bottom-2 fade-in duration-200"
+      } ${styleConfig}`}
     >
       <div className="flex items-start gap-3 p-4">
         <div className="shrink-0 mt-0.5">

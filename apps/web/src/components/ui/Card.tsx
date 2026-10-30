@@ -16,8 +16,8 @@ export const Card: React.FC<CardProps> = ({
     <div
       className={twMerge(
         clsx(
-          "bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden",
-          hoverEffect && "hover:border-slate-300 hover:shadow transition-all duration-200",
+          "bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs dark:shadow-slate-950/40 overflow-hidden transition-colors",
+          hoverEffect && "hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md dark:hover:shadow-slate-950/60 transition-all duration-200",
           className
         )
       )}
@@ -34,7 +34,7 @@ export const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   ...props
 }) => {
   return (
-    <div className={twMerge(clsx("p-5 border-b border-slate-100", className))} {...props}>
+    <div className={twMerge(clsx("p-5 border-b border-slate-100 dark:border-slate-800/80", className))} {...props}>
       {children}
     </div>
   );
@@ -47,7 +47,7 @@ export const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
 }) => {
   return (
     <h3
-      className={twMerge(clsx("text-base font-semibold text-slate-900 tracking-tight", className))}
+      className={twMerge(clsx("text-base font-semibold text-slate-900 dark:text-slate-100 tracking-tight", className))}
       {...props}
     >
       {children}

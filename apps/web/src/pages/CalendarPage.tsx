@@ -18,6 +18,11 @@ import {
   Coffee,
   Landmark,
   Check,
+  Calendar as CalendarIcon,
+  Clock,
+  MapPin,
+  Eye,
+  Edit2,
 } from "lucide-react";
 import {
   useCalendarEvents,
@@ -34,6 +39,7 @@ import { getFullApiUrl } from "../api/client";
 import { useSocket } from "../context/SocketContext";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { AttendanceStatus } from "@vorldx/shared";
 import { Card } from "../components/ui/Card";
@@ -45,6 +51,9 @@ import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { Input } from "../components/ui/Input";
 import { Skeleton } from "../components/ui/Skeleton";
 import { ErrorState } from "../components/ui/ErrorState";
+import { Tooltip } from "../components/ui/Tooltip";
+import { ProgressRing } from "../components/ui/ProgressRing";
+import { clsx } from "clsx";
 
 type CalendarView = "month" | "week" | "year";
 
@@ -59,11 +68,21 @@ interface DayCellInfo {
 
 export const CalendarPage: React.FC = () => {
   const { user } = useAuth();
+  const { prefersReducedMotion } = useTheme();
   const isHrOrAdmin = user?.role === "HR" || user?.role === "ADMIN" || user?.role === "HR_ADMIN";
 
   // Date & View Navigation State
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [view, setView] = useState<CalendarView>("month");
+
+  // Selected Date State (Defaults to Today)
+  const [selectedDateKey, setSelectedDateKey] = useState<string>(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  });
 
   // Filter & Search State
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -191,7 +210,41 @@ export const CalendarPage: React.FC = () => {
   }, [view]);
 
   const goToday = useCallback(() => {
-    setCurrentDate(new Date());
+    const today = new Date();
+    setCurrentDate(today);
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    setSelectedDateKey(`${y}-${m}-${d}`);
+  }, []);
+
+  const handleSelectPreviousDay = useCallback(() => {
+    const [y, m, d] = selectedDateKey.split("-").map(Number);
+    const prev = new Date(Date.UTC(y, m - 1, d - 1));
+    const nextKey = `${prev.getUTCFullYear()}-${String(prev.getUTCMonth() + 1).padStart(2, "0")}-${String(prev.getUTCDate()).padStart(2, "0")}`;
+    setSelectedDateKey(nextKey);
+    if (prev.getUTCMonth() !== activeMonth || prev.getUTCFullYear() !== activeYear) {
+      setCurrentDate(new Date(prev.getUTCFullYear(), prev.getUTCMonth(), 1));
+    }
+  }, [selectedDateKey, activeMonth, activeYear]);
+
+  const handleSelectNextDay = useCallback(() => {
+    const [y, m, d] = selectedDateKey.split("-").map(Number);
+    const next = new Date(Date.UTC(y, m - 1, d + 1));
+    const nextKey = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-${String(next.getUTCDate()).padStart(2, "0")}`;
+    setSelectedDateKey(nextKey);
+    if (next.getUTCMonth() !== activeMonth || next.getUTCFullYear() !== activeYear) {
+      setCurrentDate(new Date(next.getUTCFullYear(), next.getUTCMonth(), 1));
+    }
+  }, [selectedDateKey, activeMonth, activeYear]);
+
+  const handleSelectToday = useCallback(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    setSelectedDateKey(`${y}-${m}-${d}`);
+    setCurrentDate(today);
   }, []);
 
   // Keyboard Navigation Listener
@@ -297,6 +350,65 @@ export const CalendarPage: React.FC = () => {
     }
     return map;
   }, [filteredEvents]);
+
+  // Selected Day Information & Status Calculation
+  const selectedDayInfo = useMemo(() => {
+    const [y, m, d] = selectedDateKey.split("-").map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const dayOfWeek = dateObj.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const isToday = selectedDateKey === todayKey;
+
+    const events = eventsByDate.get(selectedDateKey) || [];
+    const wfh = wfhByDate.get(selectedDateKey) || [];
+    const absences = absencesByDate.get(selectedDateKey) || [];
+
+    const holiday = events.find((e) => e.type === "holiday");
+    const offDay = events.find((e) => e.type === "companyOffDay");
+
+    let statusType: "holiday" | "offDay" | "weeklyOff" | "workday" = "workday";
+    let statusLabel = "Mandatory Workday";
+
+    if (holiday) {
+      statusType = "holiday";
+      statusLabel = `Public Holiday (${holiday.title})`;
+    } else if (offDay) {
+      statusType = "offDay";
+      statusLabel = `Company Off-Day (${offDay.title})`;
+    } else if (isWeekend) {
+      statusType = "weeklyOff";
+      statusLabel = "Weekly Off (Weekend)";
+    }
+
+    const formattedDate = dateObj.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    const totalPersonnel = 100;
+    const attendanceCapacity =
+      statusType === "holiday" || statusType === "offDay"
+        ? 0
+        : Math.max(0, Math.min(100, Math.round(((totalPersonnel - absences.length) / totalPersonnel) * 100)));
+
+    return {
+      dateObj,
+      formattedDate,
+      isWeekend,
+      isToday,
+      events,
+      wfh,
+      absences,
+      statusType,
+      statusLabel,
+      attendanceCapacity,
+    };
+  }, [selectedDateKey, eventsByDate, wfhByDate, absencesByDate]);
 
   // Compute Month Summary
   const monthSummary = useMemo(() => {
@@ -937,6 +1049,7 @@ export const CalendarPage: React.FC = () => {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
+              aria-label="Filter events by type"
               className="px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs text-slate-800 dark:text-slate-200"
             >
               <option value="all">All Types</option>
@@ -1024,7 +1137,12 @@ export const CalendarPage: React.FC = () => {
           {/* VIEW 1: MONTH VIEW (7-COLUMN GRID) */}
           {/* ========================================================= */}
           {view === "month" && (
-            <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <Card
+              className={clsx(
+                "border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden",
+                prefersReducedMotion ? "" : "animate-page-enter"
+              )}
+            >
               {/* Day of Week Headers */}
               <div className="grid grid-cols-7 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-center font-bold text-xs text-slate-700 dark:text-slate-300 py-2.5">
                 <div>Mon</div>
@@ -1045,6 +1163,7 @@ export const CalendarPage: React.FC = () => {
 
                   const isHoliday = dayEvents.some((e) => e.type === "holiday");
                   const isOffDay = dayEvents.some((e) => e.type === "companyOffDay");
+                  const isSelected = cell.dateKey === selectedDateKey;
 
                   // Background tinting
                   let bgClass = "bg-white dark:bg-slate-900";
@@ -1061,12 +1180,16 @@ export const CalendarPage: React.FC = () => {
                   return (
                     <div
                       key={cell.dateKey}
-                      onClick={() => handleOpenAddDrawer(cell.dateKey)}
-                      className={`min-h-[110px] p-2 flex flex-col justify-between transition-all group relative cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-950/20 ${bgClass} ${
-                        cell.isToday
+                      onClick={() => setSelectedDateKey(cell.dateKey)}
+                      className={clsx(
+                        "min-h-[110px] p-2 flex flex-col justify-between transition-all group relative cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-950/20",
+                        bgClass,
+                        isSelected
+                          ? "ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-900 bg-indigo-50/60 dark:bg-indigo-950/40 z-20 shadow-xs"
+                          : cell.isToday
                           ? "ring-2 ring-blue-600 ring-inset dark:ring-blue-500 font-bold z-10"
                           : ""
-                      }`}
+                      )}
                     >
                       {/* Top Header of Cell: Date Number & Badges */}
                       <div className="flex items-center justify-between">
@@ -1111,19 +1234,46 @@ export const CalendarPage: React.FC = () => {
                         {/* Calendar Events (Holidays, Meetings, Corporate Events) */}
                         {dayEvents.slice(0, 3).map((evt) => {
                           const badge = getEventBadge(evt);
+                          const timeStr = evt.isFullDay
+                            ? "All Day"
+                            : `${evt.startDate.split("T")[1]?.slice(0, 5) || "09:00"} - ${evt.endDate.split("T")[1]?.slice(0, 5) || "18:00"}`;
+
                           return (
-                            <div
+                            <Tooltip
                               key={evt._id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenEditDrawer(evt);
-                              }}
-                              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium border truncate transition-transform hover:scale-[1.01] ${badge.bg}`}
-                              title={`${evt.title} (${badge.label})`}
+                              content={
+                                <div className="p-1 space-y-1 max-w-xs text-left">
+                                  <div className="flex items-center gap-1.5 font-bold text-white text-xs">
+                                    {badge.icon}
+                                    <span>{evt.title}</span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-300 flex items-center gap-2">
+                                    <span>{timeStr}</span>
+                                    {evt.audience?.scope && (
+                                      <span className="uppercase font-mono text-[9px] bg-slate-700 px-1 py-0.5 rounded">
+                                        {evt.audience.scope}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {evt.description && (
+                                    <p className="text-[11px] text-slate-300 leading-snug line-clamp-3">
+                                      {evt.description}
+                                    </p>
+                                  )}
+                                </div>
+                              }
                             >
-                              {badge.icon}
-                              <span className="truncate">{evt.title}</span>
-                            </div>
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEditDrawer(evt);
+                                }}
+                                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium border truncate transition-transform hover:scale-[1.01] ${badge.bg}`}
+                              >
+                                {badge.icon}
+                                <span className="truncate">{evt.title}</span>
+                              </div>
+                            </Tooltip>
                           );
                         })}
 
@@ -1135,24 +1285,55 @@ export const CalendarPage: React.FC = () => {
 
                         {/* Overlays: WFH Count */}
                         {dayWfh.length > 0 && (
-                          <div
-                            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-[10px] font-semibold text-sky-800 dark:text-sky-300 truncate"
-                            title={`${dayWfh.length} remote WFH employees`}
+                          <Tooltip
+                            content={
+                              <div className="p-1 text-left max-w-xs">
+                                <div className="font-bold text-sky-300 flex items-center gap-1 text-xs">
+                                  <Home className="w-3.5 h-3.5" />
+                                  <span>{dayWfh.length} Approved Remote (WFH)</span>
+                                </div>
+                                <ul className="mt-1 text-[11px] text-slate-200 space-y-0.5">
+                                  {dayWfh.slice(0, 4).map((w, idx) => (
+                                    <li key={idx}>
+                                      • {w.name || w.employeeId}
+                                      {w.reason ? `: "${w.reason}"` : ""}
+                                    </li>
+                                  ))}
+                                  {dayWfh.length > 4 && <li>+{dayWfh.length - 4} more...</li>}
+                                </ul>
+                              </div>
+                            }
                           >
-                            <Home className="w-3 h-3 text-sky-600 shrink-0" />
-                            <span>{dayWfh.length} WFH</span>
-                          </div>
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 text-[10px] font-semibold text-sky-800 dark:text-sky-300 truncate">
+                              <Home className="w-3 h-3 text-sky-600 shrink-0" />
+                              <span>{dayWfh.length} WFH</span>
+                            </div>
+                          </Tooltip>
                         )}
 
                         {/* Overlays: Absence Count */}
                         {dayAbsences.length > 0 && (
-                          <div
-                            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-[10px] font-semibold text-rose-800 dark:text-rose-300 truncate"
-                            title={`${dayAbsences.length} employees absent`}
+                          <Tooltip
+                            content={
+                              <div className="p-1 text-left max-w-xs">
+                                <div className="font-bold text-rose-300 flex items-center gap-1 text-xs">
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  <span>{dayAbsences.length} Recorded Absences</span>
+                                </div>
+                                <ul className="mt-1 text-[11px] text-slate-200 space-y-0.5">
+                                  {dayAbsences.slice(0, 4).map((a, idx) => (
+                                    <li key={idx}>• {a.name || a.employeeId}</li>
+                                  ))}
+                                  {dayAbsences.length > 4 && <li>+{dayAbsences.length - 4} more...</li>}
+                                </ul>
+                              </div>
+                            }
                           >
-                            <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                            <span>{dayAbsences.length} Absent</span>
-                          </div>
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-[10px] font-semibold text-rose-800 dark:text-rose-300 truncate">
+                              <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                              <span>{dayAbsences.length} Absent</span>
+                            </div>
+                          </Tooltip>
                         )}
                       </div>
 
@@ -1187,7 +1368,12 @@ export const CalendarPage: React.FC = () => {
           {/* VIEW 2: WEEK VIEW (7-DAY COLUMN DETAILED SPREAD) */}
           {/* ========================================================= */}
           {view === "week" && (
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+            <div
+              className={clsx(
+                "grid grid-cols-1 md:grid-cols-7 gap-3",
+                prefersReducedMotion ? "" : "animate-page-enter"
+              )}
+            >
               {Array.from({ length: 7 }).map((_, i) => {
                 const d = new Date(currentDate);
                 const day = d.getDay();
@@ -1195,6 +1381,7 @@ export const CalendarPage: React.FC = () => {
                 const weekDayDate = new Date(d.setDate(diff));
                 const dateKey = weekDayDate.toISOString().split("T")[0];
                 const isToday = dateKey === new Date().toISOString().split("T")[0];
+                const isSelected = dateKey === selectedDateKey;
                 const dayName = weekDayDate.toLocaleDateString("en-US", { weekday: "short" });
                 const dayNumber = weekDayDate.getDate();
 
@@ -1205,9 +1392,15 @@ export const CalendarPage: React.FC = () => {
                 return (
                   <Card
                     key={dateKey}
-                    className={`p-3 border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between min-h-[360px] ${
-                      isToday ? "ring-2 ring-blue-600 dark:ring-blue-500 bg-blue-50/15" : "bg-white dark:bg-slate-900"
-                    }`}
+                    onClick={() => setSelectedDateKey(dateKey)}
+                    className={clsx(
+                      "p-3 border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between min-h-[360px] cursor-pointer transition-all hover:border-indigo-400 dark:hover:border-indigo-600",
+                      isSelected
+                        ? "ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-900 bg-indigo-50/40 dark:bg-indigo-950/30"
+                        : isToday
+                        ? "ring-2 ring-blue-600 dark:ring-blue-500 bg-blue-50/15"
+                        : "bg-white dark:bg-slate-900"
+                    )}
                   >
                     <div>
                       {/* Day Header */}
@@ -1239,27 +1432,58 @@ export const CalendarPage: React.FC = () => {
 
                         {dayEvents.map((evt) => {
                           const badge = getEventBadge(evt);
+                          const timeStr = evt.isFullDay
+                            ? "All Day"
+                            : `${evt.startDate.split("T")[1]?.slice(0, 5) || "09:00"} - ${evt.endDate.split("T")[1]?.slice(0, 5) || "18:00"}`;
+
                           return (
-                            <div
+                            <Tooltip
                               key={evt._id}
-                              onClick={() => handleOpenEditDrawer(evt)}
-                              className={`p-2 rounded-lg border text-xs cursor-pointer transition-transform hover:scale-[1.01] ${badge.bg}`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1 font-bold">
-                                  {badge.icon}
-                                  <span>{evt.title}</span>
+                              content={
+                                <div className="p-1 space-y-1 max-w-xs text-left">
+                                  <div className="flex items-center gap-1.5 font-bold text-white text-xs">
+                                    {badge.icon}
+                                    <span>{evt.title}</span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-300">
+                                    <span>{timeStr}</span>
+                                    {evt.audience?.scope && (
+                                      <span className="ml-1.5 uppercase font-mono text-[9px] bg-slate-700 px-1 py-0.5 rounded">
+                                        {evt.audience.scope}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {evt.description && (
+                                    <p className="text-[11px] text-slate-300 leading-snug line-clamp-3">
+                                      {evt.description}
+                                    </p>
+                                  )}
                                 </div>
-                                <span className="text-[10px] uppercase font-semibold">
-                                  {evt.isFullDay ? "All Day" : "Scheduled"}
-                                </span>
+                              }
+                            >
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEditDrawer(evt);
+                                }}
+                                className={`p-2 rounded-lg border text-xs cursor-pointer transition-transform hover:scale-[1.01] ${badge.bg}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1 font-bold">
+                                    {badge.icon}
+                                    <span>{evt.title}</span>
+                                  </div>
+                                  <span className="text-[10px] uppercase font-semibold">
+                                    {evt.isFullDay ? "All Day" : "Scheduled"}
+                                  </span>
+                                </div>
+                                {evt.description && (
+                                  <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">
+                                    {evt.description}
+                                  </p>
+                                )}
                               </div>
-                              {evt.description && (
-                                <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">
-                                  {evt.description}
-                                </p>
-                              )}
-                            </div>
+                            </Tooltip>
                           );
                         })}
 
@@ -1302,7 +1526,10 @@ export const CalendarPage: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleOpenAddDrawer(dateKey)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenAddDrawer(dateKey);
+                        }}
                         className="w-full mt-3 text-xs gap-1 py-1"
                       >
                         <Plus className="w-3 h-3" />
@@ -1397,6 +1624,336 @@ export const CalendarPage: React.FC = () => {
       )}
 
       {/* ========================================================= */}
+      {/* SELECTED DATE RECORDS & SUMMARIES PANEL */}
+      {/* ========================================================= */}
+      <Card
+        id="selected-day-records-panel"
+        className={clsx(
+          "border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900 transition-colors no-print",
+          prefersReducedMotion ? "" : "animate-page-enter"
+        )}
+      >
+        {/* Panel Header */}
+        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/70 dark:bg-slate-800/40">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 shrink-0">
+              <CalendarIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                  {selectedDayInfo.formattedDate}
+                </h2>
+                {selectedDayInfo.isToday && (
+                  <Badge variant="primary" size="sm">
+                    Today
+                  </Badge>
+                )}
+                <span
+                  className={clsx(
+                    "text-xs px-2.5 py-0.5 rounded-full font-semibold border flex items-center gap-1",
+                    selectedDayInfo.statusType === "holiday"
+                      ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800"
+                      : selectedDayInfo.statusType === "offDay"
+                      ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                      : selectedDayInfo.statusType === "weeklyOff"
+                      ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                      : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                  )}
+                >
+                  {selectedDayInfo.statusType === "holiday" ? (
+                    <Landmark className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  ) : selectedDayInfo.statusType === "offDay" ? (
+                    <Building className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  ) : selectedDayInfo.statusType === "weeklyOff" ? (
+                    <Coffee className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  ) : (
+                    <Briefcase className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  )}
+                  {selectedDayInfo.statusLabel}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Authoritative daily roster, scheduled meetings, gazetted holidays, and approved remote work.
+              </p>
+            </div>
+          </div>
+
+          {/* Stepper + Add Button */}
+          <div className="flex items-center gap-2 self-start md:self-auto">
+            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-0.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectPreviousDay}
+                className="px-2 py-1 h-7 text-xs"
+                title="Previous Day"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectToday}
+                className="text-xs font-semibold px-2.5 py-1 h-7"
+                title="Jump to Today"
+              >
+                Today
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectNextDay}
+                className="px-2 py-1 h-7 text-xs"
+                title="Next Day"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+
+            {isHrOrAdmin && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleOpenAddDrawer(selectedDateKey)}
+                className="gap-1.5 text-xs font-semibold h-8"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Event on This Day</span>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* 4 Mini Summary Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40">
+          <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                Scheduled Events
+              </span>
+              <span className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 block mt-0.5">
+                {selectedDayInfo.events.length}
+              </span>
+            </div>
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg text-indigo-600 dark:text-indigo-400">
+              <Sparkles className="w-4 h-4" />
+            </div>
+          </div>
+
+          <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                Approved Remote
+              </span>
+              <span className="text-xl font-extrabold text-sky-600 dark:text-sky-400 block mt-0.5">
+                {selectedDayInfo.wfh.length}
+              </span>
+            </div>
+            <div className="p-2 bg-sky-50 dark:bg-sky-950/60 rounded-lg text-sky-600 dark:text-sky-400">
+              <Home className="w-4 h-4" />
+            </div>
+          </div>
+
+          <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                Absences Logged
+              </span>
+              <span className="text-xl font-extrabold text-rose-600 dark:text-rose-400 block mt-0.5">
+                {selectedDayInfo.absences.length}
+              </span>
+            </div>
+            <div className="p-2 bg-rose-50 dark:bg-rose-950/60 rounded-lg text-rose-600 dark:text-rose-400">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+
+          <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                Estimated Capacity
+              </span>
+              <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                {selectedDayInfo.statusType === "holiday" || selectedDayInfo.statusType === "offDay" ? "Off" : `${selectedDayInfo.attendanceCapacity}%`}
+              </span>
+            </div>
+            <ProgressRing
+              value={selectedDayInfo.attendanceCapacity}
+              size={36}
+              variant={selectedDayInfo.statusType === "holiday" ? "indigo" : selectedDayInfo.attendanceCapacity > 80 ? "success" : "warning"}
+            />
+          </div>
+        </div>
+
+        {/* Detailed Records Content */}
+        <div className="p-4 sm:p-5 space-y-6">
+          {/* Section 1: Scheduled Events & Holidays */}
+          <div>
+            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <CalendarIcon className="w-4 h-4 text-indigo-500" />
+              <span>Events & Organizational Schedules ({selectedDayInfo.events.length})</span>
+            </h3>
+
+            {selectedDayInfo.events.length === 0 ? (
+              <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/30">
+                No holidays, company off-days, or corporate meetings declared for this date.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {selectedDayInfo.events.map((evt) => {
+                  const badge = getEventBadge(evt);
+                  return (
+                    <div
+                      key={evt._id}
+                      className={clsx(
+                        "p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 bg-white dark:bg-slate-800/80 hover:shadow-xs",
+                        badge.bg
+                      )}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 font-bold text-sm text-slate-900 dark:text-white">
+                            {badge.icon}
+                            <span>{evt.title}</span>
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/80 dark:bg-slate-900/80 shadow-xs border border-slate-200 dark:border-slate-700">
+                            {badge.label}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span>
+                              {evt.isFullDay
+                                ? "Full Day"
+                                : `${evt.startDate.split("T")[1]?.slice(0, 5) || "09:00"} - ${evt.endDate.split("T")[1]?.slice(0, 5) || "18:00"}`}
+                            </span>
+                          </div>
+                          {(evt as any).location && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                              <span>{(evt as any).location}</span>
+                            </div>
+                          )}
+                          {evt.audience?.scope && (
+                            <span className="uppercase font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                              Scope: {evt.audience.scope}
+                            </span>
+                          )}
+                        </div>
+
+                        {evt.description && (
+                          <p className="text-xs text-slate-600 dark:text-slate-300 pt-1 line-clamp-2 leading-relaxed">
+                            {evt.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                        {isHrOrAdmin ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenEditDrawer(evt)}
+                            className="text-xs h-7 gap-1 px-2.5"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                            Edit
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEditDrawer(evt)}
+                            className="text-xs h-7 gap-1 px-2.5"
+                          >
+                            <Eye className="w-3 h-3" />
+                            View Details
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Approved Remote Work (WFH) & Absences Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Approved WFH */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Home className="w-4 h-4 text-sky-500" />
+                <span>Approved Remote Staff ({selectedDayInfo.wfh.length})</span>
+              </h3>
+
+              {selectedDayInfo.wfh.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/30">
+                  No remote work approvals scheduled for this day.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {selectedDayInfo.wfh.map((w, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-lg border border-sky-100 dark:border-sky-900/40 bg-sky-50/60 dark:bg-sky-950/20 flex items-center justify-between text-xs"
+                    >
+                      <div>
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {w.name || w.employeeId}
+                        </span>
+                        {w.reason && (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            "{w.reason}"
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="primary" size="sm" className="bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/60 dark:text-sky-300 dark:border-sky-800 shrink-0">
+                        WFH
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recorded Absences */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-rose-500" />
+                <span>Recorded Absences ({selectedDayInfo.absences.length})</span>
+              </h3>
+
+              {selectedDayInfo.absences.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/30">
+                  Zero absences logged for this date. Full attendance baseline.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {selectedDayInfo.absences.map((a, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-lg border border-rose-100 dark:border-rose-900/40 bg-rose-50/60 dark:bg-rose-950/20 flex items-center justify-between text-xs"
+                    >
+                      <span className="font-semibold text-slate-900 dark:text-white">
+                        {a.name || a.employeeId}
+                      </span>
+                      <Badge variant="danger" size="sm" className="shrink-0">
+                        Absent
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* ========================================================= */}
       {/* DRAWER: ADD / EDIT / VIEW ENTRY */}
       {/* ========================================================= */}
       <Drawer
@@ -1441,6 +1998,7 @@ export const CalendarPage: React.FC = () => {
                   })
                 }
                 disabled={drawerMode === "view"}
+                aria-label="Event Type"
                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900"
               >
                 <option value="holiday">Official Public Holiday</option>
@@ -1463,6 +2021,7 @@ export const CalendarPage: React.FC = () => {
                   })
                 }
                 disabled={drawerMode === "view"}
+                aria-label="Audience Scope"
                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900"
               >
                 <option value="all">All Staff (Company-Wide)</option>
@@ -1647,6 +2206,7 @@ export const CalendarPage: React.FC = () => {
               <select
                 value={importCountry}
                 onChange={(e) => setImportCountry(e.target.value)}
+                aria-label="Select Country"
                 className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-md text-xs bg-white dark:bg-slate-900"
               >
                 <option value="IN">India (Gazetted National Holidays)</option>
@@ -1662,6 +2222,7 @@ export const CalendarPage: React.FC = () => {
               <select
                 value={importYear}
                 onChange={(e) => setImportYear(Number(e.target.value))}
+                aria-label="Target Year"
                 className="w-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-md text-xs bg-white dark:bg-slate-900"
               >
                 <option value={activeYear - 1}>{activeYear - 1}</option>

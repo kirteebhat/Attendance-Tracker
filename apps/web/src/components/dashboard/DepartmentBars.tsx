@@ -1,15 +1,19 @@
 import React, { useState } from "react";
-import { Building2, ArrowUpDown, Check, Users } from "lucide-react";
+import { Building2, ArrowUpDown, Users } from "lucide-react";
 import { DepartmentAttendanceBreakdown } from "@vorldx/shared";
 import { Tooltip } from "../ui/Tooltip";
 import { Card } from "../ui/Card";
 import { Badge } from "../ui/Badge";
 
 interface DepartmentBarsProps {
-  departments: DepartmentAttendanceBreakdown[];
+  departments?: DepartmentAttendanceBreakdown[];
+  isLoading?: boolean;
 }
 
-export const DepartmentBars: React.FC<DepartmentBarsProps> = ({ departments = [] }) => {
+export const DepartmentBars: React.FC<DepartmentBarsProps> = ({
+  departments = [],
+  isLoading = false,
+}) => {
   const [sortBy, setSortBy] = useState<"rate" | "headcount" | "name">("rate");
 
   const sortedDepts = [...departments].sort((a, b) => {
@@ -19,12 +23,12 @@ export const DepartmentBars: React.FC<DepartmentBarsProps> = ({ departments = []
   });
 
   return (
-    <Card className="p-5 flex flex-col justify-between">
+    <Card className="p-4 sm:p-5 flex flex-col justify-between h-full">
       {/* Header */}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
@@ -43,44 +47,62 @@ export const DepartmentBars: React.FC<DepartmentBarsProps> = ({ departments = []
               <ArrowUpDown className="w-3 h-3" />
               Sort:
             </span>
-            <button
-              onClick={() => setSortBy("rate")}
-              className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
-                sortBy === "rate"
-                  ? "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold"
-                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-              }`}
+            <div
+              role="group"
+              aria-label="Sort departments by metric"
+              className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-lg border border-slate-200/80 dark:border-slate-700/80"
             >
-              Attendance %
-            </button>
-            <button
-              onClick={() => setSortBy("headcount")}
-              className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
-                sortBy === "headcount"
-                  ? "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold"
-                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-              }`}
-            >
-              Staff Count
-            </button>
-            <button
-              onClick={() => setSortBy("name")}
-              className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
-                sortBy === "name"
-                  ? "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold"
-                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-              }`}
-            >
-              Name
-            </button>
+              <button
+                type="button"
+                onClick={() => setSortBy("rate")}
+                className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                  sortBy === "rate"
+                    ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+                aria-pressed={sortBy === "rate"}
+              >
+                Rate %
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortBy("headcount")}
+                className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                  sortBy === "headcount"
+                    ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+                aria-pressed={sortBy === "headcount"}
+              >
+                Staff
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortBy("name")}
+                className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                  sortBy === "name"
+                    ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+                aria-pressed={sortBy === "name"}
+              >
+                Name
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Department List */}
         <div className="space-y-4 mt-2">
-          {sortedDepts.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-400">
-              No department data available for today.
+          {sortedDepts.length === 0 && !isLoading ? (
+            <div className="py-10 text-center text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+              <Building2 className="w-8 h-8 mx-auto mb-1.5 opacity-50" />
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                No department data available
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Department metrics will compute automatically as workforce assignments are configured.
+              </p>
             </div>
           ) : (
             sortedDepts.map((dept) => {
@@ -101,16 +123,16 @@ export const DepartmentBars: React.FC<DepartmentBarsProps> = ({ departments = []
                       <span className="font-semibold text-slate-800 dark:text-slate-200">
                         {dept.department}
                       </span>
-                      <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                      <span className="text-[11px] text-slate-400 flex items-center gap-1 font-mono">
                         <Users className="w-3 h-3" />
-                        {dept.totalEmployees} staff
+                        {dept.totalEmployees}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:inline">
                         Punctuality:{" "}
-                        <strong className="text-slate-700 dark:text-slate-300">
+                        <strong className="text-slate-700 dark:text-slate-300 font-mono">
                           {dept.punctualityRate}%
                         </strong>
                       </span>
@@ -123,8 +145,9 @@ export const DepartmentBars: React.FC<DepartmentBarsProps> = ({ departments = []
                             : "danger"
                         }
                         size="sm"
+                        className="font-mono"
                       >
-                        {dept.attendanceRate}% Attendance
+                        {dept.attendanceRate}%
                       </Badge>
                     </div>
                   </div>
@@ -138,30 +161,26 @@ export const DepartmentBars: React.FC<DepartmentBarsProps> = ({ departments = []
                         </div>
                         <div className="text-[11px] space-y-0.5">
                           <div className="flex justify-between gap-4 text-emerald-400">
-                            <span>Present:</span>
-                            <span className="font-semibold">{dept.present}</span>
+                            <span>Present (Office):</span>
+                            <span className="font-semibold font-mono">{dept.present}</span>
                           </div>
                           {dept.late > 0 && (
                             <div className="flex justify-between gap-4 text-amber-400 pl-2">
                               <span>↳ Late Arrivals:</span>
-                              <span className="font-semibold">{dept.late}</span>
+                              <span className="font-semibold font-mono">{dept.late}</span>
                             </div>
                           )}
                           <div className="flex justify-between gap-4 text-indigo-400">
                             <span>Approved WFH:</span>
-                            <span className="font-semibold">{dept.wfh}</span>
+                            <span className="font-semibold font-mono">{dept.wfh}</span>
                           </div>
                           <div className="flex justify-between gap-4 text-purple-400">
                             <span>On Leave:</span>
-                            <span className="font-semibold">{dept.leave}</span>
+                            <span className="font-semibold font-mono">{dept.leave}</span>
                           </div>
                           <div className="flex justify-between gap-4 text-rose-400">
-                            <span>Absent:</span>
-                            <span className="font-semibold">{dept.absent}</span>
-                          </div>
-                          <div className="flex justify-between gap-4 text-slate-400">
-                            <span>Awaiting Scan:</span>
-                            <span className="font-semibold">{dept.notYetIn}</span>
+                            <span>Absent / Pending:</span>
+                            <span className="font-semibold font-mono">{dept.absent + dept.notYetIn}</span>
                           </div>
                         </div>
                       </div>
@@ -179,22 +198,22 @@ export const DepartmentBars: React.FC<DepartmentBarsProps> = ({ departments = []
                     >
                       {/* Present (Emerald) */}
                       <div
-                        className="bg-emerald-500 h-full transition-all duration-700 ease-out"
+                        className="bg-emerald-500 h-full transition-all duration-700 ease-out motion-reduce:transition-none"
                         style={{ width: `${presentPercent}%` }}
                       />
                       {/* WFH (Indigo) */}
                       <div
-                        className="bg-indigo-500 h-full transition-all duration-700 ease-out"
+                        className="bg-indigo-500 h-full transition-all duration-700 ease-out motion-reduce:transition-none"
                         style={{ width: `${wfhPercent}%` }}
                       />
                       {/* Leave (Purple) */}
                       <div
-                        className="bg-purple-500 h-full transition-all duration-700 ease-out"
+                        className="bg-purple-500 h-full transition-all duration-700 ease-out motion-reduce:transition-none"
                         style={{ width: `${leavePercent}%` }}
                       />
                       {/* Absent (Rose) */}
                       <div
-                        className="bg-rose-500 h-full transition-all duration-700 ease-out"
+                        className="bg-rose-500 h-full transition-all duration-700 ease-out motion-reduce:transition-none"
                         style={{ width: `${absentPercent}%` }}
                       />
                     </div>
@@ -225,7 +244,9 @@ export const DepartmentBars: React.FC<DepartmentBarsProps> = ({ departments = []
               <span>Absent</span>
             </span>
           </div>
-          <span className="text-[11px] text-slate-400">Total Units: {sortedDepts.length}</span>
+          <span className="text-[11px] text-slate-400 font-mono">
+            {sortedDepts.length} Units
+          </span>
         </div>
       </div>
 
@@ -264,4 +285,3 @@ export const DepartmentBars: React.FC<DepartmentBarsProps> = ({ departments = []
     </Card>
   );
 };
-

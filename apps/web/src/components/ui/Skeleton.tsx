@@ -28,7 +28,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     "table-row": "h-12 w-full rounded-lg",
   }[variant];
 
-  const animationClass = prefersReducedMotion ? "" : "animate-pulse";
+  const animationClass = prefersReducedMotion ? "" : "animate-shimmer";
 
   return (
     <div

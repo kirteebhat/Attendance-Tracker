@@ -204,3 +204,4 @@ Located in [`apps/web/src/components/ui/`](file:///c:/Attendance%20Tracker/apps/
 | **5. WFH Approval Lifecycle** | E2E Steps 10–12 | **WORKING** | Employee submits request $\to$ HR receives real-time notification $\to$ HR approves $\to$ attendance record auto-credits to `WFH (Approved)`. |
 | **6. QR Scan & Terminal Flow** | E2E Steps 4, 5, 9 | **WORKING** | Terminal registration code generation $\to$ kiosk pairing $\to$ dynamic HMAC QR token rotation $\to$ atomic check-in $\to$ check-out duration calculation functional. |
 | **What Could Not Be Tested** | Hardware Device Testing | **LIMITATION** | Physical camera hardware on actual mobile iOS/Android devices (tested using software simulation and simulated QR code input). |
+

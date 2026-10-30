@@ -156,3 +156,4 @@ node scripts/verify-3d-motion.js
 - [ ] **Responsiveness:** Page adapts smoothly across Desktop ($\ge 1280\text{px}$), Tablet ($768\text{px}$–$1024\text{px}$), and Mobile ($< 640\text{px}$).
 - [ ] **Reduced Motion:** If `prefers-reduced-motion` is enabled, all animations, transitions, and 3D scenes gracefully revert to static states.
 - [ ] **Keyboard Navigation:** Tab key visits all interactive elements in logical order; active item has visible focus ring.
+
