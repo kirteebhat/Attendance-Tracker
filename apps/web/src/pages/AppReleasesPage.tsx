@@ -18,7 +18,6 @@ import {
   useAppReleases,
   usePublishRelease,
   useDeleteRelease,
-  useFeatureFlags,
   AppReleaseItem,
 } from "../api/queries";
 import { Button } from "../components/ui/Button";
@@ -32,8 +31,6 @@ import { StatCard } from "../components/ui/StatCard";
 
 export const AppReleasesPage: React.FC = () => {
   const { toast } = useToast();
-  const { data: flagData } = useFeatureFlags();
-  const otaEnabled = flagData?.data?.otaUpdates ?? true;
 
   // Filters State
   const [selectedPlatform, setSelectedPlatform] = useState<string>("ALL");
@@ -168,15 +165,9 @@ export const AppReleasesPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              App Releases & OTA Updates
+              App Releases
             </h1>
-            <Badge variant={otaEnabled ? "success" : "warning"} size="sm">
-              {otaEnabled ? "OTA Engine Active" : "Flag Inactive"}
-            </Badge>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Publish, monitor, and enforce multi-platform application versions and OTA update channels.
-          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -441,7 +432,7 @@ export const AppReleasesPage: React.FC = () => {
               </label>
               <input
                 type="text"
-                placeholder="e.g. 1.3.0"
+                placeholder="1.3.0"
                 value={formVersion}
                 onChange={(e) => setFormVersion(e.target.value)}
                 required
@@ -470,7 +461,7 @@ export const AppReleasesPage: React.FC = () => {
               </label>
               <input
                 type="text"
-                placeholder="e.g. 1.0.0"
+                placeholder="1.0.0"
                 value={formMinVersion}
                 onChange={(e) => setFormMinVersion(e.target.value)}
                 required

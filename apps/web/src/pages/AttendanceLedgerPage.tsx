@@ -272,9 +272,6 @@ export const AttendanceLedgerPage: React.FC = () => {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Organization-wide punch records, punctuality tracking, duration math, and administrative corrections
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1030,7 +1027,7 @@ export const AttendanceLedgerPage: React.FC = () => {
                 rows={3}
                 value={correctionReason}
                 onChange={(e) => setCorrectionReason(e.target.value)}
-                placeholder="e.g. Employee forgot card/phone; verified gate entry with front security log at 09:12 AM"
+                placeholder="Reason for manual correction..."
                 className="w-full px-3 py-2 text-xs rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
               />
             </div>

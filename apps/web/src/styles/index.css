@@ -21,7 +21,7 @@
     --border-base: #e2e8f0;    /* slate-200 */
     --border-strong: #cbd5e1;  /* slate-300 */
 
-    --ring-color: #2563eb;     /* blue-600 */
+    --ring-color: #5965f2;     /* Brand Indigo */
     --ring-offset: #ffffff;
 
     /* Spacing Tokens */
@@ -49,7 +49,7 @@
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-    --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    --shadow-glass: 0 8px 32px 0 rgba(89, 101, 242, 0.08);
 
     /* Motion Durations & Easings */
     --duration-instant: 0ms;
@@ -63,36 +63,37 @@
   }
 
   .dark {
-    /* Color Tokens - Dark Mode */
-    --bg-base: #0b0f19;        /* Deep midnight */
-    --bg-surface: #111827;     /* slate-900 */
-    --bg-card: #162032;        /* elevated dark slate */
-    --bg-muted: #1e293b;       /* slate-800 */
-    --bg-hover: #273549;       /* slate-700 */
-    --bg-overlay: rgba(3, 7, 18, 0.75);
+    /* Color Tokens - Dark Mode (Exact Mobile Obsidian / Cyberpunk Palette) */
+    --bg-base: #07080e;        /* Mobile colors.bg */
+    --bg-surface: #0a0c15;     /* Mobile colors.sidebar */
+    --bg-card: #141727;        /* Mobile colors.surface */
+    --bg-muted: #0d101b;       /* Mobile colors.bgRaised */
+    --bg-hover: #1e2238;       /* Mobile colors.surfaceSoft */
+    --bg-overlay: rgba(7, 8, 14, 0.85);
 
-    --text-primary: #f8fafc;   /* slate-50 (Contrast 16.5:1 on #0B0F19) */
-    --text-secondary: #cbd5e1; /* slate-300 (Contrast 10.4:1 on #0B0F19) */
-    --text-muted: #94a3b8;     /* slate-400 (Contrast 5.9:1 on #0B0F19) */
-    --text-inverse: #0f172a;
+    --text-primary: #f4f5ff;   /* Mobile colors.text */
+    --text-secondary: #b3b7ce; /* Mobile colors.textSecondary */
+    --text-muted: #9ba1c2;     /* Mobile colors.muted */
+    --text-inverse: #07080e;
 
-    --border-subtle: #1e293b;  /* slate-800 */
-    --border-base: #334155;    /* slate-700 */
-    --border-strong: #475569;  /* slate-600 */
+    --border-subtle: rgba(184, 190, 255, 0.08);
+    --border-base: rgba(184, 190, 255, 0.13);   /* Mobile colors.border */
+    --border-strong: rgba(133, 145, 255, 0.38); /* Mobile colors.borderActive */
 
-    --ring-color: #3b82f6;     /* blue-500 */
-    --ring-offset: #0b0f19;
+    --ring-color: #5965f2;     /* Mobile colors.indigo */
+    --ring-offset: #07080e;
 
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
-    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
+    --shadow-glass: 0 8px 32px 0 rgba(89, 101, 242, 0.18);
   }
 
   body {
     background-color: var(--bg-base);
     color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
     @apply antialiased font-sans min-h-screen transition-colors duration-200;
   }
 
@@ -100,6 +101,93 @@
   :focus-visible {
     outline: 2px solid var(--ring-color) !important;
     outline-offset: 2px !important;
+  }
+
+  /* =========================================================================
+     Global Dark Mode Text Visibility & Legibility Rules
+     Guarantees that when dark mode is enabled, all text, headings, labels,
+     and icons render in clear, crisp, high-contrast light tones.
+     ========================================================================= */
+
+  .dark {
+    color-scheme: dark;
+    color: var(--text-primary);
+  }
+
+  /* Headings, titles, and bold typography lacking a dark:text- class */
+  .dark h1:not([class*="dark:text-"]),
+  .dark h2:not([class*="dark:text-"]),
+  .dark h3:not([class*="dark:text-"]),
+  .dark h4:not([class*="dark:text-"]),
+  .dark h5:not([class*="dark:text-"]),
+  .dark h6:not([class*="dark:text-"]),
+  .dark th:not([class*="dark:text-"]),
+  .dark dt:not([class*="dark:text-"]),
+  .dark strong:not([class*="dark:text-"]),
+  .dark b:not([class*="dark:text-"]) {
+    color: #f4f5ff;
+  }
+
+  /* Specific high-emphasis text classes lacking dark:text- */
+  .dark [class*="text-slate-950"]:not([class*="dark:text-"]),
+  .dark [class*="text-slate-900"]:not([class*="dark:text-"]),
+  .dark [class*="text-slate-850"]:not([class*="dark:text-"]),
+  .dark [class*="text-slate-800"]:not([class*="dark:text-"]),
+  .dark [class*="text-black"]:not([class*="dark:text-"]) {
+    color: #f4f5ff;
+  }
+
+  /* Medium-emphasis labels, form headers, and field titles */
+  .dark label:not([class*="dark:text-"]),
+  .dark [class*="text-slate-700"]:not([class*="dark:text-"]) {
+    color: #e2e8f0;
+  }
+
+  /* Descriptions, paragraphs, and secondary text */
+  .dark [class*="text-slate-600"]:not([class*="dark:text-"]) {
+    color: #cbd5e1;
+  }
+
+  /* Muted metadata, captions, and timestamps */
+  .dark [class*="text-slate-500"]:not([class*="dark:text-"]) {
+    color: #b3b7ce;
+  }
+
+  /* Ensure explicit dark:text-slate-500 and dark:text-slate-600 are bright enough to read */
+  .dark [class*="dark:text-slate-500"] {
+    color: #b3b7ce;
+  }
+  .dark [class*="dark:text-slate-600"] {
+    color: #cbd5e1;
+  }
+
+  /* Prevent hover states from making text dark in dark mode */
+  .dark [class*="hover:text-slate-950"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class*="hover:text-slate-900"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class*="hover:text-slate-850"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class*="hover:text-slate-800"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class*="hover:text-slate-700"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class*="hover:text-black"]:hover:not([class*="dark:hover:text-"]) {
+    color: #ffffff !important;
+  }
+
+  .dark [class*="hover:text-slate-600"]:hover:not([class*="dark:hover:text-"]),
+  .dark [class*="hover:text-slate-500"]:hover:not([class*="dark:hover:text-"]) {
+    color: #e2e8f0 !important;
+  }
+
+  /* Fix legacy inputs and labels that hardcode bg-white in dark mode */
+  .dark input.bg-white,
+  .dark select.bg-white,
+  .dark textarea.bg-white,
+  .dark label.bg-white,
+  .dark .bg-white.text-slate-800,
+  .dark .bg-white.text-slate-700,
+  .dark .bg-white.text-slate-600,
+  .dark .bg-white.text-slate-500 {
+    background-color: var(--bg-card);
+    color: #f4f5ff;
+    border-color: var(--border-base);
   }
 }
 
@@ -111,7 +199,7 @@
     @apply w-full text-left border-collapse text-sm;
   }
   .table-header {
-    @apply bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 py-3.5 px-4;
+    @apply bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-300 py-3.5 px-4;
   }
   .table-row-hover {
     @apply border-b border-slate-100 dark:border-slate-800/60 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40;
@@ -144,9 +232,9 @@
   .dark .animate-shimmer {
     background: linear-gradient(
       90deg,
-      rgba(30, 41, 59, 0.75) 25%,
-      rgba(51, 65, 85, 0.95) 37%,
-      rgba(30, 41, 59, 0.75) 63%
+      rgba(20, 23, 39, 0.75) 25%,
+      rgba(30, 34, 56, 0.95) 37%,
+      rgba(20, 23, 39, 0.75) 63%
     );
     background-size: 200% 100%;
     animation: shimmer 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;

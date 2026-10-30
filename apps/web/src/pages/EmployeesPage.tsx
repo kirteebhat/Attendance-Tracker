@@ -379,9 +379,6 @@ export const EmployeesPage: React.FC = () => {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Workforce roster, shift assignments, status activation/deactivation, and profile snapshots
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -949,7 +946,7 @@ export const EmployeesPage: React.FC = () => {
           <div>
             <Input
               label="Employee ID (Corporate Identifier)"
-              placeholder="e.g. EMP-101"
+              placeholder="EMP-101"
               disabled={Boolean(editingEmployee)}
               error={errors.employeeId?.message}
               helperText={
@@ -964,7 +961,7 @@ export const EmployeesPage: React.FC = () => {
           <div>
             <Input
               label="Full Name"
-              placeholder="e.g. Ananya Sharma"
+              placeholder="Full name"
               error={errors.name?.message}
               {...register("name")}
             />
@@ -974,7 +971,7 @@ export const EmployeesPage: React.FC = () => {
             <Input
               type="email"
               label="Work Email Address"
-              placeholder="e.g. ananya.sharma@vorldx.demo"
+              placeholder="name@company.com"
               error={errors.email?.message}
               {...register("email")}
             />
@@ -998,7 +995,7 @@ export const EmployeesPage: React.FC = () => {
             <div>
               <Input
                 label="Designation"
-                placeholder="e.g. Senior Software Engineer"
+                placeholder="Job designation"
                 error={errors.designation?.message}
                 {...register("designation")}
               />
@@ -1097,7 +1094,7 @@ export const EmployeesPage: React.FC = () => {
               rows={2}
               value={statusReason}
               onChange={(e) => setStatusReason(e.target.value)}
-              placeholder="e.g. Resignation, administrative leave, or return to active duties"
+              placeholder="Reason for status change..."
               className="w-full px-3 py-2 text-xs rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
             />
           </div>

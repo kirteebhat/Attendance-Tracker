@@ -276,15 +276,9 @@ export const SecurityPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Staff Security & Active Sessions
+              Security & Sessions
             </h1>
-            <Badge variant="info" size="sm" className="font-mono uppercase">
-              Zero-Trust 2.0
-            </Badge>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Monitor active login sessions, trusted hardware devices, and real-time security events.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -659,7 +653,7 @@ export const SecurityPage: React.FC = () => {
             <input
               type="text"
               required
-              placeholder="e.g. HR-001 or MongoDB ObjectId"
+              placeholder="HR-001 or MongoDB ObjectId"
               value={targetUserId}
               onChange={(e) => setTargetUserId(e.target.value)}
               className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none"
@@ -672,7 +666,7 @@ export const SecurityPage: React.FC = () => {
             </label>
             <textarea
               rows={2}
-              placeholder="e.g. Suspected hardware compromise or privilege rotation"
+              placeholder="Reason for termination..."
               value={forceLogoutReason}
               onChange={(e) => setForceLogoutReason(e.target.value)}
               className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none resize-none"

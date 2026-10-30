@@ -410,7 +410,7 @@ export const PoliciesPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              Attendance Policies & Shifts
+              Policies & Shifts
             </h1>
             {activePolicy && (
               <Badge variant="primary" className="text-xs font-semibold px-2.5 py-0.5">
@@ -418,10 +418,6 @@ export const PoliciesPage: React.FC = () => {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Configure shift timings, punctuality tolerances, remote work quotas, and official
-            holidays
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -696,7 +692,7 @@ export const PoliciesPage: React.FC = () => {
                               <Input
                                 value={shift.name}
                                 onChange={(e) => handleShiftChange(idx, "name", e.target.value)}
-                                placeholder="Shift Name (e.g. Standard General)"
+                                placeholder="Shift Name"
                                 className="font-semibold text-slate-800 bg-white"
                               />
                             </div>
@@ -1073,7 +1069,7 @@ export const PoliciesPage: React.FC = () => {
               id="policy-change-reason-input"
               value={justificationReason}
               onChange={(e) => setJustificationReason(e.target.value)}
-              placeholder="e.g. Adjusted winter grace period for engineering shifts"
+              placeholder="Reason for policy change..."
             />
           </div>
 
@@ -1117,7 +1113,7 @@ export const PoliciesPage: React.FC = () => {
             <Input
               value={holidayForm.name}
               onChange={(e) => setHolidayForm({ ...holidayForm, name: e.target.value })}
-              placeholder="e.g. Diwali / Republic Day"
+              placeholder="Holiday name"
               required
             />
           </div>

@@ -111,7 +111,7 @@ export const AuditLogsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-              Security & Audit Trail
+              Audit Trail
             </h1>
             {pagination && (
               <Badge variant="primary" className="text-xs font-semibold px-2.5 py-0.5">
@@ -119,9 +119,6 @@ export const AuditLogsPage: React.FC = () => {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Immutable organizational forensic audit log tracking administrative modifications, decisions, and state diffs
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   AlertCircle,
   Info,
-  Sparkles,
   ArrowRight,
   RotateCcw,
   Clock,
@@ -61,12 +60,11 @@ export const LoginPage: React.FC = () => {
 
   // Mobile & Country Code
   const [countryCode, setCountryCode] = useState<string>("+91");
-  const [mobileNumber, setMobileNumber] = useState<string>("9876543210");
+  const [mobileNumber, setMobileNumber] = useState<string>("");
   const [rememberDevice, setRememberDevice] = useState<boolean>(true);
 
   // OTP State
   const [otpValue, setOtpValue] = useState<string>("");
-  const [simulatedOtp, setSimulatedOtp] = useState<string | null>(null);
 
   // Timers: Cooldown (60s) and Expiry (300s)
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
@@ -94,13 +92,12 @@ export const LoginPage: React.FC = () => {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors: passwordErrors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      identifier: "admin@vorldx.demo",
-      password: "Admin@VorldX2026!",
+      identifier: "",
+      password: "",
     },
   });
 
@@ -216,10 +213,6 @@ export const LoginPage: React.FC = () => {
       setCooldownRemaining(res.cooldownSeconds || 60);
       setExpiryRemaining(res.expiresInSeconds || 300);
 
-      if (res.simulatedDemoOtp) {
-        setSimulatedOtp(res.simulatedDemoOtp);
-      }
-
       setServerNotice(res.message);
       setSocketStatus("SENT");
       setSocketStatusDetail("Code dispatched to your mobile device.");
@@ -289,20 +282,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleDemoFill = (identifier: string) => {
-    setValue("identifier", identifier);
-    if (identifier.includes("admin")) {
-      setValue("password", "Admin@VorldX2026!");
-    } else {
-      setValue("password", "Hr@VorldX2026!");
-    }
-    setServerError(null);
-  };
-
-  const handleStaffDemoMobile = (mobile: string) => {
-    setMobileNumber(mobile.replace(/^\+91/, ""));
-    setServerError(null);
-  };
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -326,11 +305,8 @@ export const LoginPage: React.FC = () => {
           <h1 className="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
             <span>Vorld</span>
             <span className="text-cyan-400">X</span>
-            <span className="font-light text-slate-300">Staff Portal</span>
+            <span className="font-light text-slate-300">Portal</span>
           </h1>
-          <p className="text-xs text-slate-400">
-            Enterprise Attendance & Biometric QR Infrastructure
-          </p>
         </div>
 
         {/* Auth Mode Tabs */}
@@ -348,10 +324,7 @@ export const LoginPage: React.FC = () => {
             }`}
           >
             <Smartphone className="w-3.5 h-3.5" />
-            <span>Staff Mobile OTP</span>
-            <span className="text-[10px] bg-cyan-950 border border-cyan-400/40 text-cyan-300 px-1.5 py-0.5 rounded font-mono font-bold">
-              2.0
-            </span>
+            <span>Mobile OTP</span>
           </button>
           <button
             type="button"
@@ -366,7 +339,7 @@ export const LoginPage: React.FC = () => {
             }`}
           >
             <Lock className="w-3.5 h-3.5" />
-            <span>Password Sign In</span>
+            <span>Password</span>
           </button>
         </div>
 
@@ -579,32 +552,6 @@ export const LoginPage: React.FC = () => {
                     </label>
                   </div>
 
-                  {/* Simulated Demo OTP Banner */}
-                  <div className="p-3 bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800 rounded-xl flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-xs text-cyan-900 dark:text-cyan-200">
-                      <Sparkles className="w-4 h-4 text-cyan-500 shrink-0" />
-                      <div>
-                        <span className="font-semibold block">
-                          {simulatedOtp ? "Generated Demo Code:" : "Demo Staff OTP Code:"}
-                        </span>
-                        <span className="font-mono text-base font-bold tracking-widest text-cyan-600 dark:text-cyan-400">
-                          {simulatedOtp || "123456"}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setOtpValue(simulatedOtp || "123456")}
-                      className="px-2.5 py-1 text-[11px] font-semibold bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors shrink-0"
-                    >
-                      Auto-fill
-                    </button>
-                  </div>
-
-                  <p className="text-[11px] text-slate-400 text-center">
-                    Note: Telecom SMS is simulated. Use the code above or click <span className="font-semibold text-cyan-400">Auto-fill</span> to test.
-                  </p>
-
                   {/* Actions */}
                   <div className="space-y-2">
                     <Button
@@ -653,44 +600,6 @@ export const LoginPage: React.FC = () => {
                   </div>
                 </form>
               )}
-
-              {/* Demo Staff Number Switcher */}
-              <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2.5">
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-500" />
-                  <span>Demo Staff Mobile Switcher</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => handleStaffDemoMobile("9876543210")}
-                    className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium transition-colors text-left flex items-center gap-2"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                    <div className="truncate">
-                      <span className="block font-semibold">Admin Staff</span>
-                      <span className="font-mono text-[10px] text-slate-400">+91 9876543210</span>
-                      <span className="font-mono text-[10px] text-cyan-500 dark:text-cyan-400 font-semibold block">Code: 123456</span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleStaffDemoMobile("9876543211")}
-                    className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium transition-colors text-left flex items-center gap-2"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-cyan-600 shrink-0" />
-                    <div className="truncate">
-                      <span className="block font-semibold">HR Staff</span>
-                      <span className="font-mono text-[10px] text-slate-400">+91 9876543211</span>
-                      <span className="font-mono text-[10px] text-cyan-500 dark:text-cyan-400 font-semibold block">Code: 123456</span>
-                    </div>
-                  </button>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-2.5 text-center leading-relaxed">
-                  💡 <span className="font-semibold text-slate-300">Staff OTP Demo Code:</span>{" "}
-                  <span className="font-mono font-bold text-cyan-400">123456</span>. Real SMS requires paid telecom gateway credits; use <span className="font-mono font-semibold">123456</span> to sign in.
-                </p>
-              </div>
             </div>
           )}
 
@@ -703,7 +612,7 @@ export const LoginPage: React.FC = () => {
                 <div>
                   <Input
                     label="Email or Employee ID"
-                    placeholder="e.g. admin@vorldx.demo or ADM-001"
+                    placeholder="admin@vorldx.demo or ADM-001"
                     autoComplete="username"
                     error={passwordErrors.identifier?.message}
                     {...register("identifier")}
@@ -732,39 +641,13 @@ export const LoginPage: React.FC = () => {
                   Sign In with Password
                 </Button>
               </form>
-
-              {/* Quick Demo Credentials Autofill */}
-              <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2.5">
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-500" />
-                  <span>Demo Quick Switcher</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => handleDemoFill("admin@vorldx.demo")}
-                    className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium transition-colors text-left flex items-center gap-1.5"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-blue-600" />
-                    <span>Demo Admin</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDemoFill("hr@vorldx.demo")}
-                    className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium transition-colors text-left flex items-center gap-1.5"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-cyan-600" />
-                    <span>Demo HR</span>
-                  </button>
-                </div>
-              </div>
             </div>
           )}
         </Card>
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-400 font-medium">
-          VorldX Industries &copy; 2026. Zero-Trust Hardware & Multi-Factor Staff Portal.
+          VorldX Industries &copy; 2026. Staff Portal.
         </p>
       </div>
     </div>

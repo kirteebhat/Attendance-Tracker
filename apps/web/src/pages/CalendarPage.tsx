@@ -798,9 +798,6 @@ export const CalendarPage: React.FC = () => {
               <span>Live Sync Active</span>
             </div>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Real-time working days governance, holiday synchronization, and scheduled event management.
-          </p>
         </div>
 
         {/* Right: Actions (Import, Export, Print, Add Entry) */}
@@ -1976,7 +1973,7 @@ export const CalendarPage: React.FC = () => {
             </label>
             <Input
               type="text"
-              placeholder="e.g. Republic Day / Quarterly All-Hands"
+              placeholder="Event or holiday name"
               value={entryForm.title}
               onChange={(e) => setEntryForm({ ...entryForm, title: e.target.value })}
               required
@@ -2109,7 +2106,7 @@ export const CalendarPage: React.FC = () => {
             </label>
             <Input
               type="text"
-              placeholder="e.g. Main Auditorium / Zoom Link"
+              placeholder="Location or meeting link"
               value={entryForm.location}
               onChange={(e) => setEntryForm({ ...entryForm, location: e.target.value })}
               disabled={drawerMode === "view"}

@@ -158,15 +158,9 @@ export const ReportsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-              Reports & Workforce Analytics
+              Reports & Analytics
             </h1>
-            <Badge variant="primary" className="text-xs font-semibold px-2.5 py-0.5">
-              Live Aggregations
-            </Badge>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Aggregated attendance, employee and department metrics, punctuality breakdown, and streaming CSV exports
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

@@ -198,15 +198,9 @@ export const DisplaysPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Office QR Display Terminals
+              QR Displays
             </h1>
-            <Badge variant="primary" className="text-xs font-semibold px-2.5 py-0.5">
-              Live Monitor
-            </Badge>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Manage physical office kiosk pairing, dynamic rotating QR challenge generation, and remote deactivation
-          </p>
         </div>
 
         <Button
@@ -477,7 +471,7 @@ export const DisplaysPage: React.FC = () => {
                 id="display-name-input"
                 value={registerForm.name}
                 onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
-                placeholder="e.g. Ground Floor Main Entrance Kiosk"
+                placeholder="Ground Floor Main Entrance Kiosk"
                 required
               />
             </div>
@@ -490,7 +484,7 @@ export const DisplaysPage: React.FC = () => {
                 id="display-location-input"
                 value={registerForm.location}
                 onChange={(e) => setRegisterForm({ ...registerForm, location: e.target.value })}
-                placeholder="e.g. Tower A Lobby, Security Turnstiles"
+                placeholder="Tower A Lobby, Security Turnstiles"
                 required
               />
             </div>
@@ -551,7 +545,7 @@ export const DisplaysPage: React.FC = () => {
                 id="revoke-reason-input"
                 value={revokeReason}
                 onChange={(e) => setRevokeReason(e.target.value)}
-                placeholder="e.g. Decommissioned physical kiosk or security audit"
+                placeholder="Reason for revoking display..."
               />
             </div>
 
@@ -602,7 +596,7 @@ export const DisplaysPage: React.FC = () => {
               <Input
                 value={statusReason}
                 onChange={(e) => setStatusReason(e.target.value)}
-                placeholder="e.g. Temporary lobby maintenance"
+                placeholder="Reason for status change..."
               />
             </div>
 

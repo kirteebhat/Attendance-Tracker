@@ -271,15 +271,12 @@ export const WfhPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-              Work From Home Review Queue
+              WFH Requests
             </h1>
             <Badge variant="primary" className="text-xs font-semibold px-2.5 py-0.5">
               Live Updates
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Review and decide employee remote work applications with automatic attendance crediting
-          </p>
         </div>
       </div>
 
@@ -460,7 +457,7 @@ export const WfhPage: React.FC = () => {
                             type="button"
                             onClick={(e) => handleToggleSelectRow(req._id, e)}
                             className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                            aria-label={`Select request from ${req.employee?.name || req.employeeId}`}
+                            aria-label={`Select request from ${empName}`}
                           >
                             {isSelected ? (
                               <CheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -702,7 +699,7 @@ export const WfhPage: React.FC = () => {
             <Input
               value={reviewerRemarks}
               onChange={(e) => setReviewerRemarks(e.target.value)}
-              placeholder="e.g. Approved under monthly quota allowance"
+              placeholder="Review remarks (optional)..."
               className="text-xs"
             />
           </div>

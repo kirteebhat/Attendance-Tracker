@@ -173,7 +173,7 @@ export const DashboardPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-              Executive Dashboard & Live Analytics
+              Executive Dashboard
             </h1>
             <Badge variant="info" size="md">
               {dateKey}
@@ -186,9 +186,6 @@ export const DashboardPage: React.FC = () => {
             )}
             <HROnlineIndicator variant="compact" />
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Real-time workforce attendance metrics, dynamic QR scan activity, and compliance trends.
-          </p>
         </div>
 
         <div className="flex items-center gap-3">

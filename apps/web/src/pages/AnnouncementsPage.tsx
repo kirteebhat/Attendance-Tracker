@@ -37,7 +37,6 @@ import { useToast } from "../components/ui/Toast";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Card } from "../components/ui/Card";
-import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
 import { Skeleton } from "../components/ui/Skeleton";
 import { ErrorState } from "../components/ui/ErrorState";
@@ -385,15 +384,9 @@ export const AnnouncementsPage: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  Announcements & Broadcasts
+                  Announcements
                 </h1>
-                <Badge variant="info" size="sm">
-                  Live Feed
-                </Badge>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Publish company broadcasts, manage automated holiday & meeting alerts, and monitor employee read status.
-              </p>
             </div>
           </div>
         </div>
@@ -803,7 +796,7 @@ export const AnnouncementsPage: React.FC = () => {
                 <Input
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="e.g. Town Hall Meeting Tomorrow at 2 PM"
+                  placeholder="Town Hall Meeting Tomorrow at 2 PM"
                   required
                   maxLength={150}
                 />

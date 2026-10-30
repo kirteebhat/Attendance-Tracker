@@ -357,7 +357,7 @@ export const EnquiriesPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Support & HR Enquiries
+              Support Enquiries
             </h1>
             <Badge
               variant={isConnected ? "success" : "neutral"}
@@ -372,9 +372,6 @@ export const EnquiriesPage: React.FC = () => {
               {isConnected ? "Live Sync Active" : "Disconnected"}
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Resolve attendance disputes, biometric punch discrepancies, and staff helpdesk requests.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

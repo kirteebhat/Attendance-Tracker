@@ -594,11 +594,8 @@ export const LeavePage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Leave Management Hub
+                Leave Requests
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Review employee applications, govern departmental quotas, and inspect team calendar overlays.
-              </p>
             </div>
           </div>
         </div>
@@ -1626,7 +1623,7 @@ export const LeavePage: React.FC = () => {
               rows={2}
               value={bulkDecisionNote}
               onChange={(e) => setBulkDecisionNote(e.target.value)}
-              placeholder="e.g. Bulk approved following department schedule review"
+              placeholder="Review remarks (optional)..."
               className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
             />
           </div>
@@ -1854,7 +1851,7 @@ export const LeavePage: React.FC = () => {
                 required
                 value={typeForm.name}
                 onChange={(e) => setTypeForm({ ...typeForm, name: e.target.value })}
-                placeholder="e.g. Paid Time Off"
+                placeholder="Paid Time Off"
               />
             </div>
             <div>
@@ -1865,7 +1862,7 @@ export const LeavePage: React.FC = () => {
                 required
                 value={typeForm.code}
                 onChange={(e) => setTypeForm({ ...typeForm, code: e.target.value.toUpperCase() })}
-                placeholder="e.g. PTO"
+                placeholder="PTO"
               />
             </div>
           </div>
@@ -1969,7 +1966,7 @@ export const LeavePage: React.FC = () => {
               rows={2}
               value={typeForm.description}
               onChange={(e) => setTypeForm({ ...typeForm, description: e.target.value })}
-              placeholder="e.g. Standard statutory paid time off for full-time employees."
+              placeholder="Description of leave category..."
               className="w-full p-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
             />
           </div>
