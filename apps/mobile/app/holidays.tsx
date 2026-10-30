@@ -986,7 +986,6 @@ export default function HolidaysScreen() {
     >
       <ScreenHeader
         title="Calendar & Events"
-        subtitle={`Holidays, hackathons, town halls & corporate sessions (${activeYear})`}
         right={
           <View style={styles.headerYearBadge}>
             <CalendarIcon size={13} color={colors.indigoSoft} strokeWidth={2.2} />

@@ -19,4 +19,5 @@ export * from './ui/Text';
 export * from './Toast';
 export * from './OfflineBanner';
 export * from './AnnouncementBanner';
+export * from './Globe3DStand';
 export * from './Icon';

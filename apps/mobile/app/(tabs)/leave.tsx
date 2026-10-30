@@ -6,12 +6,15 @@ import {
   TextInput,
   Modal,
   RefreshControl,
+  TouchableOpacity,
   Alert,
   AppState,
   AppStateStatus,
 } from 'react-native';
 import {
   CalendarCheck,
+  Calendar as CalendarIcon,
+  ChevronRight,
   Clock,
   Plus,
   CheckCircle2,
@@ -31,6 +34,7 @@ import {
   Text,
   PressableScale,
   Skeleton,
+  Calendar,
 } from '../../src/components';
 import { useToast } from '../../src/components/Toast';
 import { colors, fonts, radii, spacing, type Tone } from '../../src/theme/tokens';
@@ -52,6 +56,16 @@ type StatusFilter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 
 function formatDateDisplay(isoString: string): string {
   try {
+    const parts = isoString.split('-');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      return d.toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
     const d = new Date(isoString);
     return d.toLocaleDateString(undefined, {
       month: 'short',
@@ -63,19 +77,6 @@ function formatDateDisplay(isoString: string): string {
   }
 }
 
-function calculateEstimatedDays(start: string, end: string, isHalf: boolean): number {
-  if (isHalf) return 0.5;
-  try {
-    const s = new Date(start);
-    const e = new Date(end);
-    if (isNaN(s.getTime()) || isNaN(e.getTime()) || s > e) return 0;
-    const diffTime = Math.abs(e.getTime() - s.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
-  } catch {
-    return 1;
-  }
-}
 
 const DEFAULT_LEAVE_TYPES: LeaveTypeItem[] = [
   {
@@ -178,6 +179,10 @@ export default function LeaveScreen() {
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Calendar picker state
+  const [calendarPickerTarget, setCalendarPickerTarget] = useState<'start' | 'end' | null>(null);
+  const [pickerMonth, setPickerMonth] = useState<Date>(() => new Date());
 
   // Decision Modal State (for HR/Admin)
   const [decisionModalTarget, setDecisionModalTarget] = useState<{
@@ -561,9 +566,7 @@ export default function LeaveScreen() {
       }
     >
       <PageHeader
-        eyebrow="Time-Off & Leave Portal"
         title="Leave Management"
-        subtitle="Check leave balances, apply for time-off, and track approvals."
       />
 
       <View style={[styles.container, isWide && styles.containerWide]}>
@@ -646,9 +649,6 @@ export default function LeaveScreen() {
             <Card variant="raised" padding={spacing.lg} style={styles.quotaSummaryCard}>
               <View style={styles.quotaSummaryHeader}>
                 <View style={styles.quotaTitleBlock}>
-                  <Text variant="caption" color={colors.muted}>
-                    Annual Allocation {new Date().getFullYear()}
-                  </Text>
                   <Text variant="subheading" weight="bold">
                     Leave Entitlement
                   </Text>
@@ -1049,9 +1049,6 @@ export default function LeaveScreen() {
           <View style={styles.modalCard}>
             <View style={styles.modalHeaderRow}>
               <View>
-                <Text variant="caption" color={colors.muted}>
-                  Submit Application
-                </Text>
                 <Text variant="subheading" weight="bold">
                   Apply for Time-Off
                 </Text>
@@ -1077,11 +1074,6 @@ export default function LeaveScreen() {
                   <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.fieldLabel}>
                     LEAVE CATEGORY
                   </Text>
-                  {activeLeaveTypeForForm && (
-                    <Text variant="small" color={colors.indigoSoft} weight="semibold">
-                      {activeLeaveTypeForForm.paid ? 'Paid' : 'Unpaid'} • {activeLeaveTypeForForm.halfDayAllowed ? 'Half-day ok' : 'Full day only'}
-                    </Text>
-                  )}
                 </View>
 
                 <View style={styles.categoriesWrapGrid}>
@@ -1146,32 +1138,70 @@ export default function LeaveScreen() {
               {/* Start Date */}
               <View style={styles.formField}>
                 <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.fieldLabel}>
-                  START DATE (YYYY-MM-DD)
+                  START DATE
                 </Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="2026-11-05"
-                  placeholderTextColor={colors.muted}
-                  value={startDate}
-                  onChangeText={setStartDate}
-                  maxLength={10}
-                />
+                <PressableScale
+                  onPress={() => {
+                    void Haptics.selectionAsync().catch(() => undefined);
+                    try {
+                      setPickerMonth(new Date(startDate + 'T00:00:00'));
+                    } catch {
+                      setPickerMonth(new Date());
+                    }
+                    setCalendarPickerTarget('start');
+                  }}
+                  style={styles.dateSelectorBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose start date from calendar"
+                >
+                  <View style={styles.dateSelectorLeft}>
+                    <View style={styles.calendarIconBubble}>
+                      <CalendarIcon size={16} color={colors.indigoSoft} strokeWidth={2.2} />
+                    </View>
+                    <Text variant="body" weight="medium" color={colors.text}>
+                      {formatDateDisplay(startDate)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.dateSelectorBadge}>
+                    <ChevronRight size={16} color={colors.textSecondary} strokeWidth={2.2} />
+                  </View>
+                </PressableScale>
               </View>
 
               {/* End Date (if not half-day) */}
               {!isHalfDay && (
                 <View style={styles.formField}>
                   <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.fieldLabel}>
-                    END DATE (YYYY-MM-DD)
+                    END DATE
                   </Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="2026-11-06"
-                    placeholderTextColor={colors.muted}
-                    value={endDate}
-                    onChangeText={setEndDate}
-                    maxLength={10}
-                  />
+                  <PressableScale
+                    onPress={() => {
+                      void Haptics.selectionAsync().catch(() => undefined);
+                      try {
+                        setPickerMonth(new Date(endDate + 'T00:00:00'));
+                      } catch {
+                        setPickerMonth(new Date());
+                      }
+                      setCalendarPickerTarget('end');
+                    }}
+                    style={styles.dateSelectorBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Choose end date from calendar"
+                  >
+                    <View style={styles.dateSelectorLeft}>
+                      <View style={styles.calendarIconBubble}>
+                        <CalendarIcon size={16} color={colors.indigoSoft} strokeWidth={2.2} />
+                      </View>
+                      <Text variant="body" weight="medium" color={colors.text}>
+                        {formatDateDisplay(endDate)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.dateSelectorBadge}>
+                      <ChevronRight size={16} color={colors.textSecondary} strokeWidth={2.2} />
+                    </View>
+                  </PressableScale>
                 </View>
               )}
 
@@ -1230,16 +1260,6 @@ export default function LeaveScreen() {
                 </View>
               )}
 
-              {/* Estimated Days Calculation Indicator */}
-              <View style={styles.estimateBanner}>
-                <Clock size={15} color={colors.indigoSoft} strokeWidth={2} />
-                <Text variant="small" color={colors.indigoSoft} weight="semibold">
-                  Estimated duration:{' '}
-                  {calculateEstimatedDays(startDate, endDate, isHalfDay)}{' '}
-                  {calculateEstimatedDays(startDate, endDate, isHalfDay) === 1 ? 'day' : 'days'}
-                </Text>
-              </View>
-
               {/* Reason Input */}
               <View style={styles.formField}>
                 <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.fieldLabel}>
@@ -1247,7 +1267,7 @@ export default function LeaveScreen() {
                 </Text>
                 <TextInput
                   style={[styles.textInput, styles.textArea]}
-                  placeholder="Explain your reason for leave (medical, personal emergency, travel)..."
+                  placeholder="Reason for leave..."
                   placeholderTextColor={colors.muted}
                   value={reason}
                   onChangeText={setReason}
@@ -1269,6 +1289,59 @@ export default function LeaveScreen() {
               />
             </ScrollView>
           </View>
+
+          {/* Calendar Date Picker Dialog Overlay */}
+          {calendarPickerTarget !== null && (
+            <View style={styles.calendarModalOverlay}>
+              <View style={styles.datePickerModalCard}>
+                <View style={styles.datePickerHeader}>
+                  <View style={styles.datePickerHeaderTitleWrap}>
+                    <CalendarIcon size={18} color={colors.indigoSoft} strokeWidth={2.2} />
+                    <Text variant="subheading" weight="bold" color={colors.text}>
+                      {calendarPickerTarget === 'start' ? 'Select Start Date' : 'Select End Date'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setCalendarPickerTarget(null)}
+                    style={styles.datePickerCloseBtn}
+                    accessibilityLabel="Close date picker"
+                  >
+                    <X size={18} color={colors.textSecondary} strokeWidth={2.2} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.calendarContainer}>
+                  <Calendar
+                    month={pickerMonth}
+                    onMonthChange={setPickerMonth}
+                    selectedDate={calendarPickerTarget === 'start' ? startDate : endDate}
+                    onSelectDate={(dateStr) => {
+                      void Haptics.selectionAsync().catch(() => undefined);
+                      if (calendarPickerTarget === 'start') {
+                        setStartDate(dateStr);
+                        if (endDate < dateStr) {
+                          setEndDate(dateStr);
+                        }
+                        setCalendarPickerTarget(null);
+                      } else {
+                        if (dateStr < startDate) {
+                          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+                          showToast({
+                            title: 'Invalid Date Range',
+                            message: 'End date cannot be earlier than start date.',
+                            type: 'warning',
+                          });
+                          return;
+                        }
+                        setEndDate(dateStr);
+                        setCalendarPickerTarget(null);
+                      }
+                    }}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
         </View>
       </Modal>
 
@@ -1285,9 +1358,6 @@ export default function LeaveScreen() {
           <View style={[styles.modalCard, { maxWidth: 400 }]}>
             <View style={styles.modalHeaderRow}>
               <View>
-                <Text variant="caption" color={colors.muted}>
-                  Review Action
-                </Text>
                 <Text variant="subheading" weight="bold">
                   {decisionModalTarget?.action === 'APPROVED' ? 'Approve' : 'Reject'} Request
                 </Text>
@@ -1769,5 +1839,79 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: spacing.sm,
     marginTop: spacing.sm,
+  },
+
+  // Target Date Selector Button Styles
+  dateSelectorBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(17, 20, 34, 0.72)',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dateSelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  calendarIconBubble: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(89, 101, 242, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateSelectorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: spacing.xs,
+  },
+
+  // Calendar Modal Dialog Overlay
+  calendarModalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+    zIndex: 999,
+  },
+  datePickerModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#0D101B',
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  datePickerHeaderTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  datePickerCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  calendarContainer: {
+    paddingVertical: 2,
   },
 });

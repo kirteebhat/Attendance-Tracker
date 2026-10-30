@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Modal,
   Alert,
   AppState,
   AppStateStatus,
@@ -13,6 +17,7 @@ import {
   House,
   Plus,
   X,
+  ChevronRight,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useToast } from '../../src/components/Toast';
@@ -28,6 +33,8 @@ import {
   Field,
   Notice,
   Text,
+  PressableScale,
+  Calendar,
 } from '../../src/components';
 import { colors, radii, spacing } from '../../src/theme/tokens';
 import { useResponsive } from '../../src/lib/responsive';
@@ -58,6 +65,38 @@ export default function WfhScreen() {
   const [requestReason, setRequestReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Calendar picker modal state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState<Date>(() => new Date());
+
+  // Formatted date string for the calendar button
+  const formattedTargetDate = useMemo(() => {
+    if (!requestDate) return 'Select date';
+    try {
+      const parts = requestDate.split('-');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        return d.toLocaleDateString(undefined, {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        });
+      }
+      return requestDate;
+    } catch {
+      return requestDate;
+    }
+  }, [requestDate]);
+
+  const REASON_PRESETS = [
+    'Deep focus on sprint deliverables',
+    'Personal & family commitment',
+    'Doctor appointment / medical checkup',
+    'Home maintenance / delivery',
+    'Severe commute / travel constraints',
+  ];
 
   const latestFetchTimestampRef = useRef<number>(0);
 
@@ -251,9 +290,7 @@ export default function WfhScreen() {
       }
     >
       <PageHeader
-        eyebrow="Remote Work Policy"
         title="Work From Home"
-        subtitle="Submit remote requests and check your monthly quota balance."
       />
 
       <View style={[styles.container, isWide && styles.containerWide]}>
@@ -261,9 +298,6 @@ export default function WfhScreen() {
         <Card variant="raised" padding={20} style={styles.quotaCard}>
           <View style={styles.quotaHeader}>
             <View style={styles.quotaTitleWrap}>
-              <Text variant="caption" color={colors.muted}>
-                Entitlement & Policy
-              </Text>
               <Text variant="title">Monthly WFH Quota</Text>
             </View>
             <Badge
@@ -333,45 +367,151 @@ export default function WfhScreen() {
 
         {/* 2. New Request Form Card */}
         {isFormOpen && (
-          <Card variant="glass" padding={20} style={styles.formCard}>
-            <View style={styles.formHeader}>
-              <House size={18} color={colors.indigoSoft} />
-              <Text variant="subheading">Submit Remote Work Request</Text>
-            </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardWrap}
+          >
+            <Card variant="glass" padding={20} style={styles.formCard}>
+              <View style={styles.formHeader}>
+                <House size={18} color={colors.indigoSoft} />
+                <Text variant="subheading">Submit Remote Work Request</Text>
+              </View>
 
-            {formError ? <Notice tone="danger" title="Invalid Request" message={formError} /> : null}
+              {formError ? <Notice tone="danger" title="Invalid Request" message={formError} /> : null}
 
-            <Field label="Target Date" required hint="Format: YYYY-MM-DD">
-              <Input
-                placeholder="2026-10-30"
-                value={requestDate}
-                onChangeText={setRequestDate}
-                leftIcon={CalendarIcon}
+              <Field label="Target Date" required>
+                <PressableScale
+                  onPress={() => {
+                    void Haptics.selectionAsync().catch(() => undefined);
+                    try {
+                      setPickerMonth(new Date(requestDate + 'T00:00:00'));
+                    } catch {
+                      setPickerMonth(new Date());
+                    }
+                    setShowDatePicker(true);
+                  }}
+                  style={styles.dateSelectorBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose date from calendar"
+                >
+                  <View style={styles.dateSelectorLeft}>
+                    <View style={styles.calendarIconBubble}>
+                      <CalendarIcon size={16} color={colors.indigoSoft} strokeWidth={2.2} />
+                    </View>
+                    <Text variant="body" weight="medium" color={colors.text}>
+                      {formattedTargetDate}
+                    </Text>
+                  </View>
+
+                  <View style={styles.dateSelectorBadge}>
+                    <ChevronRight size={16} color={colors.textSecondary} strokeWidth={2.2} />
+                  </View>
+                </PressableScale>
+              </Field>
+
+              <Field label="Business Justification" required>
+                <Input
+                  placeholder="Describe reason for remote work..."
+                  value={requestReason}
+                  onChangeText={setRequestReason}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+                <View style={styles.presetsRow}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.reasonChipsScroll}
+                  >
+                    {REASON_PRESETS.map((preset) => {
+                      const isSelected = requestReason === preset;
+                      return (
+                        <TouchableOpacity
+                          key={preset}
+                          onPress={() => {
+                            void Haptics.selectionAsync().catch(() => undefined);
+                            setRequestReason(preset);
+                          }}
+                          style={[styles.presetChip, isSelected && styles.presetChipActive]}
+                        >
+                          <Text
+                            variant="caption"
+                            weight={isSelected ? 'bold' : 'medium'}
+                            color={isSelected ? colors.white : colors.textSecondary}
+                          >
+                            {preset}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              </Field>
+
+              <Button
+                label={submitting ? 'Submitting...' : 'Submit Request to HR'}
+                loading={submitting}
+                onPress={handleCreateRequest}
               />
-            </Field>
-
-            <Field label="Business Justification" required hint="At least 5 characters">
-              <Input
-                placeholder="Describe reason for remote work..."
-                value={requestReason}
-                onChangeText={setRequestReason}
-                multiline
-                numberOfLines={3}
-              />
-            </Field>
-
-            <Button
-              label={submitting ? 'Submitting...' : 'Submit Request to HR'}
-              loading={submitting}
-              onPress={handleCreateRequest}
-            />
-          </Card>
+            </Card>
+          </KeyboardAvoidingView>
         )}
+
+        {/* Calendar Date Picker Modal */}
+        <Modal
+          visible={showDatePicker}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.datePickerModalCard}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderTitleWrap}>
+                  <CalendarIcon size={18} color={colors.indigoSoft} strokeWidth={2.2} />
+                  <Text variant="subheading" weight="bold" color={colors.text}>
+                    Select WFH Date
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(false)}
+                  style={styles.modalCloseBtn}
+                  accessibilityLabel="Close date picker"
+                >
+                  <X size={18} color={colors.textSecondary} strokeWidth={2.2} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.calendarContainer}>
+                <Calendar
+                  month={pickerMonth}
+                  onMonthChange={setPickerMonth}
+                  selectedDate={requestDate}
+                  onSelectDate={(dateStr) => {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    if (dateStr < todayStr) {
+                      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+                      showToast({
+                        title: 'Invalid Date',
+                        message: 'WFH cannot be requested for past dates.',
+                        type: 'warning',
+                      });
+                      return;
+                    }
+                    void Haptics.selectionAsync().catch(() => undefined);
+                    setRequestDate(dateStr);
+                    setShowDatePicker(false);
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* 3. Requests Feed */}
         <SectionHeader
           title="My requests"
-          caption={`${requests.length} applications on record`}
         />
 
         {requests.length === 0 ? (
@@ -379,9 +519,6 @@ export default function WfhScreen() {
             <House size={28} color={colors.muted} strokeWidth={1.6} />
             <Text variant="subheading" align="center">
               No remote requests yet
-            </Text>
-            <Text variant="small" color={colors.muted} align="center">
-              Tap "Request Work From Home" to submit your first remote request.
             </Text>
           </Card>
         ) : (
@@ -491,6 +628,32 @@ const styles = StyleSheet.create({
   formCard: {
     gap: spacing.md,
   },
+  keyboardWrap: {
+    width: '100%',
+  },
+  presetsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  reasonChipsScroll: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 2,
+  },
+  presetChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radii.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  presetChipActive: {
+    backgroundColor: colors.indigo,
+    borderColor: colors.indigo,
+  },
   formHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -530,5 +693,78 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: radii.sm,
     backgroundColor: 'rgba(255, 107, 131, 0.1)',
+  },
+
+  // Target Date Selector Button Styles
+  dateSelectorBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(17, 20, 34, 0.72)',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dateSelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  calendarIconBubble: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(89, 101, 242, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateSelectorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: spacing.xs,
+  },
+
+  // Calendar Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.78)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  datePickerModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#0D101B',
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalHeaderTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  calendarContainer: {
+    paddingVertical: 2,
   },
 });

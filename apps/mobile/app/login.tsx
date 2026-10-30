@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Mail, Lock, ArrowRight, ArrowLeft, Sparkles, Clock } from 'lucide-react-native';
+import { Mail, Lock, ArrowRight, ArrowLeft, Clock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../src/context/AuthContext';
 import { useToast } from '../src/components/Toast';
@@ -11,12 +11,10 @@ import {
   Input,
   Field,
   Button,
-  Badge,
   Notice,
   Text,
-  PressableScale,
 } from '../src/components';
-import { colors, radii, spacing } from '../src/theme/tokens';
+import { colors, spacing } from '../src/theme/tokens';
 import { useResponsive } from '../src/lib/responsive';
 import { ApiError } from '../src/services/api';
 
@@ -74,15 +72,12 @@ export default function LoginScreen() {
     }
   };
 
-  const fillDemoCredentials = () => {
-    setIdentifier('aarav.sharma@vorldx.demo');
-    setPassword('Employee@2026!');
-    setError(null);
-    void Haptics.selectionAsync().catch(() => undefined);
-  };
-
   return (
-    <Screen edges={['top', 'bottom']} keyboardShouldPersistTaps="handled">
+    <Screen
+      edges={['top', 'bottom']}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={styles.screenInner}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardWrap}
@@ -104,12 +99,8 @@ export default function LoginScreen() {
 
           {/* Hero Section */}
           <View style={styles.hero}>
-            <Badge label="Employee Attendance" tone="indigo" dot />
-            <Text variant="display" style={styles.headline}>
-              Your workday,{'\n'}in one place.
-            </Text>
-            <Text variant="body" color={colors.textSecondary} style={styles.heroSub}>
-              Scan in at the office, check in from home, and keep your attendance and remote work requests together.
+            <Text variant="display" align="center" style={styles.headline} numberOfLines={1}>
+              Your workday, in one place.
             </Text>
           </View>
 
@@ -128,10 +119,7 @@ export default function LoginScreen() {
           {/* Main Card */}
           <Card style={styles.card} padding={22} variant="raised">
             <View style={styles.formHeader}>
-              <Text variant="title">Welcome back</Text>
-              <Text variant="small" color={colors.muted}>
-                Sign in with your employee email or ID.
-              </Text>
+              <Text variant="title" align="center">Welcome back</Text>
             </View>
 
             {error ? (
@@ -148,7 +136,7 @@ export default function LoginScreen() {
                     setIdentifier(val);
                     if (error) setError(null);
                   }}
-                  placeholder="e.g. EMP-1001 or aarav.sharma@vorldx.demo"
+                  placeholder="EMP-1001 or aarav.sharma@vorldx.demo"
                   returnKeyType="next"
                   value={identifier}
                 />
@@ -169,19 +157,6 @@ export default function LoginScreen() {
                   value={password}
                 />
               </Field>
-
-              {/* Demo credentials helper pill */}
-              <PressableScale
-                accessibilityRole="button"
-                haptic="selection"
-                onPress={fillDemoCredentials}
-                style={styles.demoPill}
-              >
-                <Sparkles size={14} color={colors.indigoSoft} />
-                <Text variant="small" color={colors.indigoSoft} weight="medium">
-                  Auto-fill demo account (Aarav Sharma)
-                </Text>
-              </PressableScale>
             </View>
 
             <Button
@@ -209,13 +184,6 @@ export default function LoginScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-
-            <View style={styles.footer}>
-              <View style={styles.divider} />
-              <Text variant="caption" color={colors.muted} align="center">
-                Employees only · Admin & HR use the web dashboard
-              </Text>
-            </View>
           </Card>
         </View>
       </KeyboardAvoidingView>
@@ -224,8 +192,15 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  screenInner: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   keyboardWrap: {
     width: '100%',
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
@@ -233,6 +208,8 @@ const styles = StyleSheet.create({
     maxWidth: 460,
     gap: spacing.lg,
     paddingVertical: spacing.md,
+    alignSelf: 'center',
+    justifyContent: 'center',
   },
   contentWide: {
     maxWidth: 520,
@@ -245,39 +222,26 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   hero: {
-    gap: spacing.sm,
-    paddingTop: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: spacing.xs,
   },
   headline: {
-    fontSize: 32,
-    lineHeight: 38,
-    marginTop: 4,
-  },
-  heroSub: {
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 2,
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   card: {
     gap: spacing.lg,
   },
   formHeader: {
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
   },
   fields: {
     gap: spacing.md,
-  },
-  demoPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: radii.sm,
-    backgroundColor: 'rgba(89, 101, 242, 0.08)',
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: 'rgba(89, 101, 242, 0.2)',
   },
   registerPrompt: {
     flexDirection: 'row',
@@ -288,13 +252,5 @@ const styles = StyleSheet.create({
   },
   registerLink: {
     paddingVertical: 4,
-  },
-  footer: {
-    gap: spacing.md,
-    paddingTop: spacing.xs,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
   },
 });

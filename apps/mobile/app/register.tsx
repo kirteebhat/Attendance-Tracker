@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Hash, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react-native';
+import { Hash, ArrowRight, ArrowLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../src/context/AuthContext';
 import {
@@ -10,13 +10,10 @@ import {
   Input,
   Field,
   Button,
-  Badge,
   Notice,
   Text,
-  PageHeader,
-  PressableScale,
 } from '../src/components';
-import { colors, radii, spacing } from '../src/theme/tokens';
+import { colors, spacing } from '../src/theme/tokens';
 import { useResponsive } from '../src/lib/responsive';
 import { ApiError } from '../src/services/api';
 
@@ -76,14 +73,8 @@ export default function RegisterScreen() {
     }
   };
 
-  const fillDemoId = () => {
-    setEmployeeId('EMP-1003');
-    setError(null);
-    void Haptics.selectionAsync().catch(() => undefined);
-  };
-
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} contentContainerStyle={styles.screenInner}>
       <View style={[styles.content, isWide && styles.contentWide]}>
         {/* Back Link */}
         <TouchableOpacity
@@ -99,19 +90,17 @@ export default function RegisterScreen() {
           </Text>
         </TouchableOpacity>
 
-        <View style={styles.stepBadge}>
-          <Badge label="Step 1 of 3" tone="indigo" dot />
+        {/* Hero Section */}
+        <View style={styles.hero}>
+          <Text variant="display" align="center" style={styles.headline}>
+            Activate Account
+          </Text>
         </View>
-
-        <PageHeader
-          title="Activate Account"
-          subtitle="Enter your official VorldX Employee ID to initiate verification."
-        />
 
         <Card style={styles.card} padding={22} variant="raised">
           {error ? <Notice tone="danger" title="Lookup Failed" message={error} /> : null}
 
-          <Field label="Employee ID" required hint="Found on your ID badge or employment letter">
+          <Field label="Employee ID" required>
             <Input
               autoCapitalize="characters"
               autoCorrect={false}
@@ -120,25 +109,12 @@ export default function RegisterScreen() {
                 setEmployeeId(val);
                 if (error) setError(null);
               }}
-              placeholder="e.g. EMP-1003"
+              placeholder="EMP-1003"
               returnKeyType="go"
               onSubmitEditing={handleStartRegistration}
               value={employeeId}
             />
           </Field>
-
-          {/* Demo ID filler */}
-          <PressableScale
-            accessibilityRole="button"
-            haptic="selection"
-            onPress={fillDemoId}
-            style={styles.demoPill}
-          >
-            <Sparkles size={14} color={colors.indigoSoft} />
-            <Text variant="small" color={colors.indigoSoft} weight="medium">
-              Use demo ID (EMP-1003)
-            </Text>
-          </PressableScale>
 
           <Button
             label={loading ? 'Verifying ID...' : 'Continue to OTP'}
@@ -155,11 +131,17 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
+  screenInner: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   content: {
     width: '100%',
     maxWidth: 460,
-    gap: spacing.md,
+    gap: spacing.lg,
     alignSelf: 'center',
+    justifyContent: 'center',
     paddingVertical: spacing.md,
   },
   contentWide: {
@@ -170,24 +152,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingVertical: 4,
+    alignSelf: 'flex-start',
   },
-  stepBadge: {
-    marginTop: spacing.xs,
+  hero: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: spacing.xs,
+  },
+  headline: {
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   card: {
     gap: spacing.lg,
-    marginTop: spacing.sm,
-  },
-  demoPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: radii.sm,
-    backgroundColor: 'rgba(89, 101, 242, 0.08)',
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: 'rgba(89, 101, 242, 0.2)',
   },
 });

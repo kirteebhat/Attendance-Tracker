@@ -185,7 +185,6 @@ export default function ProfileScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <PageHeader
-        eyebrow="VorldX Operations"
         title={user?.name ?? 'Your Profile'}
         subtitle={employeeDetails?.designation || user?.department || 'Employee Profile'}
         right={<Avatar name={user?.name ?? 'VX'} showRing size={48} />}
@@ -212,7 +211,7 @@ export default function ProfileScreen() {
         </Card>
 
         {/* 2. Work Details Section */}
-        <SectionHeader title="Profile details" caption="Read-only in the mobile app" />
+        <SectionHeader title="Profile details" />
         <Card padding={0}>
           <InfoRow icon={Hash} label="Employee ID" value={user?.employeeId ?? '—'} />
           <InfoRow icon={Mail} label="Work email" value={user?.email ?? '—'} />
@@ -235,7 +234,7 @@ export default function ProfileScreen() {
         </Card>
 
         {/* 3. Assigned Shift & Policy Card */}
-        <SectionHeader title="Shift specifications" caption="Company attendance policy" />
+        <SectionHeader title="Shift specifications" />
         <Card padding={0}>
           <InfoRow
             icon={Clock3}
@@ -251,7 +250,7 @@ export default function ProfileScreen() {
         </Card>
 
         {/* 4. Application & System Updates */}
-        <SectionHeader title="Application & Updates" caption="App version and release channel" />
+        <SectionHeader title="Application & Updates" />
         <Card padding={0}>
           <PressableScale
             onPress={handleManualCheckUpdates}
@@ -288,9 +287,6 @@ export default function ProfileScreen() {
             onPress={handleLogout}
             variant="danger"
           />
-          <Text variant="caption" color={colors.muted} align="center">
-            VorldX Attendance Suite · {APP_CHANNEL.toUpperCase()}
-          </Text>
         </View>
       </View>
     </Screen>

@@ -213,7 +213,6 @@ export default function HomeScreen() {
       }
     >
       <PageHeader
-        eyebrow="VorldX Operations"
         title={`${getGreeting()}, ${firstName}`}
         subtitle={getFormattedDate()}
         right={
@@ -281,11 +280,11 @@ export default function HomeScreen() {
                     ? 'Working from home'
                     : 'Ready to punch in'}
             </Text>
-            <Text variant="small" color={colors.textSecondary}>
-              {record?.checkInTime
-                ? `Punched in at ${formatTime(record.checkInTime)}`
-                : 'Scan office display QR or verify WFH request.'}
-            </Text>
+            {record?.checkInTime ? (
+              <Text variant="small" color={colors.textSecondary}>
+                Punched in at {formatTime(record.checkInTime)}
+              </Text>
+            ) : null}
           </View>
           <Badge label={punchStatusLabel} tone={punchStatusTone} dot />
         </View>
@@ -357,26 +356,42 @@ export default function HomeScreen() {
       </Card>
 
       {/* 2. Monthly Stats Row */}
-      <View style={styles.statGrid}>
-        <StatTile
-          hint="this month"
-          icon={CheckCircle2}
-          label="Present"
-          tone="success"
-          value={presentCount}
-        />
-        <StatTile hint="this month" icon={Clock3} label="Late" tone="warning" value={lateCount} />
-        <StatTile hint="this month" icon={AlertCircle} label="Absent" tone="danger" value={absentCount} />
-        <StatTile hint="this month" icon={House} label="WFH" tone="info" value={wfhCount} />
+      <View style={styles.statSection}>
+        <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.statSectionLabel}>
+          THIS MONTH
+        </Text>
+        <View style={styles.statGrid}>
+          <StatTile
+            icon={CheckCircle2}
+            label="Present"
+            tone="success"
+            value={presentCount}
+          />
+          <StatTile
+            icon={AlertCircle}
+            label="Absent"
+            tone="danger"
+            value={absentCount}
+          />
+          <StatTile
+            icon={Clock3}
+            label="Late"
+            tone="warning"
+            value={lateCount}
+          />
+          <StatTile
+            icon={House}
+            label="WFH"
+            tone="info"
+            value={wfhCount}
+          />
+        </View>
       </View>
 
       {/* 3. Month Mix Donut Chart */}
       <Card style={styles.chartCard} padding={18}>
         <View style={styles.chartHeader}>
           <Text variant="subheading">Month Attendance Mix</Text>
-          <Text variant="small" color={colors.muted}>
-            {totalRecordedDays} recorded days
-          </Text>
         </View>
         {totalRecordedDays > 0 ? (
           <View style={styles.donutRow}>
@@ -403,7 +418,6 @@ export default function HomeScreen() {
         <View style={styles.recentSection}>
           <SectionHeader
             actionLabel="View all"
-            caption="Latest attendance punches"
             onAction={() => router.navigate('/(tabs)/history')}
             title="Recent activity"
           />
@@ -535,10 +549,19 @@ const styles = StyleSheet.create({
   heroButton: {
     flex: 1,
   },
+  statSection: {
+    gap: 8,
+  },
+  statSectionLabel: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 11,
+    paddingHorizontal: 2,
+  },
   statGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    alignItems: 'stretch',
+    gap: 8,
   },
   chartCard: {
     gap: spacing.md,

@@ -1,17 +1,16 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { QrCode, ShieldCheck, Clock, ArrowRight } from 'lucide-react-native';
+import { ArrowRight } from 'lucide-react-native';
 import { useAuth } from '../src/context/AuthContext';
 import {
   Screen,
-  Card,
   Button,
-  Badge,
   Text,
   DashboardSkeleton,
+  Globe3DStand,
 } from '../src/components';
-import { colors, radii, spacing } from '../src/theme/tokens';
+import { colors, spacing } from '../src/theme/tokens';
 import { useResponsive } from '../src/lib/responsive';
 
 export default function WelcomeScreen() {
@@ -34,62 +33,22 @@ export default function WelcomeScreen() {
   }
 
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']} contentContainerStyle={styles.screenInner}>
       <View style={[styles.container, isWide && styles.containerWide]}>
         {/* Top Branding Section */}
         <View style={styles.brandingSection}>
-          <View style={styles.logoBadgeContainer}>
-            <View style={styles.logoIcon}>
-              <QrCode size={34} color={colors.indigoSoft} strokeWidth={2} />
-            </View>
-          </View>
-
-          <Badge label="VORLDX ENTERPRISE SUITE" tone="indigo" dot />
-
-          <Text variant="display" style={styles.brandTitle}>
-            Vorld<Text style={styles.brandAccent}>X</Text>
+          <Text variant="display" align="center" style={styles.brandTitle}>
+            <Text style={styles.capLetter}>V</Text>orld<Text style={[styles.brandAccent, styles.capLetter]}>X</Text>
           </Text>
-          <Text variant="subheading" color={colors.textSecondary} style={styles.tagline}>
+          <Text variant="subheading" color={colors.textSecondary} align="center" style={styles.tagline}>
             Workforce Attendance & Remote Operations
-          </Text>
-
-          <Text variant="body" color={colors.muted} align="center" style={styles.description}>
-            Cryptographic dynamic QR check-ins, automated grace period evaluation, and transparent remote work accounting.
           </Text>
         </View>
 
-        {/* Feature Highlights Card */}
-        <Card style={styles.featureCard} variant="raised" padding={18}>
-          <View style={styles.featureItem}>
-            <View style={styles.featureIconWrap}>
-              <ShieldCheck size={18} color={colors.success} strokeWidth={2} />
-            </View>
-            <View style={styles.featureTextContainer}>
-              <Text variant="bodyMedium" weight="semibold">
-                Cryptographic QR Punch
-              </Text>
-              <Text variant="small" color={colors.muted}>
-                Dynamic 30s rotating lobby codes with zero client timestamps
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.featureDivider} />
-
-          <View style={styles.featureItem}>
-            <View style={styles.featureIconWrap}>
-              <Clock size={18} color={colors.indigoSoft} strokeWidth={2} />
-            </View>
-            <View style={styles.featureTextContainer}>
-              <Text variant="bodyMedium" weight="semibold">
-                Authoritative Punctuality
-              </Text>
-              <Text variant="small" color={colors.muted}>
-                Grace minutes and shift boundaries evaluated server-side
-              </Text>
-            </View>
-          </View>
-        </Card>
+        {/* 3D Continuously Revolving Earth Globe on Cursive 'X' Stand */}
+        <View style={styles.globeSection}>
+          <Globe3DStand size={isWide ? 260 : 230} />
+        </View>
 
         {/* Action Buttons */}
         <View style={styles.actionSection}>
@@ -110,23 +69,23 @@ export default function WelcomeScreen() {
             testID="btn-register"
           />
         </View>
-
-        {/* Footer Info */}
-        <View style={styles.footer}>
-          <Text variant="caption" color={colors.muted} align="center">
-            Encrypted & NTP-synchronized · Built for VorldX Industries
-          </Text>
-        </View>
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  screenInner: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     width: '100%',
     maxWidth: 480,
     alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.lg,
     paddingVertical: spacing.md,
   },
@@ -135,74 +94,38 @@ const styles = StyleSheet.create({
   },
   brandingSection: {
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingTop: spacing.lg,
-  },
-  logoBadgeContainer: {
-    marginBottom: spacing.xs,
-  },
-  logoIcon: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
-    backgroundColor: 'rgba(89, 101, 242, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(89, 101, 242, 0.3)',
-    alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.indigo,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
+    gap: spacing.xs,
   },
   brandTitle: {
-    fontSize: 34,
-    lineHeight: 40,
-    marginTop: 4,
+    fontSize: 32,
+    lineHeight: 44,
+    marginTop: 2,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    textAlign: 'center',
+  },
+  capLetter: {
+    fontSize: 38,
+    lineHeight: 44,
+    fontWeight: '800',
   },
   brandAccent: {
     color: colors.indigoSoft,
   },
   tagline: {
     marginTop: -2,
+    textAlign: 'center',
   },
-  description: {
-    maxWidth: 340,
-    lineHeight: 20,
-    marginTop: 4,
-  },
-  featureCard: {
-    gap: spacing.md,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  featureIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: radii.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+  globeSection: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  featureTextContainer: {
-    flex: 1,
-    gap: 2,
-  },
-  featureDivider: {
-    height: 1,
-    backgroundColor: colors.border,
+    marginVertical: 4,
   },
   actionSection: {
     width: '100%',
+    alignItems: 'center',
     gap: spacing.md,
     marginTop: spacing.xs,
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
   },
 });

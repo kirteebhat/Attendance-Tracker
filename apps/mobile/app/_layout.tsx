@@ -2,6 +2,7 @@ import React from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { DarkTheme, ThemeProvider } from "@react-navigation/native";
 import {
   useFonts,
   PlusJakartaSans_400Regular,
@@ -19,6 +20,18 @@ import { OfflineBanner } from "../src/components/OfflineBanner";
 import { UpdateSheet } from "../src/components/UpdateSheet";
 import { colors } from "../src/theme/tokens";
 
+const navigationTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: colors.bg,
+    card: colors.bg,
+    border: colors.border,
+    text: colors.text,
+    notification: colors.indigo,
+  },
+};
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     PlusJakartaSans_400Regular,
@@ -34,32 +47,34 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <ToastProvider>
-          <StatusBar style="light" />
-          <OfflineBanner />
-          <UpdateSheet />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.bg },
-              animation: "fade",
-            }}
-          >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="register" options={{ headerShown: false }} />
-            <Stack.Screen name="verify-otp" options={{ headerShown: false }} />
-            <Stack.Screen name="set-password" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="announcements" options={{ headerShown: false }} />
-            <Stack.Screen name="enquiries" options={{ headerShown: false }} />
-            <Stack.Screen name="holidays" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-          </Stack>
-        </ToastProvider>
-      </AuthProvider>
+    <SafeAreaProvider style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ThemeProvider value={navigationTheme}>
+        <AuthProvider>
+          <ToastProvider>
+            <StatusBar style="light" backgroundColor={colors.bg} />
+            <OfflineBanner />
+            <UpdateSheet />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+                animation: "slide_from_right",
+              }}
+            >
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="register" options={{ headerShown: false }} />
+              <Stack.Screen name="verify-otp" options={{ headerShown: false }} />
+              <Stack.Screen name="set-password" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="announcements" options={{ headerShown: false }} />
+              <Stack.Screen name="enquiries" options={{ headerShown: false }} />
+              <Stack.Screen name="holidays" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+            </Stack>
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

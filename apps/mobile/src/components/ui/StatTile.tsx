@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import { colors, radii, spacing, tones, type Tone } from '../../theme/tokens';
+import { colors, radii, tones, type Tone } from '../../theme/tokens';
 import { Text } from './Text';
 
 export function StatTile({
@@ -22,18 +22,16 @@ export function StatTile({
   const palette = tones[tone] || tones.neutral;
   return (
     <View style={[styles.tile, { borderColor: palette.border }, style]}>
-      <View style={styles.top}>
-        <Text variant="caption" color={colors.muted} numberOfLines={1} style={styles.label}>
-          {label}
-        </Text>
-        {Icon ? (
-          <View style={[styles.icon, { backgroundColor: palette.bg }]}>
-            <Icon size={13} color={palette.fg} strokeWidth={1.9} />
-          </View>
-        ) : null}
-      </View>
+      {Icon ? (
+        <View style={[styles.icon, { backgroundColor: palette.bg }]}>
+          <Icon size={12} color={palette.fg} strokeWidth={2.2} />
+        </View>
+      ) : null}
       <Text variant="numberSmall" numberOfLines={1} style={styles.value}>
         {value}
+      </Text>
+      <Text variant="caption" numberOfLines={1} style={styles.label}>
+        {label}
       </Text>
       {hint ? (
         <Text variant="small" color={colors.muted} numberOfLines={1} style={styles.hint}>
@@ -47,22 +45,13 @@ export function StatTile({
 const styles = StyleSheet.create({
   tile: {
     flex: 1,
-    minWidth: 110,
-    padding: spacing.md,
+    minWidth: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: radii.md,
     borderWidth: 1,
     backgroundColor: 'rgba(18, 21, 36, 0.66)',
-    gap: 2,
-  },
-  top: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  label: {
-    flex: 1,
-    marginRight: 4,
+    gap: 3,
   },
   icon: {
     width: 22,
@@ -70,14 +59,20 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 2,
   },
   value: {
     color: colors.text,
-    fontSize: 22,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  label: {
+    fontSize: 11,
+    color: colors.muted,
   },
   hint: {
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: 10,
+    marginTop: 1,
   },
 });
 

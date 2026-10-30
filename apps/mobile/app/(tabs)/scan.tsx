@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   Animated,
 } from 'react-native';
@@ -14,11 +13,7 @@ import {
   ArrowRight,
   Camera,
   CheckCircle2,
-  Clock3,
-  QrCode,
   RotateCcw,
-  ScanLine,
-  Sparkles,
   Zap,
   ZapOff,
 } from 'lucide-react-native';
@@ -28,7 +23,6 @@ import {
   Card,
   Button,
   PageHeader,
-  Input,
   Text,
   PressableScale,
 } from '../../src/components';
@@ -84,8 +78,6 @@ export default function ScanScreen() {
 
   const [torch, setTorch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [manualToken, setManualToken] = useState('');
-  const [showManualInput, setShowManualInput] = useState(false);
 
   const [scanResult, setScanResult] = useState<{
     tone: Tone;
@@ -99,7 +91,6 @@ export default function ScanScreen() {
     isProcessingRef.current = false;
     setIsSubmitting(false);
     setScanResult(null);
-    setManualToken('');
   };
 
   /**
@@ -186,9 +177,7 @@ export default function ScanScreen() {
   return (
     <Screen edges={['top', 'bottom']}>
       <PageHeader
-        eyebrow="Dynamic Token"
         title="Office QR Punch"
-        subtitle="Aim your camera at the office lobby display kiosk to check in or out."
       />
 
       <View style={[styles.container, isWide && styles.containerWide]}>
@@ -235,12 +224,7 @@ export default function ScanScreen() {
 
           {/* Top Bar Controls */}
           <View style={styles.cameraTop}>
-            <View style={styles.cameraBadge}>
-              <QrCode size={13} color={colors.indigoSoft} strokeWidth={2} />
-              <Text variant="caption" color={colors.indigoSoft}>
-                VorldX Office Kiosk
-              </Text>
-            </View>
+            <View style={{ flex: 1 }} />
             {permission?.granted ? (
               <PressableScale
                 accessibilityRole="button"
@@ -314,54 +298,6 @@ export default function ScanScreen() {
             </View>
           ) : null}
         </View>
-
-        {/* Hints Footer */}
-        <View style={styles.footerHints}>
-          <View style={styles.hintItem}>
-            <ScanLine size={14} color={colors.muted} />
-            <Text variant="small" color={colors.muted}>
-              Hold steady inside the frame
-            </Text>
-          </View>
-          <View style={styles.hintItem}>
-            <Clock3 size={14} color={colors.muted} />
-            <Text variant="small" color={colors.muted}>
-              QR challenge rotates every 30s
-            </Text>
-          </View>
-        </View>
-
-        {/* Demo Token Manual Input Fallback */}
-        <Card variant="soft" padding={14} style={styles.demoCard}>
-          <TouchableOpacity
-            onPress={() => setShowManualInput(!showManualInput)}
-            style={styles.demoToggle}
-          >
-            <View style={styles.demoToggleLeft}>
-              <Sparkles size={15} color={colors.indigoSoft} />
-              <Text variant="small" color={colors.indigoSoft} weight="semibold">
-                No lobby display screen? Use Instant Demo Punch
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          {showManualInput && (
-            <View style={styles.demoInputWrap}>
-              <Input
-                placeholder="Paste token or payload"
-                value={manualToken}
-                onChangeText={setManualToken}
-                leftIcon={QrCode}
-              />
-              <Button
-                label="Submit Challenge Token"
-                size="sm"
-                onPress={() => processToken(manualToken)}
-                loading={isSubmitting}
-              />
-            </View>
-          )}
-        </Card>
       </View>
     </Screen>
   );

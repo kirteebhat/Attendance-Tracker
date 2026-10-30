@@ -16,7 +16,6 @@ import {
   MapPin,
   Clock,
   ChevronRight,
-  Sparkles,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import {
@@ -122,17 +121,9 @@ export default function HistoryScreen() {
     const next = upcoming[0];
     if (!next) {
       return {
-        badge: 'Calendar',
         subtitle: 'Holidays, hackathons, sessions & town halls',
       };
     }
-
-    const badge =
-      next.diffDays === 0
-        ? 'Today! 🎉'
-        : next.diffDays === 1
-        ? 'Tomorrow'
-        : `In ${next.diffDays} days`;
 
     const dayStr = next.dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     const typeLabel =
@@ -147,7 +138,7 @@ export default function HistoryScreen() {
     const isLongWeekend = (next.type === 'holiday' || next.type === 'companyOffDay') && (next.dateObj.getDay() === 1 || next.dateObj.getDay() === 5);
     const subtitle = `${next.name} (${dayStr}) • ${typeLabel}${isLongWeekend ? ' • Long Weekend' : ''}`;
 
-    return { badge, subtitle };
+    return { subtitle };
   }, [calendarEvents]);
 
   const monthKey = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`;
@@ -235,7 +226,6 @@ export default function HistoryScreen() {
       }
     >
       <PageHeader
-        eyebrow="Monthly Ledger"
         title="Attendance Activity"
         subtitle={monthDisplayName}
         right={
@@ -272,17 +262,9 @@ export default function HistoryScreen() {
                 <CalendarDays size={18} color={colors.white} strokeWidth={2.2} />
               </View>
               <View style={styles.holidaysBtnTexts}>
-                <View style={styles.holidaysBtnTitleRow}>
-                  <Text variant="body" weight="bold" color={colors.white} style={styles.holidaysBtnTitle}>
-                    Company Calendar & Events
-                  </Text>
-                  <View style={styles.holidaysCountdownBadge}>
-                    <Sparkles size={11} color={colors.indigo} strokeWidth={2.4} />
-                    <Text variant="small" weight="bold" color={colors.indigo}>
-                      {nextCalendarTeaser.badge}
-                    </Text>
-                  </View>
-                </View>
+                <Text variant="body" weight="bold" color={colors.white} style={styles.holidaysBtnTitle}>
+                  Company Calendar & Events
+                </Text>
                 <Text variant="caption" color="rgba(255, 255, 255, 0.88)" numberOfLines={1}>
                   {nextCalendarTeaser.subtitle}
                 </Text>
@@ -296,35 +278,36 @@ export default function HistoryScreen() {
         </PressableScale>
 
         {/* 1. Monthly Stats Grid */}
-        <View style={styles.statGrid}>
-          <StatTile
-            hint="this month"
-            icon={CheckCircle2}
-            label="Present"
-            tone="success"
-            value={stats?.presentDays ?? 0}
-          />
-          <StatTile
-            hint="this month"
-            icon={Clock3}
-            label="Late"
-            tone="warning"
-            value={stats?.lateDays ?? 0}
-          />
-          <StatTile
-            hint="this month"
-            icon={AlertCircle}
-            label="Absent"
-            tone="danger"
-            value={stats?.absentDays ?? 0}
-          />
-          <StatTile
-            hint="this month"
-            icon={House}
-            label="WFH"
-            tone="info"
-            value={stats?.wfhDays ?? 0}
-          />
+        <View style={styles.statSection}>
+          <Text variant="caption" weight="bold" color={colors.textSecondary} style={styles.statSectionLabel}>
+            THIS MONTH
+          </Text>
+          <View style={styles.statGrid}>
+            <StatTile
+              icon={CheckCircle2}
+              label="Present"
+              tone="success"
+              value={stats?.presentDays ?? 0}
+            />
+            <StatTile
+              icon={AlertCircle}
+              label="Absent"
+              tone="danger"
+              value={stats?.absentDays ?? 0}
+            />
+            <StatTile
+              icon={Clock3}
+              label="Late"
+              tone="warning"
+              value={stats?.lateDays ?? 0}
+            />
+            <StatTile
+              icon={House}
+              label="WFH"
+              tone="info"
+              value={stats?.wfhDays ?? 0}
+            />
+          </View>
         </View>
 
         {/* 2. Interactive Calendar Card */}
@@ -346,9 +329,6 @@ export default function HistoryScreen() {
           <Card variant="glass" padding={18} style={styles.selectedDayCard}>
             <View style={styles.selectedHeader}>
               <View style={styles.selectedHeaderLeft}>
-                <Text variant="caption" color={colors.muted}>
-                  Selected Date
-                </Text>
                 <Text variant="subheading" weight="semibold">
                   {selectedRecord.dateKey}
                 </Text>
@@ -529,22 +509,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  holidaysBtnTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   holidaysBtnTitle: {
     fontSize: 15,
-  },
-  holidaysCountdownBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.white,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: radii.full,
   },
   holidaysBtnArrow: {
     width: 28,
@@ -554,10 +520,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  statSection: {
+    gap: 8,
+  },
+  statSectionLabel: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 11,
+    paddingHorizontal: 2,
+  },
   statGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    alignItems: 'stretch',
+    gap: 8,
   },
   calendarCard: {
     gap: spacing.sm,

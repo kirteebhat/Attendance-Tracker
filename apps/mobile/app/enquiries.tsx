@@ -496,7 +496,6 @@ export default function EnquiriesScreen() {
         {/* Screen Header */}
         <ScreenHeader
           title="Helpdesk & Enquiries"
-          subtitle="HR support, dispute resolution & queries"
           right={
             <Badge
               label={activeTab === 'list' ? `${enquiries.length} TICKETS` : 'NEW'}
@@ -775,13 +774,6 @@ export default function EnquiriesScreen() {
                           numberOfLines={1}
                         >
                           {cat.label}
-                        </Text>
-                        <Text
-                          variant="small"
-                          color={isSelected ? colors.lavender : colors.muted}
-                          numberOfLines={1}
-                        >
-                          {cat.sub}
                         </Text>
                       </PressableScale>
                     );

@@ -1,8 +1,9 @@
-import React, { useState, type ReactNode } from 'react';
+import React, { useState, useRef, useImperativeHandle, type ReactNode } from 'react';
 import {
   StyleSheet,
   TextInput,
   View,
+  Pressable,
   TouchableOpacity,
   type StyleProp,
   type TextInputProps,
@@ -60,29 +61,41 @@ export interface InputProps extends Omit<TextInputProps, 'style'> {
   testID?: string;
 }
 
-export function Input({
-  label,
-  error,
-  helperText,
-  leftIcon: LeftIcon,
-  right,
-  secure = false,
-  isPassword = false,
-  containerStyle,
-  style,
-  inputStyle,
-  multiline,
-  onFocus,
-  onBlur,
-  editable = true,
-  testID,
-  ...props
-}: InputProps) {
+export const Input = React.forwardRef<TextInput, InputProps>(function Input(
+  {
+    label,
+    error,
+    helperText,
+    leftIcon: LeftIcon,
+    right,
+    secure = false,
+    isPassword = false,
+    containerStyle,
+    style,
+    inputStyle,
+    multiline,
+    onFocus,
+    onBlur,
+    editable = true,
+    testID,
+    ...props
+  },
+  ref
+) {
+  const innerRef = useRef<TextInput>(null);
+  useImperativeHandle(ref, () => innerRef.current as TextInput);
+
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const isSecure = (secure || isPassword) && !revealed;
   const hasError = Boolean(error);
   const errorMessage = typeof error === 'string' ? error : null;
+
+  const handleContainerPress = () => {
+    if (editable) {
+      innerRef.current?.focus();
+    }
+  };
 
   const renderLeft = () => {
     if (!LeftIcon) return null;
@@ -104,7 +117,8 @@ export function Input({
   };
 
   const inputEl = (
-    <View
+    <Pressable
+      onPress={handleContainerPress}
       style={[
         styles.inputShell,
         multiline ? styles.multilineShell : null,
@@ -116,10 +130,12 @@ export function Input({
     >
       {renderLeft()}
       <TextInput
+        ref={innerRef}
         {...props}
         testID={testID}
         editable={editable}
         multiline={multiline}
+        textAlignVertical={multiline ? 'top' : (props.textAlignVertical ?? 'center')}
         onBlur={(event) => {
           setFocused(false);
           onBlur?.(event);
@@ -130,7 +146,11 @@ export function Input({
         }}
         placeholderTextColor={colors.muted}
         secureTextEntry={isSecure}
-        style={[styles.input, inputStyle]}
+        style={[
+          styles.input,
+          multiline ? styles.multilineInput : null,
+          inputStyle,
+        ]}
       />
       {secure || isPassword ? (
         <TouchableOpacity
@@ -147,7 +167,7 @@ export function Input({
       ) : right ? (
         right
       ) : null}
-    </View>
+    </Pressable>
   );
 
   if (label || errorMessage || helperText) {
@@ -175,7 +195,7 @@ export function Input({
   }
 
   return inputEl;
-}
+});
 
 const styles = StyleSheet.create({
   field: {
@@ -199,7 +219,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   multilineShell: {
-    height: 108,
+    height: undefined,
+    minHeight: 110,
     alignItems: 'flex-start',
     paddingVertical: spacing.md,
   },
@@ -226,8 +247,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     padding: 0,
   },
+  multilineInput: {
+    minHeight: 84,
+    textAlignVertical: 'top',
+    alignSelf: 'stretch',
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
   eyeBtn: {
     padding: 4,
   },
 });
-
