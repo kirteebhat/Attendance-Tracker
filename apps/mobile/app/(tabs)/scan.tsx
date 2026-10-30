@@ -304,7 +304,7 @@ export default function ScanScreen() {
                   />
                   <Button
                     icon={<ArrowRight size={14} color={colors.white} />}
-                    label="View history"
+                    label="View activity"
                     onPress={() => router.navigate('/(tabs)/history')}
                     size="sm"
                     style={{ flex: 1 }}

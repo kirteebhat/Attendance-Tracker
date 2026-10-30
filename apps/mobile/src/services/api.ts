@@ -515,6 +515,49 @@ export const employeeApi = {
   },
 };
 
+export interface HolidayItem {
+  _id: string;
+  name: string;
+  dateKey: string;
+  description?: string;
+  isRecurring?: boolean;
+  type?: "national" | "gazetted" | "restricted" | "company";
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CalendarEventItem {
+  _id: string;
+  type: "holiday" | "companyOffDay" | "meeting" | "event";
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  isFullDay: boolean;
+  location?: string;
+  startTime?: string;
+  endTime?: string;
+  audience?: {
+    scope: string;
+    departments?: string[];
+    roles?: string[];
+  };
+}
+
+export const holidayApi = {
+  async getHolidays(year?: number): Promise<{ success: boolean; data: HolidayItem[] }> {
+    return apiRequest<{ success: boolean; data: HolidayItem[] }>(
+      `/api/holidays${year ? `?year=${year}` : ""}`
+    );
+  },
+  async getCalendarEvents(year?: number): Promise<{
+    success: boolean;
+    data: CalendarEventItem[];
+  }> {
+    return apiRequest(`/api/calendar/events${year ? `?year=${year}` : ""}`);
+  },
+};
+
 export const policyApi = {
   async getPolicy(): Promise<{ success: boolean; data: PolicyData }> {
     return apiRequest<{ success: boolean; data: PolicyData }>("/api/policy");

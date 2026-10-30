@@ -13,6 +13,8 @@ import {
   Platform,
 } from 'react-native';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   Clock,
@@ -43,6 +45,7 @@ import {
   Text,
   PressableScale,
   Skeleton,
+  AppBackground,
 } from '../src/components';
 import { useToast } from '../src/components/Toast';
 import { colors, fonts, radii, spacing, type Tone } from '../src/theme/tokens';
@@ -922,12 +925,16 @@ export default function EnquiriesScreen() {
           animationType="slide"
           onRequestClose={closeThread}
           transparent={false}
+          statusBarTranslucent
         >
-          <Screen scroll={false} edges={['left', 'right', 'bottom']}>
-            <KeyboardAvoidingView
-              style={styles.modalBody}
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            >
+          <View style={styles.modalRoot}>
+            <StatusBar style="light" />
+            <AppBackground />
+            <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.modalSafeArea}>
+              <KeyboardAvoidingView
+                style={styles.modalBody}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              >
               {/* Modal Top Navigation Bar */}
               <View style={styles.modalHeader}>
                 <PressableScale onPress={closeThread} style={styles.modalBackBtn}>
@@ -1133,8 +1140,9 @@ export default function EnquiriesScreen() {
                     </View>
                   </View>
                 )}
-            </KeyboardAvoidingView>
-          </Screen>
+              </KeyboardAvoidingView>
+            </SafeAreaView>
+          </View>
         </Modal>
 
         {/* ================================================================= */}
@@ -1507,9 +1515,17 @@ const styles = StyleSheet.create({
   },
 
   // Modal / Thread Styles
+  modalRoot: {
+    flex: 1,
+    backgroundColor: '#07080E',
+  },
+  modalSafeArea: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
   modalBody: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: 'transparent',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1518,7 +1534,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    backgroundColor: 'rgba(13, 16, 27, 0.95)',
+    backgroundColor: 'rgba(13, 16, 27, 0.88)',
     gap: spacing.md,
   },
   modalBackBtn: {
@@ -1647,7 +1663,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
   },
   replyBar: {
-    backgroundColor: 'rgba(13, 16, 27, 0.98)',
+    backgroundColor: 'rgba(13, 16, 27, 0.92)',
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingHorizontal: spacing.lg,

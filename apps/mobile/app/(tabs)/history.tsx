@@ -5,6 +5,7 @@ import {
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import {
   AlertCircle,
   CalendarDays,
@@ -14,6 +15,8 @@ import {
   RefreshCw,
   MapPin,
   Clock,
+  ChevronRight,
+  Sparkles,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import {
@@ -35,7 +38,9 @@ import {
   attendanceApi,
   AttendanceRecordItem,
   AttendanceStats,
+  holidayApi,
 } from '../../src/services';
+import { DEFAULT_CORPORATE_HOLIDAYS_2026 } from '../holidays';
 
 function formatTime(isoString?: string | null): string {
   if (!isoString) return '—';
@@ -59,6 +64,7 @@ function formatDuration(mins?: number): string {
 type FilterType = 'ALL' | 'PRESENT' | 'LATE' | 'WFH' | 'ABSENT';
 
 export default function HistoryScreen() {
+  const router = useRouter();
   const { isWide } = useResponsive();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -72,6 +78,77 @@ export default function HistoryScreen() {
 
   const [records, setRecords] = useState<AttendanceRecordItem[]>([]);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>(DEFAULT_CORPORATE_HOLIDAYS_2026);
+
+  useEffect(() => {
+    let isMounted = true;
+    holidayApi.getCalendarEvents(new Date().getFullYear())
+      .then((res) => {
+        if (!isMounted || !res.success || !Array.isArray(res.data) || res.data.length === 0) return;
+        const list: any[] = [];
+        for (const evt of res.data) {
+          const dateKey = new Date(evt.startDate).toISOString().split('T')[0];
+          list.push({
+            _id: evt._id,
+            name: evt.title,
+            dateKey,
+            type: evt.type,
+            description: evt.description,
+          });
+        }
+        if (list.length > 0) setCalendarEvents(list);
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Next upcoming corporate calendar teaser (dynamically derived from backend events)
+  const nextCalendarTeaser = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const upcoming = calendarEvents
+      .map((h) => {
+        const parts = h.dateKey.split('-');
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        const diffDays = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        return { ...h, dateObj: d, diffDays };
+      })
+      .filter((h) => h.diffDays >= 0)
+      .sort((a, b) => a.diffDays - b.diffDays);
+
+    const next = upcoming[0];
+    if (!next) {
+      return {
+        badge: 'Calendar',
+        subtitle: 'Holidays, hackathons, sessions & town halls',
+      };
+    }
+
+    const badge =
+      next.diffDays === 0
+        ? 'Today! 🎉'
+        : next.diffDays === 1
+        ? 'Tomorrow'
+        : `In ${next.diffDays} days`;
+
+    const dayStr = next.dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const typeLabel =
+      next.type === 'event'
+        ? 'Hackathon / Session'
+        : next.type === 'meeting'
+        ? 'Town Hall'
+        : next.type === 'companyOffDay'
+        ? 'Company Off-Day'
+        : 'Public Holiday';
+
+    const isLongWeekend = (next.type === 'holiday' || next.type === 'companyOffDay') && (next.dateObj.getDay() === 1 || next.dateObj.getDay() === 5);
+    const subtitle = `${next.name} (${dayStr}) • ${typeLabel}${isLongWeekend ? ' • Long Weekend' : ''}`;
+
+    return { badge, subtitle };
+  }, [calendarEvents]);
 
   const monthKey = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`;
 
@@ -159,7 +236,7 @@ export default function HistoryScreen() {
     >
       <PageHeader
         eyebrow="Monthly Ledger"
-        title="Attendance History"
+        title="Attendance Activity"
         subtitle={monthDisplayName}
         right={
           <Button
@@ -175,6 +252,48 @@ export default function HistoryScreen() {
 
       <View style={[styles.container, isWide && styles.containerWide]}>
         {error ? <Notice tone="danger" title="Load Error" message={error} /> : null}
+
+        {/* ============================================================= */}
+        {/* COMPANY CALENDAR, SESSIONS & EVENTS BUTTON */}
+        {/* ============================================================= */}
+        <PressableScale
+          onPress={() => {
+            void Haptics.selectionAsync().catch(() => undefined);
+            router.push('/holidays' as any);
+          }}
+          style={styles.upcomingHolidaysBtn}
+          haptic="selection"
+          accessibilityRole="button"
+          accessibilityLabel="View Company Calendar, Sessions, Hackathons and Holidays"
+        >
+          <View style={styles.holidaysBtnContent}>
+            <View style={styles.holidaysBtnLeft}>
+              <View style={styles.holidaysIconPill}>
+                <CalendarDays size={18} color={colors.white} strokeWidth={2.2} />
+              </View>
+              <View style={styles.holidaysBtnTexts}>
+                <View style={styles.holidaysBtnTitleRow}>
+                  <Text variant="body" weight="bold" color={colors.white} style={styles.holidaysBtnTitle}>
+                    Company Calendar & Events
+                  </Text>
+                  <View style={styles.holidaysCountdownBadge}>
+                    <Sparkles size={11} color={colors.indigo} strokeWidth={2.4} />
+                    <Text variant="small" weight="bold" color={colors.indigo}>
+                      {nextCalendarTeaser.badge}
+                    </Text>
+                  </View>
+                </View>
+                <Text variant="caption" color="rgba(255, 255, 255, 0.88)" numberOfLines={1}>
+                  {nextCalendarTeaser.subtitle}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.holidaysBtnArrow}>
+              <ChevronRight size={18} color={colors.white} strokeWidth={2.4} />
+            </View>
+          </View>
+        </PressableScale>
 
         {/* 1. Monthly Stats Grid */}
         <View style={styles.statGrid}>
@@ -371,6 +490,69 @@ const styles = StyleSheet.create({
   containerWide: {
     maxWidth: 620,
     alignSelf: 'center',
+  },
+  // Upcoming Holidays Button (Same color as selected date)
+  upcomingHolidaysBtn: {
+    backgroundColor: colors.indigo,
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+    shadowColor: colors.indigo,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.38,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  holidaysBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  holidaysBtnLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  holidaysIconPill: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  holidaysBtnTexts: {
+    flex: 1,
+    gap: 2,
+  },
+  holidaysBtnTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  holidaysBtnTitle: {
+    fontSize: 15,
+  },
+  holidaysCountdownBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.white,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radii.full,
+  },
+  holidaysBtnArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statGrid: {
     flexDirection: 'row',

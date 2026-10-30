@@ -95,11 +95,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: 'History',
+          title: 'Activity',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon color={String(color)} focused={focused} icon={CalendarDays} />
           ),
-          tabBarAccessibilityLabel: 'tab-history',
+          tabBarAccessibilityLabel: 'tab-activity',
         }}
       />
 

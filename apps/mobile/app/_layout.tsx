@@ -55,6 +55,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="announcements" options={{ headerShown: false }} />
             <Stack.Screen name="enquiries" options={{ headerShown: false }} />
+            <Stack.Screen name="holidays" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" options={{ headerShown: false }} />
           </Stack>
         </ToastProvider>
