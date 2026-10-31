@@ -4,7 +4,7 @@
 > **Production Infrastructure**: MongoDB Atlas (Cloud Database), Render (Express + Socket.io Web Service), and Vercel (Frontends & Kiosk Displays).  
 > **Production URLs**:
 > - **HR Web Portal (Direct Cloud)**: [https://attendance-tracker-56du.onrender.com](https://attendance-tracker-56du.onrender.com) (Public / Zero SSO)
-> - **HR Web Portal (Vercel CDN)**: [https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app](https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app)
+> - **HR Web Portal (Vercel CDN)**: [https://attendance-tracker-apps-kirtee.vercel.app](https://attendance-tracker-apps-kirtee.vercel.app)
 > - **Office QR Display Kiosk**: [https://attendance-tracker-qq8u.vercel.app](https://attendance-tracker-qq8u.vercel.app)
 > - **Backend API & WebSockets**: [https://attendance-tracker-56du.onrender.com](https://attendance-tracker-56du.onrender.com)
 > - **Health Diagnostic**: [https://attendance-tracker-56du.onrender.com/health](https://attendance-tracker-56du.onrender.com/health)  

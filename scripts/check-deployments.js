@@ -92,7 +92,7 @@ async function main() {
 
   // 5. HR Web Portal Frontend
   console.log('5. Checking HR Web Portal on Vercel...');
-  const webRes = await testUrl('HR Web Portal', 'https://attendance-tracker-apps-rehu9vems-kirtee.vercel.app');
+  const webRes = await testUrl('HR Web Portal', 'https://attendance-tracker-apps-kirtee.vercel.app');
   console.log(`   Status: ${webRes.status} ${webRes.statusText} (${webRes.duration}ms)`);
   console.log('   Contains HTML Document:', typeof webRes.data === 'string' && webRes.data.includes('<html'));
   console.log('');
