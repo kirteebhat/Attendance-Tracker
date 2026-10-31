@@ -29,7 +29,6 @@ import {
   useDeleteAnnouncement,
   useAnnouncementTemplates,
   useUpdateAnnouncementTemplate,
-  useTriggerAutoAnnouncements,
   AnnouncementItem,
 } from "../api/queries";
 import { useSocket } from "../context/SocketContext";
@@ -90,7 +89,6 @@ export const AnnouncementsPage: React.FC = () => {
   const updateMutation = useUpdateAnnouncement();
   const deleteMutation = useDeleteAnnouncement();
   const updateTemplateMutation = useUpdateAnnouncementTemplate();
-  const triggerAutoMutation = useTriggerAutoAnnouncements();
 
   // Modals
   const [isComposerOpen, setIsComposerOpen] = useState(false);
@@ -296,24 +294,6 @@ export const AnnouncementsPage: React.FC = () => {
     }
   };
 
-  const handleTriggerAuto = async () => {
-    try {
-      const res = await triggerAutoMutation.mutateAsync();
-      toast({
-        title: "Auto-Check Complete",
-        description: `Calendar and event triggers evaluated. Generated ${res.count} new announcements.`,
-        type: "success",
-      });
-      refetch();
-    } catch (err: any) {
-      toast({
-        title: "Trigger Failed",
-        description: err.message || "Failed to trigger auto check.",
-        type: "error",
-      });
-    }
-  };
-
   const toggleDept = (dept: string) => {
     if (formDepartments.includes(dept)) {
       setFormDepartments(formDepartments.filter((d) => d !== dept));
@@ -395,17 +375,6 @@ export const AnnouncementsPage: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleTriggerAuto}
-            isLoading={triggerAutoMutation.isPending}
-            title="Scan calendar and policies to trigger any automated announcements right now"
-          >
-            <Sparkles className="w-4 h-4 mr-1.5 text-cyan-500" />
-            <span>Force Auto Check</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
             onClick={() => setIsTemplateModalOpen(true)}
           >
             <Sliders className="w-4 h-4 mr-1.5 text-indigo-500" />
@@ -427,7 +396,7 @@ export const AnnouncementsPage: React.FC = () => {
       {/* 2. Filter Bar: Source Tabs, Status, Priority & Search */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
         {/* Source Filter Tabs */}
-        <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg">
+        <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg overflow-x-auto max-w-full">
           <button
             type="button"
             onClick={() => {

@@ -84,10 +84,7 @@ export const AppShell: React.FC = () => {
             {/* Platform Web Footer */}
             <footer className="mt-12 pt-6 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 font-medium flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto w-full px-2 text-center sm:text-left select-none">
               <span>© 2026 VorldX Workforce Management Suite. All rights reserved.</span>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-mono">Web Engine v{CURRENT_WEB_VERSION}</span>
-              </div>
+              <span className="font-mono text-slate-400">v{CURRENT_WEB_VERSION}</span>
             </footer>
           </main>
         </div>

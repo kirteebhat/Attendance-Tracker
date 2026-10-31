@@ -729,7 +729,7 @@ export const LeavePage: React.FC = () => {
 
           {/* Bulk Selection Actions Bar */}
           {selectedIds.length > 0 && (
-            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 rounded-xl animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 rounded-xl animate-in fade-in">
               <div className="flex items-center gap-3">
                 <span className="text-xs font-semibold text-blue-900 dark:text-blue-200">
                   {selectedIds.length} request(s) selected
@@ -742,7 +742,7 @@ export const LeavePage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   size="sm"
                   variant="primary"

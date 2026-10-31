@@ -48,7 +48,7 @@ const CANNED_MACROS = [
 
 export const EnquiriesPage: React.FC = () => {
   const { user } = useAuth();
-  const { socket, isConnected } = useSocket();
+  const { socket } = useSocket();
   const { toast } = useToast();
 
   // Navigation & Filter State
@@ -308,18 +308,6 @@ export const EnquiriesPage: React.FC = () => {
     });
   };
 
-  // Mock Upload Attachment
-  const handleAddMockAttachment = () => {
-    const timestamp = Date.now().toString().slice(-4);
-    setQuickReplyAttachment({
-      name: `resolution_proof_${timestamp}.png`,
-      mimeType: "image/png",
-      sizeBytes: 153600, // 150 KB
-      url: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&auto=format&fit=crop&q=80",
-    });
-    toast({ type: "info", title: "Attachment Added", description: "Image attached to quick reply." });
-  };
-
   // Helper badges
   const renderStatusBadge = (status: string) => {
     switch (status) {
@@ -355,23 +343,9 @@ export const EnquiriesPage: React.FC = () => {
       {/* 1. Header & Live Indicator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Support Enquiries
-            </h1>
-            <Badge
-              variant={isConnected ? "success" : "neutral"}
-              size="sm"
-              className="gap-1.5 py-0.5"
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  isConnected ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
-                }`}
-              />
-              {isConnected ? "Live Sync Active" : "Disconnected"}
-            </Badge>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Support Enquiries
+          </h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -946,17 +920,7 @@ export const EnquiriesPage: React.FC = () => {
                   className="flex-1 px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
 
-                <div className="flex flex-col gap-1.5 shrink-0">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddMockAttachment}
-                    className="h-8 px-2.5"
-                    title="Attach screenshot/document"
-                  >
-                    <Paperclip className="w-4 h-4 text-slate-500" />
-                  </Button>
+                <div className="flex items-end shrink-0">
                   <Button
                     type="button"
                     variant="primary"
@@ -964,9 +928,9 @@ export const EnquiriesPage: React.FC = () => {
                     onClick={handleSendReply}
                     isLoading={sendMessageMutation.isPending}
                     disabled={!quickReplyText.trim()}
-                    className="h-8 px-3 bg-blue-600 hover:bg-blue-700"
+                    className="h-9 px-4 bg-blue-600 hover:bg-blue-700 font-semibold shadow-xs"
                   >
-                    <Send className="w-3.5 h-3.5 mr-1" />
+                    <Send className="w-3.5 h-3.5 mr-1.5" />
                     Send
                   </Button>
                 </div>

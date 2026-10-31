@@ -77,10 +77,10 @@ export const Drawer: React.FC<DrawerProps> = ({
         )}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50/80 dark:bg-slate-900/80 shrink-0">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3 bg-slate-50/80 dark:bg-slate-900/80 shrink-0">
           <div>
             {title && (
-              <h3 id="drawer-title" className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              <h3 id="drawer-title" className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
                 {title}
               </h3>
             )}
@@ -99,13 +99,13 @@ export const Drawer: React.FC<DrawerProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 text-slate-700 dark:text-slate-300">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 text-slate-700 dark:text-slate-300">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 shrink-0 flex items-center justify-end gap-3">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 shrink-0 flex items-center justify-end gap-2.5 sm:gap-3">
             {footer}
           </div>
         )}

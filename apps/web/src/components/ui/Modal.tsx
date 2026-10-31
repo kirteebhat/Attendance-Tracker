@@ -50,7 +50,7 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
       <div
         className={clsx(
@@ -67,17 +67,17 @@ export const Modal: React.FC<ModalProps> = ({
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
         className={clsx(
-          "relative w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-10 overflow-hidden max-h-[90vh] flex flex-col transition-colors",
+          "relative w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-10 overflow-hidden max-h-[92vh] flex flex-col transition-colors",
           prefersReducedMotion ? "" : "animate-in zoom-in-95 duration-150",
           maxWidthMap[maxWidth]
         )}
       >
         {/* Header */}
         {(title || description) && (
-          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4 shrink-0 bg-slate-50/70 dark:bg-slate-800/60">
+          <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3 shrink-0 bg-slate-50/70 dark:bg-slate-800/60">
             <div>
               {title && (
-                <h3 id="modal-title" className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                <h3 id="modal-title" className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100">
                   {title}
                 </h3>
               )}
@@ -96,7 +96,7 @@ export const Modal: React.FC<ModalProps> = ({
         )}
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto text-slate-900 dark:text-slate-100">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto text-slate-900 dark:text-slate-100">{children}</div>
       </div>
     </div>
   );

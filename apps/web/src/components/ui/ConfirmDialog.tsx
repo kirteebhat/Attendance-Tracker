@@ -70,7 +70,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const { Icon, bg, buttonVariant } = iconConfig;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
       <div
         className={clsx(
@@ -88,7 +88,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-message"
         className={clsx(
-          "relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl z-10 transition-colors",
+          "relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-2xl z-10 transition-colors",
           prefersReducedMotion ? "" : "animate-in zoom-in-95 duration-200"
         )}
       >

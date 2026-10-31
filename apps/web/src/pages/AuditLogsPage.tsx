@@ -493,8 +493,8 @@ export const AuditLogsPage: React.FC = () => {
 
             {/* View 1: Structured Key-by-Key Comparison */}
             {diffViewMode === "structured" ? (
-              <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
+              <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse min-w-[480px] sm:min-w-0">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 font-semibold text-slate-700 dark:text-slate-300">
                       <th className="py-2 px-3">Field</th>

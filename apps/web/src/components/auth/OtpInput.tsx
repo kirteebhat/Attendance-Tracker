@@ -98,7 +98,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
     <div
       role="group"
       aria-label="6-digit authentication code"
-      className="flex items-center justify-between gap-2 sm:gap-3"
+      className="flex items-center justify-between gap-1.5 sm:gap-3 w-full"
     >
       {Array.from({ length: 6 }).map((_, idx) => (
         <input
@@ -117,7 +117,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
           onPaste={handlePaste}
           onFocus={(e) => e.target.select()}
           aria-label={`Digit ${idx + 1} of 6`}
-          className={`w-11 h-13 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-mono font-bold rounded-xl border transition-all duration-150 outline-none select-none
+          className={`w-9 h-12 sm:w-12 sm:h-14 flex-1 max-w-[48px] min-w-0 text-center text-lg sm:text-2xl font-mono font-bold rounded-xl border transition-all duration-150 outline-none select-none
             ${
               disabled
                 ? "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed"

@@ -22,8 +22,7 @@ import { StatCardSkeleton, Skeleton } from "../components/ui/Skeleton";
 import { ErrorState } from "../components/ui/ErrorState";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
-import { LazyAttendanceOrb3D } from "../components/3d/LazyAttendanceOrb3D";
-import { HROnlineIndicator } from "../components/ui/HROnlineIndicator";
+import { ProgressRing } from "../components/ui/ProgressRing";
 
 export const DashboardPage: React.FC = () => {
   // Executive summary query (trends & audit activity)
@@ -178,20 +177,13 @@ export const DashboardPage: React.FC = () => {
             <Badge variant="info" size="md">
               {dateKey}
             </Badge>
-            {isSocketConnected && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                LIVE STREAM
-              </span>
-            )}
-            <HROnlineIndicator variant="compact" />
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Animated 3D Attendance Hero Orb & Rate Indicator */}
+          {/* Attendance Rate Indicator */}
           <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-            <LazyAttendanceOrb3D attendanceRate={attendanceRate} size={46} />
+            <ProgressRing value={attendanceRate} size={36} strokeWidth={3.5} variant="primary" />
             <div className="text-xs">
               <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-semibold">Attendance</span>{" "}
               <strong className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">
@@ -273,14 +265,14 @@ export const DashboardPage: React.FC = () => {
 
       {/* SECTION 1: Hourly Distribution Timeline (or 30D Heatmap) & Live Scan Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-w-0">
           <TodayTimelineChart
             hourlyData={liveAnalytics?.hourlyToday || []}
             heatmapData={liveAnalytics?.heatmap30Days}
             timezone={liveAnalytics?.timezone}
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <LiveScanFeed
             scans={liveAnalytics?.recentScans || []}
             isLive={isSocketConnected}
@@ -290,14 +282,14 @@ export const DashboardPage: React.FC = () => {
 
       {/* SECTION 2: Historical Compliance Trends & Department Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-w-0">
           <AttendanceChart
             last7Days={summaryData?.trends?.last7Days || []}
             last30Days={summaryData?.trends?.last30Days || []}
             isLoading={isSummaryLoading}
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <DepartmentBars
             departments={liveAnalytics?.departmentBreakdown || []}
             isLoading={isAnalyticsLoading}

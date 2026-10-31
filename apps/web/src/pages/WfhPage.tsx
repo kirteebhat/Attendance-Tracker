@@ -329,7 +329,7 @@ export const WfhPage: React.FC = () => {
 
       {/* Bulk Selection Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 rounded-xl text-xs text-blue-900 dark:text-blue-100 shadow-xs animate-in fade-in duration-150">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 rounded-xl text-xs text-blue-900 dark:text-blue-100 shadow-xs animate-in fade-in duration-150">
           <div className="flex items-center gap-2 font-semibold">
             <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[11px]">
               {selectedIds.length}
@@ -337,7 +337,7 @@ export const WfhPage: React.FC = () => {
             <span>pending request(s) selected</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"

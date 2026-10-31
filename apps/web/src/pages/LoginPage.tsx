@@ -340,7 +340,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Main Card */}
-        <Card className="p-6 sm:p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl transition-colors">
+        <Card className="p-5 sm:p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl transition-colors">
           {/* Notifications & Reason Banners */}
           {sessionExpired && (
             <div className="mb-5 p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-2.5 text-amber-900 dark:text-amber-300">
@@ -479,7 +479,7 @@ export const LoginPage: React.FC = () => {
                     <ArrowRight className="w-4 h-4 ml-1.5" />
                   </Button>
 
-                  <div className="flex items-center justify-between pt-2 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pt-2 text-xs">
                     <span className="text-slate-500 dark:text-slate-400">Have an OTP code already?</span>
                     <button
                       type="button"
@@ -643,7 +643,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-400 font-medium">
-          VorldX Industries &copy; 2026. Staff Portal.
+          VorldX Industries &copy; 2026
         </p>
       </div>
     </div>

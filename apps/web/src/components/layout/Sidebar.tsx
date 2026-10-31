@@ -10,12 +10,9 @@ import {
   Settings2,
   Tv,
   ShieldCheck,
-  LogOut,
-  Building2,
   Lock,
   Megaphone,
   LifeBuoy,
-  Package,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -69,9 +66,7 @@ export const navGroups: NavGroup[] = [
       { name: "Policy & Shifts", href: "/policies", icon: Settings2 },
       { name: "Office QR Displays", href: "/displays", icon: Tv },
       { name: "Security & Sessions", href: "/security", icon: Lock },
-      { name: "App Releases & OTA", href: "/releases", icon: Package },
       { name: "Audit Trail", href: "/audit-logs", icon: ShieldCheck },
-      { name: "3D Floor View", href: "/three-d", icon: Tv, flagKey: "threeD" },
     ],
   },
 ];
@@ -89,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   isMobileDrawer = false,
 }) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { data: flagData } = useFeatureFlags();
   const flags = flagData?.data;
 
@@ -130,16 +125,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
-            <Building2 className="w-5 h-5 text-white" />
-          </div>
+          <img
+            src="/splash-icon.png"
+            alt="VorldX"
+            className="w-10 h-10 object-contain shrink-0 drop-shadow-md select-none"
+          />
           {!collapsed && (
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-base font-extrabold tracking-wider text-white uppercase block leading-none">
                   Vorld<span className="text-blue-600">X</span>
                 </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="Platform Active" />
               </div>
               <span className="text-[10px] text-slate-400 tracking-wider uppercase font-medium mt-1 block truncate">
                 Workforce Suite
@@ -285,50 +281,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* User Footer & Session Info */}
       <div className={`border-t border-slate-800 bg-slate-950/40 ${collapsed ? "p-3" : "p-4"}`}>
         {!collapsed ? (
-          <>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white truncate">
-                  {user?.name || user?.employeeId}
-                </p>
-                <p className="text-xs text-slate-400 truncate">{user?.email}</p>
-              </div>
-              <Badge variant="info" size="sm" className="shrink-0 uppercase font-mono text-[10px]">
-                {user?.role}
-              </Badge>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white truncate">
+                {user?.name || user?.employeeId}
+              </p>
+              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2.5 px-0.5">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>VorldX Enterprise</span>
-              </span>
-              <span className="font-mono text-slate-400">v1.2.0</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => logout()}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors border border-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
-            </button>
-          </>
+            <Badge variant="info" size="sm" className="shrink-0 uppercase font-mono text-[10px]">
+              {user?.role}
+            </Badge>
+          </div>
         ) : (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center">
             <Tooltip content={`${user?.name || user?.email} (${user?.role})`} position="right">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs border border-blue-400/30">
                 {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
               </div>
-            </Tooltip>
-            <Tooltip content="Sign Out" position="right">
-              <button
-                type="button"
-                onClick={() => logout()}
-                className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors border border-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-                aria-label="Sign out of account"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
             </Tooltip>
           </div>
         )}

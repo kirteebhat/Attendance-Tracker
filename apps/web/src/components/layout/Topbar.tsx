@@ -9,7 +9,6 @@ import {
   User,
   Sun,
   Moon,
-  Palette,
   Bell,
   Calendar,
   ChevronLeft,
@@ -24,7 +23,6 @@ import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
 import { useTheme } from "../../context/ThemeContext";
 import { Badge } from "../ui/Badge";
-import { HROnlineIndicator } from "../ui/HROnlineIndicator";
 import { Tooltip } from "../ui/Tooltip";
 import {
   useLeaveRequests,
@@ -54,8 +52,6 @@ const routeNameMap: Record<string, string> = {
   security: "Security & Sessions",
   releases: "App Releases & OTA",
   "audit-logs": "Audit Trail",
-  "design-system": "Design System Showcase",
-  "three-d": "3D Floor View",
   unauthorized: "Unauthorized Access",
 };
 
@@ -213,6 +209,8 @@ export const Topbar: React.FC<TopbarProps> = ({
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {/* Real-Time WebSocket Status Indicator */}
         <Tooltip
+          position="bottom"
+          align="end"
           content={
             isConnected
               ? "Live Socket Gateway connected: Streaming real-time attendance scans and approvals"
@@ -252,11 +250,6 @@ export const Topbar: React.FC<TopbarProps> = ({
           </div>
         </Tooltip>
 
-        {/* HR Staff Online Presence Indicator */}
-        <div className="hidden lg:block">
-          <HROnlineIndicator variant="pill" />
-        </div>
-
         {/* Notifications Popover */}
         <div className="relative" ref={notifRef}>
           <button
@@ -282,7 +275,7 @@ export const Topbar: React.FC<TopbarProps> = ({
             <div
               role="region"
               aria-label="Active Notifications"
-              className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+              className="absolute right-0 mt-2 w-[calc(100vw-1.5rem)] sm:w-96 max-w-sm sm:max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
             >
               <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/50">
                 <div className="flex items-center gap-2">
@@ -383,7 +376,11 @@ export const Topbar: React.FC<TopbarProps> = ({
         </div>
 
         {/* Theme Switcher Toggle */}
-        <Tooltip content={`Theme: ${resolvedTheme === "dark" ? "Dark (Click for Light)" : "Light (Click for Dark)"}`}>
+        <Tooltip
+          position="bottom"
+          align="end"
+          content={`Theme: ${resolvedTheme === "dark" ? "Dark (Click for Light)" : "Light (Click for Dark)"}`}
+        >
           <button
             type="button"
             onClick={toggleTheme}
@@ -427,7 +424,7 @@ export const Topbar: React.FC<TopbarProps> = ({
             <div
               role="region"
               aria-label="User Profile Menu"
-              className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-150"
+              className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 p-2 animate-in fade-in zoom-in-95 duration-150"
             >
               <div className="p-3 border-b border-slate-100 dark:border-slate-800">
                 <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
@@ -452,15 +449,6 @@ export const Topbar: React.FC<TopbarProps> = ({
                 >
                   <Shield className="w-4 h-4 text-slate-400" />
                   <span>Security & Active Sessions</span>
-                </Link>
-
-                <Link
-                  to="/design-system"
-                  onClick={() => setIsProfileOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                >
-                  <Palette className="w-4 h-4 text-indigo-400" />
-                  <span>Design System Showcase</span>
                 </Link>
               </div>
 

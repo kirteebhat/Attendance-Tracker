@@ -789,14 +789,6 @@ export const CalendarPage: React.FC = () => {
             <Badge variant="primary" size="md">
               {activeYear}
             </Badge>
-            {/* Live Socket Sync Pulse */}
-            <div
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 rounded-full text-[11px] font-semibold text-emerald-700 dark:text-emerald-400"
-              title="Live Socket connection: Changes reflect instantly across all sessions"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Live Sync Active</span>
-            </div>
           </div>
         </div>
 
@@ -1042,7 +1034,7 @@ export const CalendarPage: React.FC = () => {
           </div>
 
           {/* Search Box, Type Filter & Shortcuts hint */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
@@ -1140,7 +1132,9 @@ export const CalendarPage: React.FC = () => {
                 prefersReducedMotion ? "" : "animate-page-enter"
               )}
             >
-              {/* Day of Week Headers */}
+              <div className="overflow-x-auto w-full">
+                <div className="min-w-[640px] sm:min-w-0">
+                  {/* Day of Week Headers */}
               <div className="grid grid-cols-7 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-center font-bold text-xs text-slate-700 dark:text-slate-300 py-2.5">
                 <div>Mon</div>
                 <div>Tue</div>
@@ -1358,7 +1352,9 @@ export const CalendarPage: React.FC = () => {
                   );
                 })}
               </div>
-            </Card>
+            </div>
+          </div>
+        </Card>
           )}
 
           {/* ========================================================= */}
@@ -2294,7 +2290,7 @@ export const CalendarPage: React.FC = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+                  <div className="max-h-64 overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold">
                         <tr>
