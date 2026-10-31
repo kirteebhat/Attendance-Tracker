@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { io as ioClient, Socket } from "socket.io-client";
 import {
-  Building2,
   Lock,
   Smartphone,
   ShieldCheck,
@@ -298,14 +297,11 @@ export const LoginPage: React.FC = () => {
 
       <div className="relative w-full max-w-md space-y-5">
         {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex w-13 h-13 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 items-center justify-center text-white shadow-xl shadow-blue-500/25 mb-1 ring-4 ring-white/10">
-            <Building2 className="w-7 h-7" />
-          </div>
-          <h1 className="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
-            <span>Vorld</span>
-            <span className="text-cyan-400">X</span>
-            <span className="font-light text-slate-300">Portal</span>
+        <div className="text-center">
+          <h1 className="text-2xl font-black tracking-tight text-white flex items-center justify-center">
+            <span>
+              Vorld<span className="text-blue-600">X</span>
+            </span>
           </h1>
         </div>
 

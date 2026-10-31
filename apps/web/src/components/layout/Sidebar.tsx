@@ -137,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-base font-extrabold tracking-wider text-white uppercase block leading-none">
-                  Vorld<span className="text-cyan-400">X</span>
+                  Vorld<span className="text-blue-600">X</span>
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="Platform Active" />
               </div>
